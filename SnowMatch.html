@@ -167,7 +167,28 @@ var TERMS=[{id:"a",icon:"🩹",title:"怪我・事故は自己責任",body:"ス�
 
 var S={pg:"splash",blockedUsers:[],reportedUsers:[],showContact:false,showDeleteAccount:false,unreadChat:1,unreadBook:0,showWelcome:false,showNotif:false,following:[],followers:[2,5],showFollowList:false,followListType:"following",notifs:[{id:"n1",type:"like",icon:"❤️",msg:"こうすけがあなたにいいねしました",time:"5分前",read:false},{id:"n2",type:"msg",icon:"💬",msg:"ゆきなさんからメッセージが届きました",time:"12分前",read:false},{id:"n3",type:"match",icon:"🎿",msg:"けんじコーチとマッチングしました！",time:"1時間前",read:true},{id:"n4",type:"book",icon:"✅",msg:"予約が確定しました。一緒に楽しみましょう！",time:"2時間前",read:true},{id:"n5",type:"review",icon:"⭐",msg:"りなに口コミが投稿されました",time:"昨日",read:true}],rooms:{},checkins:[],reports:[],marketTab:"room",rankCat:"総合",openQA:null,openQAItem:null,showCheckin:false,showReport:false,openRoom:null,roomInput:"",splashIdx:0,onStep:0,kycStep:0,tab:"explore",selArea:null,selResort:null,openArea:null,openAreaReg:null,selAct:null,insOnly:false,camOnly:false,selCert:null,selUser:null,chatUser:null,chatMsgs:{"2":[{f:"t",t:"今週末、白馬一緒に滑りませんか？追い撮りもお願いしたいです！",time:"10:30"},{f:"m",t:"もちろん！どのコースが好みですか？リフトで一緒に上がりながら相談しましょう",time:"10:45"}]},chatIn:"",liked:[],matches:[],bookUser:null,confirmed:null,postLikes:{},addPost:false,postDetail:null,reviewTarget:null,reviewRating:5,reviewComment:"",selPayment:"card",npType:"video",npCap:"",npImgSrc:null,npVideoSrc:null,npUrlInput:"",termChecks:{},myProfile:null,reg:{role:"user",nick:"",real:"",age:"",email:"",pw:"",act:"スノーボード",lv:"中級",resorts:[],bio:"",isIns:false,isCam:false,price:5000,unit:"1時間",camPrice:3000,camUnit:"30分",camMenu:[],icon:"🏂"}};
 
-function saveD(){try{localStorage.setItem("sm2",JSON.stringify({myProfile:S.myProfile,reg:S.reg,liked:S.liked,postLikes:S.postLikes,matches:S.matches,chatMsgs:S.chatMsgs}));}catch(e){}}
+function saveD(){try{localStorage.setItem("sm2",JSON.stringify({myProfile:S.myProfile,reg:S.reg,liked:S.liked,postLikes:S.postLikes,matches:S.matches,chatMsgs:S.chatMsgs}));}catch(e){}syncProfileToSupabase();}
+// プロフィール変更をSupabaseへ同期（1秒まとめて送信）
+var _syncTimer=null;
+function syncProfileToSupabase(){
+  if(typeof sb==="undefined"||!sb||!currentUser||!S.myProfile)return;
+  if(_syncTimer)clearTimeout(_syncTimer);
+  _syncTimer=setTimeout(function(){
+    var p=S.myProfile;
+    var row={
+      id:currentUser.id,
+      nick:p.nick||"",real_name:p.name||"",
+      age:p.age?parseInt(p.age):null,
+      email:currentUser.email||p.email||"",
+      act:p.act||"",acts:p.acts||[],lv:p.lv||"中級",
+      resorts:p.resorts||[],bio:p.bio||"",icon:p.icon||"🏂",
+      is_verified:true,kyc_status:p.kycStatus||"approved"
+    };
+    sb.from("profiles").upsert(row).then(function(r){
+      if(r.error)console.error("Profile sync error:",r.error);
+    });
+  },1000);
+}
 function loadD(){try{var r=localStorage.getItem("sm2");if(!r)return false;var d=JSON.parse(r);if(d.myProfile){S.myProfile=d.myProfile;S.pg="main";}if(d.reg){S.reg=d.reg;if(!S.reg.resorts)S.reg.resorts=[];}if(d.liked)S.liked=d.liked;if(d.postLikes)S.postLikes=d.postLikes;if(d.matches)S.matches=d.matches;if(d.chatMsgs)S.chatMsgs=d.chatMsgs;return!!d.myProfile;}catch(e){return false;}}
 function clearD(){try{localStorage.removeItem("sm2");}catch(e){}}
 
@@ -2732,6 +2753,7 @@ function render(){
 }
 
 try{window._hs=!!localStorage.getItem("sm2");}catch(e){window._hs=false;}
+if(sb){sb.auth.getSession().then(function(r){if(r&&r.data&&r.data.session){currentUser=r.data.session.user;}}).catch(function(){});}
 render();
 </script>
 </body>
