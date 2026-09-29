@@ -1541,8 +1541,9 @@ function loadProfileFromSupabase(){
   if(!sb||!currentUser){S.showLoginModal=false;render();return;}
   sb.from("profiles").select("*").eq("id",currentUser.id).single().then(function(res){
     if(res.error||!res.data){
-      alert("プロフィールが見つかりませんでした");
-      S.showLoginModal=false;render();
+      if(window._profTried){alert("プロフィールを読み込めませんでした: "+(res.error?res.error.message:"データなし"));S.showLoginModal=false;render();return;}
+      window._profTried=true;
+      createProfileFromLocal();
       return;
     }
     var p=res.data;
@@ -1558,6 +1559,35 @@ function loadProfileFromSupabase(){
     R({pg:"main",tab:"explore"});
   }).catch(function(e){
     console.error(e);
+    S.showLoginModal=false;render();
+  });
+}
+
+// ログイン時にプロフィールが無ければ、端末内の登録データから作成する
+function createProfileFromLocal(){
+  var src={};
+  try{var raw=localStorage.getItem("sm2");if(raw){var dt=JSON.parse(raw);src=dt.myProfile||{};if(dt.reg){for(var k in dt.reg){if(src[k]===undefined)src[k]=dt.reg[k];}}}}catch(e){}
+  if(S.myProfile){for(var k2 in S.myProfile){if(S.myProfile[k2]!==undefined&&S.myProfile[k2]!=="")src[k2]=S.myProfile[k2];}}
+  var row={
+    id: currentUser.id,
+    nick: src.nick||"",
+    real_name: src.name||src.real||"",
+    age: src.age?parseInt(src.age):null,
+    email: currentUser.email||src.email||"",
+    act: src.act||"",
+    acts: src.acts||[],
+    lv: src.lv||"中級",
+    resorts: src.resorts||[],
+    bio: src.bio||"",
+    icon: src.icon||"🏂",
+    is_verified: true,
+    kyc_status: "approved"
+  };
+  sb.from("profiles").upsert(row).then(function(r){
+    if(r.error){alert("プロフィール保存エラー: "+r.error.message);S.showLoginModal=false;render();return;}
+    loadProfileFromSupabase();
+  }).catch(function(e){
+    alert("プロフィール保存エラー: "+(e&&e.message?e.message:e));
     S.showLoginModal=false;render();
   });
 }
@@ -2631,7 +2661,7 @@ function WelcomeModal(){
 
 function render(){
   var app=document.getElementById("app");app.innerHTML="";
-  if(S.pg==="splash"){app.appendChild(renderSplash());return;}
+  if(S.pg==="splash"){app.appendChild(renderSplash());if(S.showLoginModal)app.appendChild(LoginModal());return;}
   if(S.pg==="onboard"){app.appendChild(renderOnboard());return;}
   if(S.pg==="terms"){app.appendChild(renderTerms());return;}
   if(S.pg==="kyc"){app.appendChild(renderKyc());return;}
