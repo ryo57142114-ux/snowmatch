@@ -922,7 +922,7 @@ function renderOnboard(){
         var fl=d({style:{fontSize:"12px",fontWeight:"700",color:"#6B7280",marginBottom:"4px"}});fl.textContent=f[0];
         var fi=i2({type:f[2],class:"inp"});fi.placeholder=f[3];fi.value=S.reg[f[1]]||"";
         fi.addEventListener("input",function(e){S.reg[f[1]]=e.target.value;});
-        fw.appendChild(fl);fw.appendChild(fi);wrap.appendChild(fw);
+        fw.appendChild(fl);fw.appendChild(f[2]==="password"?pwToggleWrap(fi):fi);wrap.appendChild(fw);
       })(quickFields[qfi]);
     }
     var tokCard=d({style:{background:"linear-gradient(135deg,#FFF0E8,#FFE4D6)",borderRadius:"16px",padding:"14px",marginBottom:"20px"}});
@@ -1530,9 +1530,9 @@ function LoginModal(){
     box.appendChild(ei);
 
     var pl=document.createElement("div");pl.style.cssText="font-size:12px;font-weight:700;color:#6B7280;margin-bottom:6px";pl.textContent="パスワード";box.appendChild(pl);
-    var pi=document.createElement("input");pi.type="password";pi.className="inp";pi.style.marginBottom="16px";
+    var pi=document.createElement("input");pi.type="password";pi.className="inp";
     pi.addEventListener("input",function(e){loginPw=e.target.value;});
-    box.appendChild(pi);
+    var piw=pwToggleWrap(pi);piw.style.marginBottom="16px";box.appendChild(piw);
 
     var errMsg=document.createElement("div");errMsg.style.cssText="color:#EF4444;font-size:12px;margin-bottom:10px;display:none";box.appendChild(errMsg);
 
@@ -1590,6 +1590,7 @@ function createProfileFromLocal(){
   var src={};
   try{var raw=localStorage.getItem("sm2");if(raw){var dt=JSON.parse(raw);src=dt.myProfile||{};if(dt.reg){for(var k in dt.reg){if(src[k]===undefined)src[k]=dt.reg[k];}}}}catch(e){}
   if(S.myProfile){for(var k2 in S.myProfile){if(S.myProfile[k2]!==undefined&&S.myProfile[k2]!=="")src[k2]=S.myProfile[k2];}}
+  if(S.reg){var rk=["nick","age","act","lv","bio","icon"];for(var ri=0;ri<rk.length;ri++){if(!src[rk[ri]]&&S.reg[rk[ri]])src[rk[ri]]=S.reg[rk[ri]];}if(!src.resorts||!src.resorts.length)src.resorts=S.reg.resorts||[];if(!src.name&&S.reg.real)src.name=S.reg.real;}
   var row={
     id: currentUser.id,
     nick: src.nick||"",
@@ -1737,6 +1738,16 @@ function loadLikesFromSupabase(){
     }
     render();
   });
+}
+
+// パスワード表示切替ボタン付きの入れ物
+function pwToggleWrap(inp){
+  var w=document.createElement("div");w.style.cssText="position:relative";
+  inp.style.paddingRight="64px";
+  var b=document.createElement("button");b.type="button";b.textContent="表示";
+  b.style.cssText="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:#F3F4F6;border:none;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;color:#6B7280;cursor:pointer";
+  b.addEventListener("click",function(e){e.preventDefault();if(inp.type==="password"){inp.type="text";b.textContent="隠す";}else{inp.type="password";b.textContent="表示";}});
+  w.appendChild(inp);w.appendChild(b);return w;
 }
 
 function signUpToSupabase(){
