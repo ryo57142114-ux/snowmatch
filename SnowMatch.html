@@ -1,0 +1,2708 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="theme-color" content="#FF6B2B"/>
+<title>SnowMatch</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#F5F7FA;font-family:'Nunito','Hiragino Kaku Gothic ProN',sans-serif;-webkit-tap-highlight-color:transparent;overflow:hidden}
+#app{height:100%;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;max-width:430px;margin:0 auto;background:#F5F7FA;padding-top:env(safe-area-inset-top,0px)}
+::-webkit-scrollbar{display:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none;-webkit-appearance:none}
+input,textarea,select{font-family:inherit;-webkit-appearance:none;font-size:16px;outline:none}
+button:active{opacity:.75}
+img{display:block;width:100%}
+.hdr{background:linear-gradient(135deg,#FF6B2B,#FF8C55);padding:14px 18px 12px;display:flex;align-items:center;gap:8px}
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:#fff;display:flex;border-top:1px solid #F0F0F0;z-index:100;padding-bottom:env(safe-area-inset-bottom,16px)}
+.ni{flex:1;padding:10px 0 8px;text-align:center;color:#6B7280;font-size:10px;font-weight:500;border:none;background:none;font-family:inherit;cursor:pointer}
+.ni.on{color:#FF6B2B;font-weight:800}
+.pg{padding:16px 16px 80px}
+.card{background:#fff;border-radius:20px;padding:16px;margin-bottom:12px;box-shadow:0 2px 12px rgba(0,0,0,.06);transition:transform 0.15s,box-shadow 0.15s}.card:active{transform:scale(0.98);box-shadow:0 1px 6px rgba(0,0,0,.08)}
+.chip{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;background:#fff;color:#1A1A2E;border:2px solid #E8E8E8;font-family:inherit;white-space:nowrap}
+.chip.on{background:#FF6B2B;color:#fff;border-color:#FF6B2B}
+.tag{display:inline-block;padding:3px 10px;background:#EEF6FF;color:#2196F3;border-radius:10px;font-size:11px;font-weight:700;margin-right:4px;margin-top:4px}
+.obtn{padding:11px 22px;border-radius:14px;font-weight:800;font-size:14px;cursor:pointer;background:linear-gradient(135deg,#FF6B2B,#FF8C55);color:#fff;font-family:inherit;border:none;display:inline-block;box-shadow:0 4px 14px rgba(255,107,43,.35)}
+.obtn-s{background:#FFF0E8;color:#FF6B2B;box-shadow:none}
+.obtn-full{width:100%;display:block;text-align:center}
+.obtn:disabled{opacity:.5}
+.av{border-radius:18px;background:linear-gradient(135deg,#FFF0E8,#FFE4D6);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.inp{width:100%;padding:12px 14px;border-radius:12px;border:2px solid #F0F0F0;font-size:16px;background:#fff;font-family:inherit}
+.inp:focus{border-color:#FF6B2B;outline:none}
+.ov{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,.55);z-index:200;display:flex;align-items:flex-end;justify-content:center}
+.ov.top{align-items:flex-start}
+.mbox{background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:430px;max-height:92vh;overflow-y:auto;padding:24px}
+.mbox.full{border-radius:0;max-height:100vh}
+.pcard{background:#fff;border-radius:18px;overflow:hidden;margin-bottom:14px;box-shadow:0 2px 14px rgba(0,0,0,.07)}
+.upzone{border:2px dashed #FF6B2B;border-radius:18px;padding:28px 16px;text-align:center;background:#FFF0E8;position:relative;overflow:hidden}
+.upzone input{position:absolute;top:0;right:0;bottom:0;left:0;opacity:0;cursor:pointer;font-size:16px}
+#splash{position:relative;min-height:100vh;overflow:hidden;display:flex;flex-direction:column}
+.spc{position:relative;z-index:10;display:flex;flex-direction:column;justify-content:flex-end;flex:1;padding:0 24px calc(52px + env(safe-area-inset-bottom,0px))}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// ============================================
+// Supabase接続設定
+// ============================================
+var SUPABASE_URL = "https://qehaqosvytflojakyssx.supabase.co";
+var SUPABASE_KEY = "sb_publishable_yS2k2GRPTRzcfUGd9hdslQ_zbfloUFB";
+var sb = null;
+try{
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+}catch(e){
+  console.error("Supabase init failed:", e);
+}
+var currentUser = null; // ログイン中のSupabaseユーザー(auth)
+
+var AREAS=[
+  {area:"北海道・道央",resorts:["ニセコグラン比羅夫","ニセコアンヌプリ","ニセコビレッジ","ニセコHANAZONO","ルスツリゾート","キロロリゾート","サッポロテイネ","サッポロばんけいスキー場","札幌国際スキー場","朝里川温泉スキー場","定山渓スキー場","トマムスキー場","富良野スキー場","かなやまスキー場","桂沢国設スキー場","サンライバスキー場","だんぱらスキー場","オロフレスキー場","中山峠スキー場"]},
+  {area:"北海道・道北",resorts:["旭川カムイスキーリンクス","サンタプレゼントパーク","絵鞆スキー場","比布スキー場","なよろスキー場","士別サンピラースキー場","名寄ピヤシリスキー場","下川町スキー場","和寒スキー場","剣淵スキー場"]},
+  {area:"北海道・道東",resorts:["大雪山黒岳スキー場","サホロリゾート","阿寒湖温泉スキー場","摩周湖スキー場","北見スキー場","置戸スキー場","津別スキー場","斜里スキー場","清里スキー場","美幌スキー場"]},
+  {area:"北海道・道南",resorts:["函館七飯スノーパーク","大沼スキー場","恵山スキー場","鹿部スキー場","長万部スキー場","今金スキー場","黒松内スキー場","岩内スキー場","ニセコ山の家","共和スキー場"]},
+  {area:"東北・青森",resorts:["青森スプリングスキーリゾート","八甲田スキー場","酸ヶ湯スキー場","弘前スキー場","黒石スキー場","田代スキー場","碇ヶ関スキー場","大鰐温泉スキー場","十和田湖スキー場","三戸スキー場"]},
+  {area:"東北・岩手・秋田",resorts:["安比高原スキー場","八幡平リゾート","夏油高原スキー場","雫石スキー場","盛岡中央スキー場","秋田八幡平スキー場","たざわ湖スキー場","かたまえ山スキー場","湯沢市スキー場","雄物川スキー場"]},
+  {area:"東北・宮城・山形",resorts:["蔵王温泉スキー場","山形蔵王スキー場","天元台高原スキー場","白布温泉スキー場","米沢スキー場","赤倉スキー場","スプリングバレー泉スキー場","七ヶ宿スキー場","鳴子スキー場","神室スキー場"]},
+  {area:"東北・福島",resorts:["グランデコスノーリゾート","猫魔スキー場","アルツ磐梯スキー場","沼尻スキー場","箕輪スキー場","只見スキー場","南郷スキー場","羽鳥湖スキー場","いなわしろスキー場","高速滑降磐梯スキー場"]},
+  {area:"新潟・湯沢エリア",resorts:["苗場スキー場","GALA湯沢","湯沢中里スノーリゾート","神立スノーリゾート","石打丸山スキー場","かぐらスキー場","みつまたスキー場","田代スキー場","NASPAスキーガーデン","上越国際スキー場","六日町八海山スキー場","ホワイトバレースキー場"]},
+  {area:"新潟・妙高エリア",resorts:["妙高杉ノ原スキー場","赤倉観光リゾートスキー場","赤倉温泉スキー場","妙高スキーパーク","池の平温泉スキー場","シャルマン火打スキー場","キューピットバレイ","ロシアン岩原スキー場","関温泉スキー場","燕温泉スキー場"]},
+  {area:"長野・白馬エリア",resorts:["白馬八方尾根スキー場","白馬岩岳スノーフィールド","白馬五竜スキー場","Hakuba47","白馬コルチナスキー場","栂池高原スキー場","鹿島槍スキー場","白馬乗鞍温泉スキー場","白馬さのさかスキー場","姫川温泉スキー場"]},
+  {area:"長野・北信エリア",resorts:["野沢温泉スキー場","志賀高原スキー場","木島平スキー場","戸狩温泉スキー場","斑尾高原スキー場","タングラムスキーサーカス","黒姫高原スノーパーク","戸隠スキー場","飯綱高原スキー場","小丸山スキー場"]},
+  {area:"長野・中南信エリア",resorts:["菅平高原スノーリゾート","軽井沢プリンスホテルスキー場","車山高原SKYPARKスキー場","霧ヶ峰スキー場","富士見高原スキー場","パノラマスキー場","乗鞍高原温泉スキー場","Mt.乗鞍スノーリゾート","木曽福島スキー場","野麦峠スキー場"]},
+  {area:"群馬・栃木",resorts:["草津温泉スキー場","丸沼高原スキー場","たんばらスキーパーク","川場スキー場","水上高原スキーリゾート","奥利根スノーパーク","谷川岳天神平スキー場","宝台樹スキー場","尾瀬岩倉スキーリゾート","片品温泉スキー場","ハンターマウンテン塩原","那須温泉ファミリースキー場","日光湯元スキー場","エーデルワイススキーリゾート","ウインターライナーたかはら"]},
+  {area:"岐阜・福井",resorts:["ダイナランド","高鷲スノーパーク","ホワイトピアたかす","めいほうスキー場","ウイングヒルズ白鳥リゾート","鷲ヶ岳スキー場","大日ヶ岳ひるがのスキー場","奥美濃おおくら大原スキー場","スキージャム勝山","九頭竜スキー場","和泉スキー場","池田スキー場"]},
+  {area:"富山・石川",resorts:["極楽坂スキー場","牛岳温泉スキー場","立山山麓スキー場","ゴンドラスキー場","富山スキー場","医王山スキーパーク","白山一里野温泉スキー場","白山瀬女高原スキー場","奥獅子吼スキー場","白山白峰スキー場"]},
+  {area:"滋賀・京都・兵庫",resorts:["びわ湖バレイスキー場","グランスノー奥伊吹","箱館山スキー場","ハチ北高原スキー場","ハチ高原スキー場","神鍋高原スキー場","氷ノ山国際スキー場","ジャム勝スキー場","六甲山スノーパーク","峰山高原スキー場","天滝スキー場","若杉高原おおやスキー場"]},
+  {area:"中国・四国",resorts:["大山スキー場","大山ホワイトリゾート","奥大山スキー場","ちくさ高原スキー場","芸北国際スキー場","恐羅漢スノーパーク","深入山スノーパーク","蒜山高原スキー場","リゾートパーク大佐スキー場","氷ノ山国際スキー場（鳥取）","上齋原スキー場","岡山国際スキー場","瓶ヶ森スキー場","アクアスキー場","西条スキー場"]},
+  {area:"九州",resorts:["九重森林公園スキー場","五ヶ瀬ハイランドスキー場","天山スキー場","国見岳スキー場","大崩山スキー場","くじゅうスキー場","阿蘇スキー場","霧島国際スキー場","えびのスキー場","開聞岳スキー場"]}
+];
+var LEVELS=["初心者","初中級","中級","上級","エキスパート"];
+var CERTS=["JSBA会員","JSBA会員","スキー歴20年","スキー歴15年","スノースポーツ愛好家"];
+var ACTS=["スキー","スノーボード","両方","🎥 追い撮り・撮影"];
+var FEE=0.18;
+function calcF(p){var f=Math.round(p*FEE);return{fee:f,payout:p-f};}
+var USERS=[
+  {id:1,name:"ゆきな",age:26,act:"スノーボード",lv:"中級",resorts:["白馬八方尾根","ニセコグラン比羅夫"],icon:"🏂",isIns:false,bio:"週末ライダー！パウダー大好き❄️",posts:[],likes:24,ok:true},
+  {id:2,name:"こうすけ",age:32,act:"スキー",lv:"エキスパート",resorts:["蔵王温泉スキー場","白馬八方尾根"],icon:"⛷️",isIns:true,price:8000,unit:"2時間",bio:"元レーサー。カービングからパウダーまで一緒に滑りましょう！",phrase:"パウダーもコブも、できないをできるに。",exp:"スキー歴20年 / 全日本スキー選手権出場",certs:["スキー歴20年"],comps:[{name:"全日本スキー選手権",year:2019,rank:8},{name:"北海道スキー選手権",year:2021,rank:2}],posts:[{id:"p1",type:"video",url:"https://www.tiktok.com",cap:"先週の白馬！膝上パウダー",likes:42}],likes:87,ok:true},
+  {id:3,name:"あおい",age:29,act:"両方",lv:"上級",resorts:["ニセコグラン比羅夫","富良野スキー場"],icon:"🎿",isIns:false,bio:"北海道粉雪LOVEr🌨️",posts:[],likes:41,ok:true},
+  {id:8,name:"たくみ",age:28,act:"スノーボード",lv:"上級",resorts:["白馬八方尾根","ニセコグラン比羅夫","苗場スキー場"],icon:"🎥",isIns:false,isCam:true,price:4000,unit:"30分",bio:"スノボ歴10年のフリーカメラマン。GoProとミラーレス両方対応。追い撮り・パーク撮影得意です！",phrase:"あなたの滑りを最高の映像に残します。",camServices:["🎿 追い撮り","🛹 パーク・ジブ撮影","📸 写真撮影","✂️ 動画編集"],gear:["GoPro Hero12","Insta360 X3","DJI OM6"],posts:[{id:"pc1",type:"video",url:"https://www.tiktok.com",cap:"先週の白馬での追い撮りサンプル📹",likes:88}],likes:156,ok:true},
+  {id:9,name:"さおり",age:25,act:"スキー",lv:"中級",resorts:["蔵王温泉スキー場","野沢温泉"],icon:"📸",isIns:false,isCam:true,price:3000,unit:"30分",bio:"一眼レフ・GoProで撮影します。女性カメラマンなので女性の方も安心！編集込みプランもあり。",phrase:"思い出を形に残しましょう！",camServices:["🎿 追い撮り","📸 写真撮影","✂️ 動画編集込み"],gear:["GoPro Hero11","iPhone 15 Pro","Sony α7C"],posts:[],likes:89,ok:true},
+  {id:5,name:"けんじコーチ",age:38,act:"スキー",lv:"上級",resorts:["志賀高原","野沢温泉"],icon:"⛷️",isIns:true,price:6000,unit:"1時間",bio:"スキー歴20年。白馬・ニセコをホームゲレンデにしています。",phrase:"スキーは一生の趣味。一緒に楽しみましょう。",exp:"スキー歴15年 / 白馬エリアが得意",certs:["スキー歴20年"],comps:[],posts:[],likes:112,ok:true},
+  {id:6,name:"りな",age:27,act:"スノーボード",lv:"エキスパート",resorts:["白馬八方尾根","ニセコグラン比羅夫","苗場スキー場"],icon:"🏂",isIns:true,price:7000,unit:"2時間",bio:"JSBA会員。グラトリ・パーク・フリーランが得意！",phrase:"スノーボードの楽しさ、全部伝えます。",exp:"JSBA会員 / ハーフパイプ元日本代表",certs:["JSBA会員"],comps:[{name:"全日本スノーボード選手権 ハーフパイプ",year:2020,rank:3},{name:"JPSAプロスノーボードツアー",year:2022,rank:5}],posts:[{id:"p6",type:"video",url:"https://www.instagram.com",cap:"先週の白馬でグラトリ練習📸",likes:88}],likes:203,ok:true},
+  {id:7,name:"ひろし",age:45,act:"スキー",lv:"エキスパート",resorts:["野沢温泉","志賀高原","菅平高原"],icon:"⛷️",isIns:true,price:10000,unit:"2時間",bio:"スキー歴15年。国際大会出場経験あり。上級者・競技者と一緒に滑るのが好きです。",phrase:"一緒に最高の一本を滑りましょう。",exp:"スキー歴15年 / 元デモ選手 / W杯出場経験",certs:["スキー歴15年","スキー歴20年"],comps:[{name:"スキーワールドカップ",year:2015,rank:12},{name:"全日本スキー技術選手権",year:2018,rank:1},{name:"全日本スキー技術選手権",year:2019,rank:2}],posts:[],likes:156,ok:true}
+];
+var ROOMS_SAMPLE=[
+  {id:"r1",icon:"🏂",title:"グラトリ上達したい人集まれ！",cat:"スノーボード",members:24,msgs:[
+    {user:"ゆきな",icon:"🏂",t:"ollie安定してきたけどBS180がなかなか…",time:"08:12"},
+    {user:"りな",icon:"🏂",t:"私もそこで詰まりました！踏み切りのタイミングが全て。",time:"08:15"},
+    {user:"たつや",icon:"🏂",t:"後ろ足重心を意識したら一気に変わったよ！",time:"08:20"}
+  ],last:"後ろ足重心を意識したら一気に変わったよ！"},
+  {id:"r2",icon:"⛷️",title:"カービングターンを極めたい",cat:"スキー",members:18,msgs:[
+    {user:"こうすけ",icon:"⛷️",t:"外足荷重の感覚がつかめない人いる？",time:"09:30"},
+    {user:"けんじ",icon:"⛷️",t:"骨盤の向きが大事！ローテーションしすぎると外れる。",time:"09:35"},
+    {user:"まさき",icon:"⛷️",t:"動画撮って見返すのが一番の近道でした",time:"09:40"}
+  ],last:"動画撮って見返すのが一番の近道でした"},
+  {id:"r3",icon:"🌨️",title:"パウダー情報・今シーズンの積雪",cat:"情報共有",members:42,msgs:[
+    {user:"あおい",icon:"🎿",t:"ニセコ今週末どうですか？",time:"10:00"},
+    {user:"ゆきな",icon:"🏂",t:"昨日行ってきた！まだ膝上あったよ！",time:"10:05"},
+    {user:"こうすけ",icon:"⛷️",t:"明日早朝便で行きます。一緒に行ける人いたら！",time:"10:10"}
+  ],last:"明日早朝便で行きます。一緒に行ける人いたら！"},
+  {id:"r4",icon:"🎥",title:"滑り動画を見せ合おう・フォーム分析",cat:"動画",members:15,msgs:[
+    {user:"りな",icon:"🏂",t:"今日の滑りをTikTokに上げました！フォームどうでしょう",time:"11:00"},
+    {user:"けんじ",icon:"⛷️",t:"上体がちょっと被り気味かな。でも全体的に綺麗！",time:"11:08"},
+    {user:"あおい",icon:"🎿",t:"私もアップしたので見てください！",time:"11:20"}
+  ],last:"私もアップしたので見てください！"},
+  {id:"r5",icon:"🏔️",title:"初心者・今シーズン始めた人の部屋",cat:"初心者",members:31,msgs:[
+    {user:"はな",icon:"🏂",t:"リフトの乗り降りがまだ怖いです…",time:"12:00"},
+    {user:"ゆきな",icon:"🏂",t:"わかる！最初は降り場でターンせず直進が楽だよ",time:"12:05"},
+    {user:"りな",icon:"🏂",t:"私も最初そこで転びまくりました笑 すぐ慣れます！",time:"12:10"}
+  ],last:"すぐ慣れます！"}
+];
+var CHECKIN_SAMPLE=[
+  {id:"c1",user:"ゆきな",icon:"🏂",resort:"白馬八方尾根",snow:"パウダー最高❄️",time:"08:30",likes:12},
+  {id:"c2",user:"こうすけ",icon:"⛷️",resort:"ニセコグラン比羅夫",snow:"膝上パウダー！視界良好",time:"09:15",likes:8},
+  {id:"c3",user:"あおい",icon:"🎿",resort:"野沢温泉",snow:"圧雪バーン。スピード出る！",time:"10:00",likes:5}
+];
+var REPORT_SAMPLE=[
+  {id:"r1",user:"ゆきな",icon:"🏂",resort:"白馬八方尾根",snow:"⭐⭐⭐⭐⭐",crowd:"⭐⭐⭐",comment:"朝一のパウダーが最高でした！リフト待ちほぼなし。",date:"2024/4/1",likes:24},
+  {id:"r2",user:"こうすけ",icon:"⛷️",resort:"ニセコグラン比羅夫",snow:"⭐⭐⭐⭐⭐",crowd:"⭐⭐",comment:"インバウンドが多いが雪質は別格。コブも良い感じ。",date:"2024/4/1",likes:18},
+  {id:"r3",user:"りな",icon:"🏂",resort:"苗場スキー場",snow:"⭐⭐⭐",crowd:"⭐⭐⭐⭐",comment:"週末なので混雑あり。でもパークのコンディション最高！",date:"2024/3/31",likes:11}
+];
+
+var QA_DATA=[
+  {cat:"🏂 スノーボード",items:[
+    {q:"ワックスのかけ方を教えて！",a:"①板の汚れをクリーナーで拭く　②固形ワックスをアイロンで溶かしながら塗る（アイロン温度は110〜120℃）　③冷めたらスクレーパーで削る　④ブラシで仕上げる。最初は簡易ワックス（塗るだけタイプ）でもOKです！"},
+    {q:"板の保管方法（オフシーズン）",a:"①エッジを錆び止めワックス（スプレータイプでOK）でコーティング　②バインディングは外して保管　③直射日光・湿気を避けた場所に立てかけて保管　④バインディングのストラップは留めない。できれば板専用袋に入れると◎"},
+    {q:"エッジのメンテナンス方法",a:"エッジが丸くなると切れ味が落ちます。ファイルやダイヤモンドストーンで研磨します。サイドエッジは90°が基本。慣れないうちはショップに依頼するのがおすすめです（1,000〜3,000円程度）。"},
+    {q:"ブーツのインナーを乾かす方法",a:"①滑走後はインナーを外して乾燥　②新聞紙を詰めると水分を吸収してくれる　③ブーツドライヤーが一番効果的（2,000〜5,000円で購入可能）　④直接暖房に当てると変形するのでNG。"},
+    {q:"バインディングの角度はどう設定する？",a:"初心者は前足12〜18°・後足0〜-9°のダックスタンスがおすすめ。グラトリは前足15°・後足-15°の完全ダックが多い。カービングは前足21〜27°・後足9〜15°の前向きが多いです。スタンス幅は肩幅を基準に。"}
+  ]},
+  {cat:"⛷️ スキー",items:[
+    {q:"スキー板のワックスのかけ方",a:"基本はスノーボードと同じ。①クリーニング　②ホットワックス塗布（アイロン115〜120℃）　③スクレーピング　④ブラッシング。スキーは板が2本あるので両面均一に。シーズン初めと終わりは必ずケアを。"},
+    {q:"ビンディングの開放値（DIN）って何？",a:"転倒時にブーツが外れる強度の設定値です。体重・身長・スキーレベルで決まります。低すぎると転倒時に外れやすく、高すぎると外れず怪我の原因に。購入時にショップで調整してもらうのが基本です。"},
+    {q:"ストックの長さはどう選ぶ？",a:"ストックを逆さに持って（先端を上に）グリップを握ったとき、肘が90°になる長さが目安。身長×0.68が簡易計算式です。例：身長170cmなら約115cm。"},
+    {q:"スキーブーツが痛い時の対処法",a:"①インナーの慣らし期間は2〜3日かかることも　②バックルは締めすぎない（足首→甲→ふくらはぎの順）　③インソール交換で大幅改善する場合あり　④ショップでカスタムインナーを成形してもらうのが一番効果的。"}
+  ]},
+  {cat:"🎥 追い撮り・カメラ",items:[
+    {q:"GoProでゲレンデ撮影するおすすめ設定",a:"【基本設定】モード:動画 解像度:4K/60fps（なければ1080p/60fps） FOV:ワイド SuperView ON　【追い撮り】手ぶれ補正HyperSmoothをON　【逆光対策】露出補正を+0.5〜1.0EV上げる。バッテリーは必ずフル充電＋予備を持参！"},
+    {q:"Insta360で綺麗に撮るコツ",a:"①Insta360は自撮り棒が映らない魔法の機能あり。専用の見えない自撮り棒を使うと映像がかっこよくなる。②アプリのAI編集機能で自動ハイライト動画が作れる。③転倒など激しい動きはFlowStateを使うと滑らかに。"},
+    {q:"iPhoneで追い撮りするコツ",a:"①アクションモード（iPhone14以降）をONにする　②4K/60fpsで撮影　③ジンバルと組み合わせると更に滑らか　④晴天のゲレンデは白飛びしやすいのでHDRモードがおすすめ　⑤バッテリーは寒さで急減するのでモバイルバッテリー必携。"},
+    {q:"追い撮りの距離とポジションは？",a:"【距離】3〜5mが基本。近すぎると転倒時に危険、遠すぎると迫力が出ない。【ポジション】斜め後方45°から撮ると立体感が出る。真後ろより少し横から。【スピード】被写体より少し速く滑れることが前提。ゆっくり滑る被写体なら初心者でも対応可能。"}
+  ]},
+  {cat:"🔰 初心者向け",items:[
+    {q:"スキー・スノボ、どちらから始めるべき？",a:"【スキー】最初の3日間が早く上達しやすい。足が別々なので直感的。でも上級者への道は長い。【スノーボード】最初の2〜3日が特にきつい（転倒が多い）。でもある程度慣れると上達が速い。どちらも楽しいので好みで選んでOK！仲間がいる方を選ぶのも◎"},
+    {q:"スキー場の暗黙のルールって？",a:"①上から滑ってくる人が優先　②コースを横切るときは上を確認　③止まるときはコースの端で　④リフト乗り場は割り込みNG　⑤コース外への立入禁止エリアには入らない　⑥他の人との接触は絶対避ける。これを守るだけで安全に楽しめます！"},
+    {q:"リフトの乗り降りのコツ",a:"【乗るとき】乗り場の線で止まり、リフトが来たら軽く座る。スノーボードは後ろ足を外してフリーにしておく。【降りるとき】降り場が見えたら板を前に向けて準備。リフトから降りたらすぐ脇に移動して道を空ける。転んでもOK、焦らず。"},
+    {q:"初心者におすすめのゲレンデは？",a:"【北海道】キロロ・ルスツ（緩斜面が多く初心者向け）【長野】軽井沢プリンス（人工雪で滑りやすい）【新潟】GALA湯沢（駅直結で便利）。共通して「初心者向けゲレンデが広い」「スキースクールが充実している」場所を選ぶのがポイントです。"}
+  ]}
+];
+
+var TERMS=[{id:"a",icon:"🩹",title:"怪我・事故は自己責任",body:"スキー中の怪我や事故についてSnowMatchは責任を負いません。"},{id:"b",icon:"🛡️",title:"スポーツ保険への加入を推奨",body:"万が一に備えスポーツ傷害保険への加入を強くお勧めします。"},{id:"c",icon:"🚫",title:"勧誘・マルチ行為の禁止",body:"宗教・投資等の勧誘行為は厳禁。違反次第アカウント停止します。"},{id:"d",icon:"🤝",title:"ハラスメント行為の禁止",body:"性的ハラスメント・ストーキング・差別的言動を一切禁じます。"},{id:"e",icon:"✅",title:"虚偽情報の登録禁止",body:"資格・経歴の偽りなど虚偽記載は禁止。即アカウント停止します。"},{id:"f",icon:"🪪",title:"本人確認への協力義務",body:"全ユーザーに本人確認書類の提出を義務付けます。"},{id:"g",icon:"💳",title:"Stripe決済",body:"決済・資金管理はStripeが行います。SnowMatchはお金を預かりません。完了確認後にStripeが自動で振込します。"},{id:"h",icon:"🔒",title:"個人情報保護",body:"本名は本人確認のみ使用し他のユーザーには公開されません。"},{id:"i",icon:"🎿",title:"スキー場ルール・無許可レッスン禁止",body:"スキー場で許可なくレッスン行為を行うことは禁止されています。SnowMatchは『一緒に滑る仲間を見つける』コミュニティです。許可なき場所での指導・レッスン行為は行わないでください。SNSの動画撮影・滑りを一緒に見る・同行してもらう・仲間になるという目的の範囲でご利用ください。【重要】活動は必ずコース内で行ってください。バックカントリー・コース外への立入は遭難・雪崩・転落などの重大事故につながる危険があります。コース外での活動は当社では一切推奨せず、万が一の事故についても当社は責任を負いません。"}];
+
+var S={pg:"splash",blockedUsers:[],reportedUsers:[],showContact:false,showDeleteAccount:false,unreadChat:1,unreadBook:0,showWelcome:false,showNotif:false,following:[],followers:[2,5],showFollowList:false,followListType:"following",notifs:[{id:"n1",type:"like",icon:"❤️",msg:"こうすけがあなたにいいねしました",time:"5分前",read:false},{id:"n2",type:"msg",icon:"💬",msg:"ゆきなさんからメッセージが届きました",time:"12分前",read:false},{id:"n3",type:"match",icon:"🎿",msg:"けんじコーチとマッチングしました！",time:"1時間前",read:true},{id:"n4",type:"book",icon:"✅",msg:"予約が確定しました。一緒に楽しみましょう！",time:"2時間前",read:true},{id:"n5",type:"review",icon:"⭐",msg:"りなに口コミが投稿されました",time:"昨日",read:true}],rooms:{},checkins:[],reports:[],marketTab:"room",rankCat:"総合",openQA:null,openQAItem:null,showCheckin:false,showReport:false,openRoom:null,roomInput:"",splashIdx:0,onStep:0,kycStep:0,tab:"explore",selArea:null,selResort:null,openArea:null,openAreaReg:null,selAct:null,insOnly:false,camOnly:false,selCert:null,selUser:null,chatUser:null,chatMsgs:{"2":[{f:"t",t:"今週末、白馬一緒に滑りませんか？追い撮りもお願いしたいです！",time:"10:30"},{f:"m",t:"もちろん！どのコースが好みですか？リフトで一緒に上がりながら相談しましょう",time:"10:45"}]},chatIn:"",liked:[],matches:[],bookUser:null,confirmed:null,postLikes:{},addPost:false,postDetail:null,reviewTarget:null,reviewRating:5,reviewComment:"",selPayment:"card",npType:"video",npCap:"",npImgSrc:null,npVideoSrc:null,npUrlInput:"",termChecks:{},myProfile:null,reg:{role:"user",nick:"",real:"",age:"",email:"",pw:"",act:"スノーボード",lv:"中級",resorts:[],bio:"",isIns:false,isCam:false,price:5000,unit:"1時間",camPrice:3000,camUnit:"30分",camMenu:[],icon:"🏂"}};
+
+function saveD(){try{localStorage.setItem("sm2",JSON.stringify({myProfile:S.myProfile,reg:S.reg,liked:S.liked,postLikes:S.postLikes,matches:S.matches,chatMsgs:S.chatMsgs}));}catch(e){}}
+function loadD(){try{var r=localStorage.getItem("sm2");if(!r)return false;var d=JSON.parse(r);if(d.myProfile){S.myProfile=d.myProfile;S.pg="main";}if(d.reg){S.reg=d.reg;if(!S.reg.resorts)S.reg.resorts=[];}if(d.liked)S.liked=d.liked;if(d.postLikes)S.postLikes=d.postLikes;if(d.matches)S.matches=d.matches;if(d.chatMsgs)S.chatMsgs=d.chatMsgs;return!!d.myProfile;}catch(e){return false;}}
+function clearD(){try{localStorage.removeItem("sm2");}catch(e){}}
+
+function R(u){if(u){var k=Object.keys(u);for(var i=0;i<k.length;i++)S[k[i]]=u[k[i]];}render();}
+
+function mk(tag,a,ch){
+  var e=document.createElement(tag);
+  if(a){var k=Object.keys(a);for(var i=0;i<k.length;i++){var kk=k[i],v=a[kk];
+    if(kk==="class")e.className=v;
+    else if(kk==="style"&&typeof v==="object"){var sk=Object.keys(v);for(var j=0;j<sk.length;j++)e.style[sk[j]]=v[sk[j]];}
+    else if(kk==="onClick")e.addEventListener("click",v);
+    else if(kk==="type")e.type=v;
+    else if(kk==="accept")e.accept=v;
+    else if(kk==="src")e.src=v;
+    else if(kk==="rows")e.rows=v;
+    else if(kk==="disabled")e.disabled=v;
+    else if(kk==="checked")e.checked=v;
+    else if(kk==="controls"&&v)e.setAttribute("controls","");
+    else if(kk==="playsInline"&&v){e.setAttribute("playsinline","");e.setAttribute("webkit-playsinline","");}
+    else if(kk==="preload")e.setAttribute("preload",v);
+    else e.setAttribute(kk,v);
+  }}
+  if(ch){for(var ci=0;ci<ch.length;ci++){var c=ch[ci];if(c==null||c===false)continue;if(typeof c==="string")e.appendChild(document.createTextNode(c));else e.appendChild(c);}}
+  return e;
+}
+function d(a,ch){return mk("div",a,ch);}
+function sp(a,t){var e=mk("span",a);if(t!=null)e.textContent=t;return e;}
+function p2(a,t){var e=mk("p",a);if(t!=null)e.textContent=t;return e;}
+function b2(a,t){var e=mk("button",a);if(t)e.textContent=t;return e;}
+function i2(a){return mk("input",a);}
+function t2(a){return mk("textarea",a);}
+function av(sz,fs,icon){var e=d({class:"av",style:{width:sz+"px",height:sz+"px",fontSize:fs+"px"}});e.textContent=icon;return e;}
+function obtn(txt,fn,cls){var c="obtn"+(cls?" "+cls:"");return b2({class:c,onClick:fn},txt);}
+function chip2(txt,active,fn){return b2({class:"chip"+(active?" on":""),onClick:fn},txt);}
+
+function svc(url){
+  if(!url)return{icon:"🎬",name:"動画",bg:"#333"};
+  if(url.indexOf("tiktok.com")>=0)return{icon:"🎵",name:"TikTok",bg:"linear-gradient(135deg,#010101,#69C9D0)"};
+  if(url.indexOf("youtube.com")>=0||url.indexOf("youtu.be")>=0)return{icon:"▶️",name:"YouTube",bg:"linear-gradient(135deg,#FF0000,#CC0000)"};
+  if(url.indexOf("instagram.com")>=0)return{icon:"📸",name:"Instagram",bg:"linear-gradient(135deg,#833AB4,#FD1D1D)"};
+  if(url.indexOf("twitter.com")>=0||url.indexOf("x.com")>=0)return{icon:"✖️",name:"X",bg:"#000"};
+  if(url.indexOf("vimeo.com")>=0)return{icon:"🎬",name:"Vimeo",bg:"#1AB7EA"};
+  return{icon:"🎬",name:"動画を見る",bg:"linear-gradient(135deg,#FF6B2B,#FF8C55)"};
+}
+
+function Modal(full,onClose,fn){
+  var ov=d({class:"ov"+(full?" top":""),onClick:onClose});
+  var box=d({class:"mbox"+(full?" full":""),onClick:function(e){e.stopPropagation();}});
+  fn(box); ov.appendChild(box); return ov;
+}
+
+function PostCard(post){
+  var lk=S.postLikes[post.id]||false;
+  var cnt=post.likes+(lk?1:0);
+  var wrap=d({class:"pcard"});
+  var cap=post.cap||post.caption||"";
+  if(post.type==="video"&&post.url){
+    var sv=svc(post.url);
+    var lc=d({style:{display:"flex",alignItems:"center",gap:"12px",background:sv.bg,padding:"16px",cursor:"pointer"},onClick:function(){window.open(post.url,"_blank");}});
+    var ico=d({style:{fontSize:"36px",flexShrink:"0"}});ico.textContent=sv.icon;
+    var li=d({style:{flex:"1",minWidth:"0"}});
+    var lt=d({style:{fontWeight:"800",color:"#fff",fontSize:"15px",marginBottom:"3px"}});lt.textContent=sv.name+" で見る ▶";
+    var lu=d({style:{color:"rgba(255,255,255,.75)",fontSize:"11px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}});lu.textContent=post.url;
+    li.appendChild(lt);li.appendChild(lu);lc.appendChild(ico);lc.appendChild(li);wrap.appendChild(lc);
+  }
+  if(post.type==="image"&&post.url){
+    var iw=d({style:{position:"relative",cursor:"pointer"},onClick:function(){S.postDetail=post;render();}});
+    var im=mk("img",{src:post.url});im.style.maxHeight="400px";im.style.objectFit="cover";
+    var zm=d({style:{position:"absolute",top:"10px",right:"10px",background:"rgba(0,0,0,.45)",borderRadius:"20px",padding:"4px 10px",color:"#fff",fontSize:"12px",fontWeight:"700"}});zm.textContent="🔍 拡大";
+    iw.appendChild(im);iw.appendChild(zm);wrap.appendChild(iw);
+  }
+  var body=d({style:{padding:"12px 14px 10px"}});
+  if(cap){
+    var ce=p2({style:{margin:"0",fontSize:"13.5px",color:"#1A1A2E",lineHeight:"1.65",whiteSpace:"pre-wrap",cursor:"pointer"},onClick:function(){S.postDetail=post;render();}},cap);
+    body.appendChild(ce);
+  }
+  var lrow=d({style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:"10px"}});
+  var lr=d({style:{display:"flex",alignItems:"center",gap:"6px"}});
+  var lb=b2({style:{fontSize:"20px",padding:"4px",background:"none",border:"none",cursor:"pointer"}},lk?"❤️":"🤍");
+  lb.addEventListener("click",function(e){e.stopPropagation();S.postLikes[post.id]=!lk;render();});
+  lr.appendChild(lb);lr.appendChild(sp({style:{fontSize:"12px",color:"#6B7280",fontWeight:"700"}},String(cnt)));
+  var more=b2({class:"obtn obtn-s",style:{fontSize:"12px",padding:"4px 10px"},onClick:function(){S.postDetail=post;render();}},"詳細 ›");
+  lrow.appendChild(lr);lrow.appendChild(more);body.appendChild(lrow);wrap.appendChild(body);return wrap;
+}
+
+function PostDetailModal(post){
+  return Modal(false,function(){S.postDetail=null;render();},function(box){
+    var cap=post.cap||post.caption||"";
+    if(post.type==="video"&&post.url){
+      var sv=svc(post.url);
+      var lc=d({style:{display:"flex",alignItems:"center",gap:"14px",background:sv.bg,borderRadius:"16px",padding:"18px",marginBottom:"16px",cursor:"pointer"},onClick:function(){window.open(post.url,"_blank");}});
+      var ico=d({style:{fontSize:"40px",flexShrink:"0"}});ico.textContent=sv.icon;
+      var li=d({style:{flex:"1",minWidth:"0"}});
+      var lt=d({style:{fontWeight:"800",color:"#fff",fontSize:"16px",marginBottom:"4px"}});lt.textContent=sv.name+" で見る";
+      var lu=d({style:{color:"rgba(255,255,255,.75)",fontSize:"12px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}});lu.textContent=post.url;
+      var lm=d({style:{color:"rgba(255,255,255,.9)",fontSize:"13px",marginTop:"6px",fontWeight:"700"}});lm.textContent="タップして開く ▶";
+      li.appendChild(lt);li.appendChild(lu);li.appendChild(lm);lc.appendChild(ico);lc.appendChild(li);box.appendChild(lc);
+    }
+    if(post.type==="image"&&post.url){var im=mk("img",{src:post.url});im.style.cssText="width:100%;border-radius:16px;margin-bottom:16px;max-height:70vh;object-fit:contain;background:#000";box.appendChild(im);}
+    if(cap)box.appendChild(p2({style:{fontSize:"14px",color:"#1A1A2E",lineHeight:"1.75",whiteSpace:"pre-wrap",marginBottom:"16px"}},cap));
+    box.appendChild(obtn("← 戻る",function(){S.postDetail=null;render();},"obtn-full obtn-s"));
+  });
+}
+
+function handleUpload(e){
+  var file=e.target.files[0];if(!file)return;
+  if(file.type.indexOf("image/")!==0){alert("画像ファイルを選んでください");return;}
+  var fr=new FileReader();
+  fr.onload=function(ev){S.npImgSrc=ev.target.result;render();};
+  fr.readAsDataURL(file);e.target.value="";
+}
+
+function AddPostModal(){
+  return Modal(false,function(){S.addPost=false;S.npCap="";S.npImgSrc=null;S.npVideoSrc=null;S.npType="video";S.npUrlInput="";render();},function(box){
+    var title=d({style:{fontWeight:"900",fontSize:"18px",color:"#1A1A2E",marginBottom:"16px"}});title.textContent="投稿を追加";box.appendChild(title);
+    var tabs=d({style:{display:"flex",gap:"8px",marginBottom:"16px"}});
+    var tabDefs=[["video","🎥 動画リンク"],["photo","📸 写真"],["text","📝 テキスト"]];
+    for(var ti=0;ti<tabDefs.length;ti++){
+      (function(tid,tlbl){
+        var tb=b2({class:"chip"+(S.npType===tid?" on":"")},tlbl);
+        tb.addEventListener("click",function(){S.npType=tid;render();});
+        tabs.appendChild(tb);
+      })(tabDefs[ti][0],tabDefs[ti][1]);
+    }
+    box.appendChild(tabs);
+    if(S.npType==="video"){
+      var ul=d({style:{fontSize:"12px",fontWeight:"700",color:"#6B7280",marginBottom:"6px"}});ul.textContent="動画URL（TikTok・YouTube・Instagram等）";box.appendChild(ul);
+      var ui2=i2({type:"url",class:"inp",style:{marginBottom:"12px"}});ui2.placeholder="https://www.tiktok.com/...";ui2.value=S.npUrlInput||"";
+      ui2.addEventListener("input",function(ev){S.npUrlInput=ev.target.value;});box.appendChild(ui2);
+    }
+    if(S.npType==="photo"){
+      var pl=d({style:{fontSize:"12px",fontWeight:"700",color:"#6B7280",marginBottom:"8px"}});pl.textContent="写真を選択";box.appendChild(pl);
+      var pz=d({style:{border:"2px dashed #E8E8E8",borderRadius:"16px",padding:"24px",textAlign:"center",marginBottom:"12px",cursor:"pointer"}});
+      var pico=d({style:{fontSize:"36px",marginBottom:"6px"}});pico.textContent=S.npImgSrc?"✅":"📷";
+      var ptx=d({style:{color:"#6B7280",fontSize:"13px"}});ptx.textContent=S.npImgSrc?"写真が選択されました":"タップして写真を選択";
+      pz.appendChild(pico);pz.appendChild(ptx);
+      var pfi=document.createElement("input");pfi.type="file";pfi.accept="image/*";pfi.style.display="none";
+      pfi.addEventListener("change",function(ev){
+        var f=ev.target.files[0];if(!f)return;
+        var rd=new FileReader();rd.onload=function(e2){S.npImgSrc=e2.target.result;render();};rd.readAsDataURL(f);
+      });
+      pz.addEventListener("click",function(){pfi.click();});
+      box.appendChild(pz);box.appendChild(pfi);
+    }
+    var cl=d({style:{fontSize:"12px",fontWeight:"700",color:"#6B7280",marginBottom:"6px"}});cl.textContent="キャプション";box.appendChild(cl);
+    var cta=document.createElement("textarea");cta.className="inp";cta.rows=3;cta.placeholder="滑りのコメントを入力...";cta.style.marginBottom="16px";cta.value=S.npCap||"";
+    cta.addEventListener("input",function(ev){S.npCap=ev.target.value;});box.appendChild(cta);
+    var pb=b2({class:"obtn obtn-full",style:{fontSize:"16px",padding:"14px",fontWeight:"900"}},"💾 投稿して保存する");
+    pb.addEventListener("click",function(){
+      var uEl=document.querySelector(".mbox input[type=url]");
+      var cEl=document.querySelector(".mbox textarea");
+      var uv=uEl?uEl.value.trim():"";
+      var cv=cEl?cEl.value.trim():(S.npCap||"").trim();
+      if(S.npType==="video"){if(!uv){alert("URLを入力してください");return;}S.npVideoSrc=uv;}
+      if(S.npType==="text"&&!cv){alert("テキストを入力してください");return;}
+      if(S.npType==="photo"&&!S.npImgSrc){alert("写真を選んでください");return;}
+      var post=null;
+      if(S.npType==="text")post={id:"p"+Date.now(),type:"text",url:"",cap:cv,likes:0};
+      else if(S.npType==="video")post={id:"p"+Date.now(),type:"video",url:S.npVideoSrc,cap:cv,likes:0};
+      else if(S.npType==="photo")post={id:"p"+Date.now(),type:"image",url:S.npImgSrc,cap:cv,likes:0};
+      if(!post)return;
+      if(!S.myProfile.posts)S.myProfile.posts=[];
+      S.myProfile.posts.unshift(post);saveD();
+      pb.textContent="✅ 投稿しました！";pb.style.background="#22C55E";
+      setTimeout(function(){S.addPost=false;S.npCap="";S.npImgSrc=null;S.npVideoSrc=null;S.npType="video";S.npUrlInput="";render();},800);
+    });
+    box.appendChild(pb);
+  });
+}
+
+function BookModal(u){
+  var fp=calcF(u.price);
+  var nd=new Date();nd.setDate(nd.getDate()+(7-nd.getDay()+1)%7||7);
+  var nm=nd.toLocaleDateString("ja-JP");
+  return Modal(false,function(){R({bookUser:null});},function(box){
+    var title=d({style:{fontWeight:"900",fontSize:"18px",color:"#1A1A2E",marginBottom:"14px"}});title.textContent="同行・サービス予約";box.appendChild(title);
+    var sm=d({style:{background:"#F5F7FA",borderRadius:"16px",padding:"16px",marginBottom:"12px"}});
+    var rows=[["同行者",u.name],["同行費用","¥"+u.price.toLocaleString()+" / "+u.unit],["合計","¥"+u.price.toLocaleString()]];
+    for(var ri=0;ri<rows.length;ri++){
+      var r=d({style:{display:"flex",justifyContent:"space-between",marginBottom:ri<2?"8px":"0",paddingTop:ri===2?"10px":"0",borderTop:ri===2?"1px dashed #E0E0E0":"none"}});
+      r.appendChild(sp({style:{color:"#6B7280",fontSize:"13px"}},rows[ri][0]));
+      r.appendChild(sp({style:{fontWeight:ri===2?"900":"700",fontSize:ri===2?"18px":"14px",color:"#1A1A2E"}},rows[ri][1]));
+      sm.appendChild(r);
+    }
+    box.appendChild(sm);
+    var esc=d({style:{background:"#F0F7FF",border:"1.5px solid #90CAF9",borderRadius:"14px",padding:"14px",marginBottom:"12px"}});
+    var et=d({style:{fontWeight:"800",color:"#1565C0",fontSize:"13px",marginBottom:"8px"}});et.textContent="🔐 エスクロー決済の流れ";esc.appendChild(et);
+    var steps=["① Stripeが安全に決済・預かり","② 同行・撮影サービス実施後に完了確認","③ Stripeが自動振込（"+nm+"予定）"];
+    for(var si=0;si<steps.length;si++){var sd=d({style:{fontSize:"12.5px",color:"#1A237E",lineHeight:"1.8"}});sd.textContent=steps[si];esc.appendChild(sd);}
+    box.appendChild(esc);
+    // 支払い方法選択
+    var pmTitle=document.createElement("div");pmTitle.style.cssText="font-weight:800;color:#1A1A2E;font-size:14px;margin-bottom:10px";pmTitle.textContent="💳 支払い方法を選択";box.appendChild(pmTitle);
+    if(!S.selPayment)S.selPayment="card";
+    var pmMethods=[
+      {id:"card",icon:"💳",name:"クレジットカード",sub:"Visa / Master / JCB / Amex",color:"#1A1A2E",bg:"#F5F7FA",border:"#E8E8E8"},
+      {id:"paypay",icon:"🔴",name:"PayPay",sub:"残高・クレジット・銀行口座",color:"#FF0033",bg:"#FFF0F0",border:"#FF9999"},
+      {id:"applepay",icon:"🍎",name:"Apple Pay",sub:"Touch ID / Face IDで支払い",color:"#1A1A2E",bg:"#F5F7FA",border:"#E8E8E8"},
+      {id:"googlepay",icon:"🔵",name:"Google Pay",sub:"Googleアカウントで支払い",color:"#4285F4",bg:"#F0F4FF",border:"#A8C4FF"}
+    ];
+    var pmGrid=document.createElement("div");pmGrid.style.cssText="display:flex;flex-direction:column;gap:8px;margin-bottom:14px";
+    for(var pmi=0;pmi<pmMethods.length;pmi++){
+      (function(pm){
+        var isSelected=(S.selPayment===pm.id);
+        var pmRow=document.createElement("div");
+        pmRow.style.cssText="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;border:2px solid "+(isSelected?"#FF6B2B":pm.border)+";background:"+(isSelected?"#FFF0E8":pm.bg)+";cursor:pointer";
+        pmRow.addEventListener("click",function(){S.selPayment=pm.id;render();});
+        var pmIcon=document.createElement("div");pmIcon.style.cssText="font-size:24px;flex-shrink:0";pmIcon.textContent=pm.icon;
+        var pmInfo=document.createElement("div");pmInfo.style.cssText="flex:1";
+        var pmName=document.createElement("div");pmName.style.cssText="font-weight:800;font-size:14px;color:"+pm.color;pmName.textContent=pm.name;
+        var pmSub=document.createElement("div");pmSub.style.cssText="font-size:11px;color:#9CA3AF;margin-top:2px";pmSub.textContent=pm.sub;
+        pmInfo.appendChild(pmName);pmInfo.appendChild(pmSub);
+        var pmCheck=document.createElement("div");pmCheck.style.cssText="width:20px;height:20px;border-radius:10px;border:2px solid "+(isSelected?"#FF6B2B":"#D1D5DB")+";background:"+(isSelected?"#FF6B2B":"#fff")+";display:flex;align-items:center;justify-content:center;flex-shrink:0";
+        if(isSelected){var chk=document.createElement("span");chk.style.cssText="color:#fff;font-size:11px;font-weight:900";chk.textContent="✓";pmCheck.appendChild(chk);}
+        pmRow.appendChild(pmIcon);pmRow.appendChild(pmInfo);pmRow.appendChild(pmCheck);
+        pmGrid.appendChild(pmRow);
+      })(pmMethods[pmi]);
+    }
+    box.appendChild(pmGrid);
+
+    // カード入力フォーム
+    if(S.selPayment==="card"){
+      var cardForm=document.createElement("div");cardForm.style.cssText="background:#F5F7FA;border-radius:14px;padding:14px;margin-bottom:14px";
+      var cardLbl=document.createElement("div");cardLbl.style.cssText="font-size:12px;font-weight:700;color:#6B7280;margin-bottom:10px";cardLbl.textContent="カード情報（デモ用）";cardForm.appendChild(cardLbl);
+      var cardNum=document.createElement("input");cardNum.type="text";cardNum.className="inp";cardNum.placeholder="1234 5678 9012 3456";cardNum.style.marginBottom="8px";cardNum.maxLength=19;
+      cardNum.addEventListener("input",function(e){var v=e.target.value.replace(/[^0-9]/g,"").replace(/(.{4})/g,"$1 ").trim();e.target.value=v;});
+      cardForm.appendChild(cardNum);
+      var cardRow=document.createElement("div");cardRow.style.cssText="display:flex;gap:8px";
+      var cardExp=document.createElement("input");cardExp.type="text";cardExp.className="inp";cardExp.placeholder="MM/YY";cardExp.style.flex="1";cardExp.maxLength=5;
+      cardExp.addEventListener("input",function(e){var v=e.target.value.replace(/[^0-9]/g,"");if(v.length>=2)v=v.slice(0,2)+"/"+v.slice(2);e.target.value=v;});
+      var cardCvc=document.createElement("input");cardCvc.type="text";cardCvc.className="inp";cardCvc.placeholder="CVC";cardCvc.style.flex="1";cardCvc.maxLength=4;
+      cardRow.appendChild(cardExp);cardRow.appendChild(cardCvc);cardForm.appendChild(cardRow);box.appendChild(cardForm);
+    }
+    // PayPay
+    if(S.selPayment==="paypay"){
+      var ppBox=document.createElement("div");ppBox.style.cssText="background:#FFF0F0;border:1.5px solid #FF0033;border-radius:14px;padding:16px;margin-bottom:14px;text-align:center";
+      var ppT=document.createElement("div");ppT.style.cssText="font-size:36px;margin-bottom:6px";ppT.textContent="🔴";
+      var ppN=document.createElement("div");ppN.style.cssText="font-weight:800;color:#FF0033;font-size:14px;margin-bottom:4px";ppN.textContent="PayPayで支払う";
+      var ppS=document.createElement("div");ppS.style.cssText="font-size:12px;color:#9CA3AF";ppS.textContent="決済ボタンを押すとPayPayアプリが起動します";
+      ppBox.appendChild(ppT);ppBox.appendChild(ppN);ppBox.appendChild(ppS);box.appendChild(ppBox);
+    }
+    // Apple Pay
+    if(S.selPayment==="applepay"){
+      var apBox=document.createElement("div");apBox.style.cssText="background:#F5F7FA;border:1.5px solid #1A1A2E;border-radius:14px;padding:16px;margin-bottom:14px;text-align:center";
+      var apN=document.createElement("div");apN.style.cssText="font-weight:800;color:#1A1A2E;font-size:15px;margin-bottom:4px";apN.textContent="🍎 Apple Pay";
+      var apS=document.createElement("div");apS.style.cssText="font-size:12px;color:#9CA3AF";apS.textContent="Touch ID / Face IDで認証して支払います";
+      apBox.appendChild(apN);apBox.appendChild(apS);box.appendChild(apBox);
+    }
+    // Google Pay
+    if(S.selPayment==="googlepay"){
+      var gpBox=document.createElement("div");gpBox.style.cssText="background:#F0F4FF;border:1.5px solid #4285F4;border-radius:14px;padding:16px;margin-bottom:14px;text-align:center";
+      var gpN=document.createElement("div");gpN.style.cssText="font-weight:800;color:#4285F4;font-size:15px;margin-bottom:4px";gpN.textContent="🔵 Google Pay";
+      var gpS=document.createElement("div");gpS.style.cssText="font-size:12px;color:#9CA3AF";gpS.textContent="Googleアカウントで安全に支払います";
+      gpBox.appendChild(gpN);gpBox.appendChild(gpS);box.appendChild(gpBox);
+    }
+
+    var pmNote=document.createElement("div");pmNote.style.cssText="background:#F0F7FF;border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:11px;color:#1565C0;line-height:1.7";pmNote.textContent="🔒 決済・資金管理はStripeが行います。SnowMatchはお金を預かりません。";box.appendChild(pmNote);
+
+    var br=document.createElement("div");br.style.cssText="display:flex;gap:10px";
+    br.appendChild(obtn("キャンセル",function(){R({bookUser:null});},"obtn-s"));
+    var payLabels={card:"💳 カードで支払う",paypay:"🔴 PayPayで支払う",applepay:"🍎 Apple Payで支払う",googlepay:"🔵 Google Payで支払う"};
+    var payLbl=payLabels[S.selPayment]||"💳 決済・予約する";
+    br.appendChild(obtn(payLbl,function(){
+      var nd2=new Date();nd2.setDate(nd2.getDate()+(7-nd2.getDay()+1)%7||7);
+      var bk={user:u,fee:fp.fee,payout:fp.payout,total:u.price,date:new Date().toLocaleDateString("ja-JP"),payoutDate:nd2.toLocaleDateString("ja-JP"),status:"wait",payMethod:S.selPayment};
+      S.matches.push(bk);saveD();R({confirmed:bk,bookUser:null,selUser:null});
+    },""));
+    box.appendChild(br);
+  });
+}
+
+function ConfirmedModal(bk){
+  return Modal(false,function(){R({confirmed:null});},function(box){
+    box.style.textAlign="center";box.style.padding="8px 0 20px";
+    var ico=d({style:{fontSize:"56px",marginBottom:"8px"}});ico.textContent="🎉";
+    var t=d({style:{fontWeight:"900",fontSize:"22px",color:"#1A1A2E",marginBottom:"4px"}});t.textContent="予約完了！";
+    var sub=d({style:{color:"#6B7280",fontSize:"13px",marginBottom:"16px"}});sub.textContent=bk.user.name+"さんとの同行予約が完了しました";
+    box.appendChild(ico);box.appendChild(t);box.appendChild(sub);
+    box.appendChild(obtn("💬 "+bk.user.name+"さんにメッセージ",function(){R({confirmed:null,chatUser:bk.user,tab:"chat"});},"obtn-full"));
+  });
+}
+
+function CamModal(u){
+  return Modal(true,function(){R({selUser:null});},function(box){
+    // ヒーロー
+    var hero=d({style:{background:"linear-gradient(160deg,#1a1a2e,#16213e,#0f3460)",padding:"28px 20px 24px",position:"relative"}});
+    var cb=document.createElement("button");cb.style.cssText="position:absolute;top:16px;left:16px;background:rgba(255,255,255,.2);border-radius:20px;padding:6px 14px;color:#fff;font-size:13px;font-weight:700;border:none;cursor:pointer";cb.textContent="← 戻る";
+    cb.addEventListener("click",function(){R({selUser:null});});hero.appendChild(cb);
+    var hr=d({style:{display:"flex",gap:"14px",alignItems:"center"}});
+    hr.appendChild(av(72,36,u.icon));
+    var info=d({style:{flex:"1"}});
+    var nr=d({style:{display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap"}});
+    nr.appendChild(sp({style:{fontWeight:"900",fontSize:"21px",color:"#fff"}},u.name));
+    if(u.ok)nr.appendChild(sp({style:{background:"rgba(255,255,255,.2)",borderRadius:"20px",padding:"2px 8px",fontSize:"11px",color:"#fff",fontWeight:"700"}},"🪪 本人確認済"));
+    nr.appendChild(sp({style:{background:"#22C55E",borderRadius:"20px",padding:"2px 8px",fontSize:"11px",color:"#fff",fontWeight:"700"}},"🎥 カメラマン"));
+    info.appendChild(nr);
+    var agd=d({style:{color:"rgba(255,255,255,.8)",fontSize:"13px",marginTop:"4px"}});agd.textContent=u.act+"・"+u.lv;info.appendChild(agd);
+
+    hr.appendChild(info);hero.appendChild(hr);
+    if(u.phrase){
+      var q=d({style:{marginTop:"14px",background:"rgba(255,255,255,.12)",borderRadius:"14px",padding:"10px 14px"}});
+      q.appendChild(p2({style:{margin:"0",color:"#fff",fontSize:"14px",fontWeight:"700",lineHeight:"1.6",fontStyle:"italic"}},"「"+u.phrase+"」"));
+      hero.appendChild(q);
+    }
+    box.appendChild(hero);
+    var body=d({style:{padding:"16px 16px 100px"}});
+
+    // 撮影サービス・料金
+    var pr=d({style:{background:"#F0FDF4",border:"1.5px solid #86EFAC",borderRadius:"16px",padding:"14px 16px",marginBottom:"14px"}});
+    var prl=d({style:{fontWeight:"800",color:"#166534",fontSize:"13px",marginBottom:"6px"}});prl.textContent="🎥 撮影サービス・同行費用";pr.appendChild(prl);
+    var prv=d({style:{fontWeight:"900",fontSize:"26px",color:"#1A1A2E",marginBottom:"10px"}});prv.textContent="¥"+u.price.toLocaleString()+" / "+u.unit;pr.appendChild(prv);
+    // サービス一覧
+    if(u.camServices&&u.camServices.length){
+      var svRow=d({style:{display:"flex",flexWrap:"wrap",gap:"6px",marginBottom:"10px"}});
+      u.camServices.forEach(function(sv){
+        var svTag=d({style:{background:"#DCFCE7",color:"#166534",borderRadius:"20px",padding:"4px 12px",fontSize:"12px",fontWeight:"700"}});svTag.textContent=sv;svRow.appendChild(svTag);
+      });
+      pr.appendChild(svRow);
+    }
+    // 注意書き
+    var camNote=d({style:{background:"#FFF9E6",border:"1px solid #F59E0B",borderRadius:"10px",padding:"10px 12px",fontSize:"11px",color:"#92400E",lineHeight:"1.7"}});
+    camNote.textContent="⚠️ 撮影は必ずコース内で行ってください。バックカントリー・コース外への立入は重大事故の危険があります。ドローン使用は事前許可が必要な場合があります。他のスキーヤーへの配慮をお願いします。";
+    pr.appendChild(camNote);
+    pr.appendChild(obtn("撮影を依頼する",function(){R({selUser:null,bookUser:u});},""));
+    body.appendChild(pr);
+
+    // 機材情報
+    if(u.gear&&u.gear.length){
+      var gc=d({class:"card",style:{marginBottom:"14px"}});
+      var gt=d({style:{fontWeight:"800",color:"#1A1A2E",marginBottom:"10px",fontSize:"14px"}});gt.textContent="📷 使用機材";gc.appendChild(gt);
+      var gRow=d({style:{display:"flex",flexWrap:"wrap",gap:"8px"}});
+      u.gear.forEach(function(g){
+        var gbdg=d({style:{background:"linear-gradient(135deg,#1a1a2e,#16213e)",color:"#fff",borderRadius:"12px",padding:"6px 14px",fontSize:"12px",fontWeight:"700",display:"inline-flex",alignItems:"center",gap:"6px"}});
+        var gico=document.createElement("span");gico.textContent="📷";
+        var gtxt=document.createElement("span");gtxt.textContent=g;
+        gbdg.appendChild(gico);gbdg.appendChild(gtxt);gRow.appendChild(gbdg);
+      });
+      gc.appendChild(gRow);body.appendChild(gc);
+    }
+
+    // 自己紹介
+    var bc=d({class:"card",style:{marginBottom:"14px"}});
+    var bt=d({style:{fontWeight:"800",color:"#1A1A2E",marginBottom:"8px",fontSize:"14px"}});bt.textContent="📝 自己紹介";bc.appendChild(bt);
+    bc.appendChild(p2({style:{margin:"0",color:"#6B7280",fontSize:"13.5px",lineHeight:"1.75"}},u.bio));body.appendChild(bc);
+
+    // 活動エリア
+    var rc=d({class:"card",style:{marginBottom:"14px"}});var rt=d({style:{fontWeight:"800",color:"#1A1A2E",marginBottom:"8px",fontSize:"14px"}});rt.textContent="🗻 活動エリア";rc.appendChild(rt);
+    for(var rsi=0;rsi<u.resorts.length;rsi++)rc.appendChild(sp({class:"tag"},"⛰️ "+u.resorts[rsi]));body.appendChild(rc);
+
+    // 投稿サンプル
+    if(u.posts&&u.posts.length){
+      var pth=d({style:{fontWeight:"900",fontSize:"16px",color:"#1A1A2E",marginBottom:"12px"}});pth.textContent="🎬 撮影サンプル";body.appendChild(pth);
+      for(var pi=0;pi<u.posts.length;pi++)body.appendChild(PostCard(u.posts[pi]));
+    }
+
+    // ボタン
+    var isLk=S.liked.indexOf(u.id)>=0;
+    var isF2=S.following.indexOf(u.id)>=0;
+    var br2=d({style:{display:"flex",gap:"10px",marginTop:"8px",marginBottom:"80px",flexWrap:"wrap"}});
+    br2.appendChild(obtn(isLk?"💛 いいね済み":"🤍 いいね",function(){var idx=S.liked.indexOf(u.id);if(idx>=0)S.liked.splice(idx,1);else S.liked.push(u.id);render();},"obtn-s"));
+    br2.appendChild(obtn(isF2?"✅ フォロー中":"＋ フォロー",function(){var idx=S.following.indexOf(u.id);if(idx>=0)S.following.splice(idx,1);else S.following.push(u.id);render();},isF2?"obtn-s":""));
+    br2.appendChild(obtn("💬 メッセージ",function(){R({selUser:null,chatUser:u,tab:"chat"});},""));
+    body.appendChild(br2);box.appendChild(body);
+
+    // 固定フッター
+    var ff=d({style:{position:"sticky",bottom:"0",background:"#fff",padding:"12px 20px",borderTop:"1px solid #F0F0F0",display:"flex",gap:"10px",zIndex:"10"}});
+    var isLk2=S.liked.indexOf(u.id)>=0;
+    var lkBtn3=document.createElement("button");lkBtn3.style.cssText="width:48px;height:48px;border-radius:14px;background:#F0FDF4;border:none;font-size:22px;cursor:pointer;flex-shrink:0";lkBtn3.textContent=isLk2?"💛":"🤍";
+    lkBtn3.addEventListener("click",function(){var idx2=S.liked.indexOf(u.id);if(idx2>=0)S.liked.splice(idx2,1);else S.liked.push(u.id);render();});
+    var bookBtn3=document.createElement("button");bookBtn3.style.cssText="flex:1;padding:14px;border-radius:14px;background:linear-gradient(135deg,#22C55E,#16A34A);color:#fff;font-weight:900;font-size:15px;border:none;cursor:pointer;box-shadow:0 4px 14px rgba(34,197,94,0.4)";
+    bookBtn3.textContent="🎥 撮影を依頼する　¥"+u.price.toLocaleString()+" / "+u.unit;
+    bookBtn3.addEventListener("click",function(){R({selUser:null,bookUser:u});});
+    var msgBtn3=document.createElement("button");msgBtn3.style.cssText="width:48px;height:48px;border-radius:14px;background:#F5F7FA;border:none;font-size:22px;cursor:pointer;flex-shrink:0";msgBtn3.textContent="💬";
+    msgBtn3.addEventListener("click",function(){R({selUser:null,chatUser:u,tab:"chat"});});
+    ff.appendChild(lkBtn3);ff.appendChild(bookBtn3);ff.appendChild(msgBtn3);box.appendChild(ff);
+  });
+}
+
+function InsModal(u){
+  return Modal(true,function(){R({selUser:null});},function(box){
+    var hero=d({style:{background:"linear-gradient(160deg,#FF6B2B,#FF8C55 60%,#FFD580)",padding:"52px 20px 24px",position:"relative"}});
+    var cb=b2({style:{position:"absolute",top:"16px",left:"16px",background:"rgba(255,255,255,.25)",borderRadius:"20px",padding:"6px 14px",color:"#fff",fontSize:"13px",fontWeight:"700",border:"none",cursor:"pointer"}},"← 戻る");
+    cb.addEventListener("click",function(){R({selUser:null});});hero.appendChild(cb);
+    var hr=d({style:{display:"flex",gap:"14px",alignItems:"center"}});hr.appendChild(av(72,36,u.icon));
+    var info=d({});
+    var nr=d({style:{display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap"}});
+    nr.appendChild(sp({style:{fontWeight:"900",fontSize:"21px",color:"#fff"}},u.name));
+    if(u.ok)nr.appendChild(sp({style:{background:"rgba(255,255,255,.25)",borderRadius:"20px",padding:"2px 8px",fontSize:"11px",color:"#fff",fontWeight:"700"}},"🪪 本人確認済"));
+    info.appendChild(nr);
+    var agd=d({style:{color:"rgba(255,255,255,.85)",fontSize:"13px",marginTop:"2px"}});agd.textContent=u.act+"・"+u.lv;info.appendChild(agd);
+
+    hr.appendChild(info);hero.appendChild(hr);
+    if(u.phrase){var q=d({style:{marginTop:"14px",background:"rgba(255,255,255,.18)",borderRadius:"14px",padding:"10px 14px"}});var qt=p2({style:{margin:"0",color:"#fff",fontSize:"14px",fontWeight:"700",lineHeight:"1.6",fontStyle:"italic"}},"「"+u.phrase+"」");q.appendChild(qt);hero.appendChild(q);}
+    box.appendChild(hero);
+    var body=d({style:{padding:"16px 16px 100px"}});
+    var pr=d({style:{background:"#FFF0E8",borderRadius:"16px",padding:"14px 16px",marginBottom:"14px",display:"flex",justifyContent:"space-between",alignItems:"center"}});
+    var pl=d({});
+    var prl=d({style:{fontWeight:"800",color:"#FF6B2B",fontSize:"13px"}});prl.textContent="💰 同行費用の目安";
+    var prv=d({style:{fontWeight:"900",fontSize:"26px",color:"#1A1A2E",marginTop:"2px"}});prv.textContent="¥"+u.price.toLocaleString()+" / "+u.unit;
+    pl.appendChild(prl);pl.appendChild(prv);pr.appendChild(pl);pr.appendChild(obtn("予約する",function(){R({selUser:null,bookUser:u});},""));body.appendChild(pr);
+    if(u.exp){
+      var ec=d({class:"card",style:{marginBottom:"14px"}});
+      var et2=d({style:{fontWeight:"800",color:"#1A1A2E",marginBottom:"8px",fontSize:"14px"}});et2.textContent="🏅 経歴・実績";ec.appendChild(et2);
+      ec.appendChild(p2({style:{margin:"0",color:"#6B7280",fontSize:"13px",lineHeight:"1.7",marginBottom:u.certs&&u.certs.length?"10px":"0"}},u.exp));
+      // 資格バッジ
+      if(u.certs&&u.certs.length){
+        var certRow2=d({style:{display:"flex",flexWrap:"wrap",gap:"6px",marginBottom:"8px"}});
+        for(var ci5=0;ci5<u.certs.length;ci5++){
+          var cb2=d({style:{background:"linear-gradient(135deg,#1565C0,#1976D2)",color:"#fff",borderRadius:"20px",padding:"4px 12px",fontSize:"11px",fontWeight:"800",display:"inline-flex",alignItems:"center",gap:"4px"}});
+          cb2.textContent="🏅 "+u.certs[ci5];certRow2.appendChild(cb2);
+        }
+        ec.appendChild(certRow2);
+      }
+      // 大会実績
+      if(u.comps&&u.comps.length){
+        var compTitle=d({style:{fontWeight:"800",color:"#1A1A2E",fontSize:"13px",marginBottom:"6px"}});compTitle.textContent="🏆 大会実績";ec.appendChild(compTitle);
+        for(var coi=0;coi<u.comps.length;coi++){
+          var comp=u.comps[coi];
+          var cr2=d({style:{display:"flex",alignItems:"center",gap:"8px",padding:"6px 0",borderBottom:coi<u.comps.length-1?"1px solid #F3F3F3":"none"}});
+          var rankColor=comp.rank===1?"#FFD700":comp.rank===2?"#C0C0C0":comp.rank===3?"#CD7F32":"#6B7280";
+          var rankBdg=d({style:{minWidth:"28px",height:"28px",borderRadius:"14px",background:comp.rank<=3?"linear-gradient(135deg,"+rankColor+","+rankColor+"99)":"#F5F7FA",color:comp.rank<=3?"#fff":"#6B7280",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"12px",fontWeight:"900",flexShrink:"0"}});
+          rankBdg.textContent=comp.rank<=3?["🥇","🥈","🥉"][comp.rank-1]:String(comp.rank)+"位";
+          var compInfo=d({style:{flex:"1"}});
+          var compName=d({style:{fontSize:"12px",fontWeight:"700",color:"#1A1A2E"}});compName.textContent=comp.name;
+          var compYear=d({style:{fontSize:"11px",color:"#9CA3AF"}});compYear.textContent=comp.year+"年";
+          compInfo.appendChild(compName);compInfo.appendChild(compYear);
+          cr2.appendChild(rankBdg);cr2.appendChild(compInfo);ec.appendChild(cr2);
+        }
+      }
+      body.appendChild(ec);
+    }
+
+    var rc=d({class:"card",style:{marginBottom:"14px"}});var rt=d({style:{fontWeight:"800",color:"#1A1A2E",marginBottom:"8px",fontSize:"14px"}});rt.textContent="🗻 活動エリア";rc.appendChild(rt);
+    for(var rsi=0;rsi<u.resorts.length;rsi++)rc.appendChild(sp({class:"tag"},"⛰️ "+u.resorts[rsi]));body.appendChild(rc);
+    var bc=d({class:"card",style:{marginBottom:"14px"}});var bt2=d({style:{fontWeight:"800",color:"#1A1A2E",marginBottom:"8px",fontSize:"14px"}});bt2.textContent="📝 自己紹介";bc.appendChild(bt2);bc.appendChild(p2({style:{margin:"0",color:"#6B7280",fontSize:"13.5px",lineHeight:"1.75"}},u.bio));body.appendChild(bc);
+    if(u.posts&&u.posts.length){var pth=d({style:{fontWeight:"900",fontSize:"16px",color:"#1A1A2E",marginBottom:"12px"}});pth.textContent="🎥 投稿";body.appendChild(pth);for(var pi=0;pi<u.posts.length;pi++)body.appendChild(PostCard(u.posts[pi]));}
+    var isLk=S.liked.indexOf(u.id)>=0;
+    var isF2=S.following.indexOf(u.id)>=0;
+    var br2=d({style:{display:"flex",gap:"10px",marginTop:"8px",marginBottom:"80px",flexWrap:"wrap"}});
+    br2.appendChild(obtn(isLk?"💛 いいね済み":"🤍 いいね",function(){var idx=S.liked.indexOf(u.id);if(idx>=0)S.liked.splice(idx,1);else S.liked.push(u.id);render();},"obtn-s"));
+    br2.appendChild(obtn(isF2?"✅ フォロー中":"＋ フォロー",function(){var idx=S.following.indexOf(u.id);if(idx>=0)S.following.splice(idx,1);else S.following.push(u.id);render();},isF2?"obtn-s":""));
+    br2.appendChild(obtn("💬 メッセージ",function(){R({selUser:null,chatUser:u,tab:"chat"});},""));
+    body.appendChild(br2);box.appendChild(body);
+
+    // 固定フッター予約ボタン
+    var fixedFooter=d({style:{position:"sticky",bottom:"0",background:"#fff",padding:"12px 20px",borderTop:"1px solid #F0F0F0",display:"flex",gap:"10px",zIndex:"10"}});
+    var isLk2=S.liked.indexOf(u.id)>=0;
+    var lkBtn2=document.createElement("button");
+    lkBtn2.style.cssText="width:48px;height:48px;border-radius:14px;background:#FFF0E8;border:none;font-size:22px;cursor:pointer;flex-shrink:0";
+    lkBtn2.textContent=isLk2?"💛":"🤍";
+    lkBtn2.addEventListener("click",function(){var idx2=S.liked.indexOf(u.id);if(idx2>=0)S.liked.splice(idx2,1);else S.liked.push(u.id);render();});
+    var bookBtn2=document.createElement("button");
+    bookBtn2.style.cssText="flex:1;padding:14px;border-radius:14px;background:linear-gradient(135deg,#FF6B2B,#FF8C55);color:#fff;font-weight:900;font-size:16px;border:none;cursor:pointer;box-shadow:0 4px 14px rgba(255,107,43,0.4)";
+    bookBtn2.textContent="予約する　¥"+u.price.toLocaleString()+" / "+u.unit;
+    bookBtn2.addEventListener("click",function(){R({selUser:null,bookUser:u});});
+    var msgBtn2=document.createElement("button");
+    msgBtn2.style.cssText="width:48px;height:48px;border-radius:14px;background:#F5F7FA;border:none;font-size:22px;cursor:pointer;flex-shrink:0";
+    msgBtn2.textContent="💬";
+    msgBtn2.addEventListener("click",function(){R({selUser:null,chatUser:u,tab:"chat"});});
+    fixedFooter.appendChild(lkBtn2);fixedFooter.appendChild(bookBtn2);fixedFooter.appendChild(msgBtn2);
+    // 通報・ブロックボタン
+    var moreBtn=document.createElement("button");moreBtn.style.cssText="width:48px;height:48px;border-radius:14px;background:#F5F7FA;border:none;font-size:20px;cursor:pointer;flex-shrink:0;color:#9CA3AF";moreBtn.textContent="⋯";
+    moreBtn.addEventListener("click",function(){
+      var overlay=document.createElement("div");overlay.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:flex-end;justify-content:center";
+      var sheet=document.createElement("div");sheet.style.cssText="background:#fff;border-radius:24px 24px 0 0;padding:20px 20px 36px;width:100%;max-width:430px";
+      var sTitle=document.createElement("div");sTitle.style.cssText="font-weight:800;font-size:16px;color:#1A1A2E;margin-bottom:16px;text-align:center";sTitle.textContent=u.name+"さんへの操作";sheet.appendChild(sTitle);
+      var sheetActions=[
+        {icon:"🚫",label:"ブロックする",sub:"このユーザーを非表示にする",color:"#EF4444"},
+        {icon:"🚨",label:"通報する",sub:"問題のある行動を運営に報告",color:"#F59E0B"},
+        {icon:"✕",label:"キャンセル",sub:"",color:"#6B7280"}
+      ];
+      sheetActions.forEach(function(a,ai){
+        var btn=document.createElement("button");btn.style.cssText="width:100%;padding:14px 16px;background:#F9FAFB;border:none;border-radius:14px;margin-bottom:8px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:12px;text-align:left";
+        var ico=document.createElement("div");ico.style.cssText="font-size:20px;width:32px;text-align:center;flex-shrink:0";ico.textContent=a.icon;
+        var info=document.createElement("div");
+        var lbl=document.createElement("div");lbl.style.cssText="font-size:15px;font-weight:700;color:"+a.color;lbl.textContent=a.label;
+        info.appendChild(lbl);
+        if(a.sub){var sub=document.createElement("div");sub.style.cssText="font-size:11px;color:#9CA3AF;margin-top:2px";sub.textContent=a.sub;info.appendChild(sub);}
+        btn.appendChild(ico);btn.appendChild(info);
+        btn.addEventListener("click",function(){
+          document.body.removeChild(overlay);
+          if(ai===0){
+            if(!S.blockedUsers)S.blockedUsers=[];
+            if(S.blockedUsers.indexOf(u.id)<0)S.blockedUsers.push(u.id);
+            R({selUser:null});
+            setTimeout(function(){alert("🚫 "+u.name+"さんをブロックしました。\nこのユーザーはあなたの画面に表示されなくなります。");},200);
+          } else if(ai===1){
+            if(!S.reportedUsers)S.reportedUsers=[];
+            if(S.reportedUsers.indexOf(u.id)<0)S.reportedUsers.push(u.id);
+            R({selUser:null});
+            setTimeout(function(){alert("🚨 通報を受け付けました。\n運営チームが内容を確認し、適切に対応します。\nご協力ありがとうございます。");},200);
+          }
+        });
+        sheet.appendChild(btn);
+      });
+      overlay.appendChild(sheet);
+      overlay.addEventListener("click",function(e){if(e.target===overlay)document.body.removeChild(overlay);});
+      document.body.appendChild(overlay);
+    });
+    fixedFooter.appendChild(moreBtn);
+    box.appendChild(fixedFooter);
+  });
+}
+
+function renderSplash(){
+  var wrap=document.createElement("div");wrap.id="splash";
+  var bgs=["linear-gradient(160deg,#0a1a3a 0%,#1a4a7a 35%,#4a90c8 60%,#b8d8f0 80%,#e8f4ff 100%)","linear-gradient(160deg,#1a0a2a 0%,#5a1a80 30%,#c86010 55%,#f0a040 75%,#ffe8c0 100%)","linear-gradient(160deg,#020810 0%,#051228 40%,#082040 68%,#a0c0e0 85%,#d0e8f8 100%)"];
+  var bg=document.createElement("div");bg.style.cssText="position:absolute;top:0;right:0;bottom:0;left:0;background:"+bgs[S.splashIdx];wrap.appendChild(bg);
+
+  // 白馬の山SVG（シーン0のみ詳細描画）
+  if(S.splashIdx===0){
+    var svgWrap=document.createElement("div");
+    svgWrap.style.cssText="position:absolute;bottom:0;left:0;right:0;height:70%";
+    svgWrap.innerHTML='<svg viewBox="0 0 430 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMax meet" style="width:100%;height:100%">'
+      // 遠景山脈
+      +'<path d="M0,200 L50,120 L90,155 L140,80 L185,125 L225,65 L265,110 L305,58 L345,95 L385,60 L430,85 L430,300 L0,300Z" fill="#2a5a9a" opacity="0.5"/>'
+      // 雪帽子（遠景）
+      +'<path d="M225,65 L242,90 L208,90Z" fill="white" opacity="0.85"/>'
+      +'<path d="M305,58 L322,80 L288,80Z" fill="white" opacity="0.85"/>'
+      +'<path d="M385,60 L400,80 L370,80Z" fill="white" opacity="0.8"/>'
+      // 中景山（八方尾根）
+      +'<path d="M-5,230 L55,145 L100,178 L155,110 L205,152 L255,98 L305,138 L355,86 L400,118 L430,105 L430,300 L-5,300Z" fill="#1a4080" opacity="0.85"/>'
+      // 雪帽子（中景）
+      +'<path d="M255,98 L272,122 L238,122Z" fill="white" opacity="0.9"/>'
+      +'<path d="M355,86 L371,108 L339,108Z" fill="white" opacity="0.88"/>'
+      // 太陽
+      +'<circle cx="360" cy="55" r="28" fill="#FFE580" opacity="0.22"/>'
+      +'<circle cx="360" cy="55" r="18" fill="#FFE580" opacity="0.88"/>'
+      // ゲレンデ雪面
+      +'<path d="M-5,258 Q80,235 180,244 Q290,253 435,228 L435,300 L-5,300Z" fill="#c0daf0" opacity="0.6"/>'
+      +'<path d="M-5,274 Q90,258 200,264 Q320,270 435,250 L435,300 L-5,300Z" fill="#daeeff" opacity="0.8"/>'
+      +'<path d="M-5,287 Q110,276 225,280 Q350,284 435,268 L435,300 L-5,300Z" fill="#eef6ff" opacity="0.92"/>'
+      +'<path d="M-5,296 L435,288 L435,300 L-5,300Z" fill="white"/>'
+      // リフト支柱
+      +'<line x1="80" y1="265" x2="74" y2="288" stroke="#556" stroke-width="2" opacity="0.5"/>'
+      +'<line x1="130" y1="258" x2="124" y2="281" stroke="#556" stroke-width="2" opacity="0.5"/>'
+      +'<line x1="178" y1="253" x2="172" y2="276" stroke="#556" stroke-width="2" opacity="0.5"/>'
+      +'<path d="M74,268 Q124,255 172,250" stroke="#445" stroke-width="1.2" fill="none" opacity="0.4"/>'
+      // スキーヤー
+      +'<circle cx="310" cy="272" r="5" fill="#FFD580"/>'
+      +'<line x1="310" y1="277" x2="310" y2="284" stroke="#2255aa" stroke-width="2"/>'
+      +'<line x1="310" y1="279" x2="305" y2="276" stroke="#2255aa" stroke-width="1.5"/>'
+      +'<line x1="310" y1="279" x2="315" y2="276" stroke="#2255aa" stroke-width="1.5"/>'
+      +'<line x1="309" y1="284" x2="305" y2="289" stroke="#2255aa" stroke-width="1.5"/>'
+      +'<line x1="311" y1="284" x2="315" y2="289" stroke="#2255aa" stroke-width="1.5"/>'
+      +'<line x1="302" y1="290" x2="318" y2="290" stroke="#FF6B2B" stroke-width="2"/>'
+      // トレース
+      +'<path d="M322,278 Q338,286 358,291" stroke="white" stroke-width="1.2" fill="none" opacity="0.4" stroke-dasharray="3,3"/>'
+      +'<path d="M318,281 Q334,289 354,294" stroke="white" stroke-width="0.8" fill="none" opacity="0.25" stroke-dasharray="3,3"/>'
+      // 雪の粒
+      +'<circle cx="60" cy="248" r="2" fill="white" opacity="0.5"/>'
+      +'<circle cx="200" cy="242" r="1.5" fill="white" opacity="0.4"/>'
+      +'<circle cx="390" cy="250" r="2" fill="white" opacity="0.5"/>'
+      +'</svg>';
+    wrap.appendChild(svgWrap);
+  }
+
+  // 夕焼けシーン（シーン1）
+  if(S.splashIdx===1){
+    var svgWrap2=document.createElement("div");
+    svgWrap2.style.cssText="position:absolute;bottom:0;left:0;right:0;height:70%";
+    svgWrap2.innerHTML='<svg viewBox="0 0 430 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMax meet" style="width:100%;height:100%">'
+      +'<circle cx="215" cy="-20" r="80" fill="#FF8C00" opacity="0.2"/>'
+      +'<path d="M0,185 L45,105 L85,140 L135,72 L180,115 L220,55 L260,98 L300,48 L340,82 L385,50 L430,72 L430,300 L0,300Z" fill="#180430" opacity="0.88"/>'
+      +'<path d="M220,55 L237,80 L203,80Z" fill="#ffcc88" opacity="0.65"/>'
+      +'<path d="M300,48 L317,70 L283,70Z" fill="#ffcc88" opacity="0.65"/>'
+      +'<path d="M-5,245 Q80,220 180,230 Q290,240 435,215 L435,300 L-5,300Z" fill="#100228" opacity="0.75"/>'
+      +'<path d="M-5,272 Q90,256 200,262 Q320,268 435,248 L435,300 L-5,300Z" fill="#c0a8e0" opacity="0.28"/>'
+      +'<path d="M-5,287 Q110,278 225,281 Q350,285 435,270 L435,300 L-5,300Z" fill="#e8d0f8" opacity="0.45"/>'
+      +'<path d="M-5,296 L435,288 L435,300 L-5,300Z" fill="white" opacity="0.85"/>'
+      +'<circle cx="200" cy="258" r="4" fill="#FFD580"/>'
+      +'<line x1="200" y1="262" x2="201" y2="268" stroke="#FF4444" stroke-width="2"/>'
+      +'<line x1="200" y1="263" x2="195" y2="260" stroke="#FF4444" stroke-width="1.5"/>'
+      +'<line x1="200" y1="263" x2="205" y2="260" stroke="#FF4444" stroke-width="1.5"/>'
+      +'<rect x="193" y="268" width="14" height="2.5" rx="1.2" fill="#1a1a2e" transform="rotate(-10,200,270)"/>'
+      +'</svg>';
+    wrap.appendChild(svgWrap2);
+  }
+
+  // 夜・星空シーン（シーン2）
+  if(S.splashIdx===2){
+    var svgWrap3=document.createElement("div");
+    svgWrap3.style.cssText="position:absolute;top:0;left:0;right:0;bottom:0";
+    svgWrap3.innerHTML='<svg viewBox="0 0 430 760" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" style="width:100%;height:100%">'
+      // 星
+      +'<circle cx="40" cy="60" r="2" fill="white" opacity="0.9"/>'
+      +'<circle cx="100" cy="40" r="1.5" fill="white" opacity="0.8"/>'
+      +'<circle cx="160" cy="70" r="2" fill="white" opacity="0.85"/>'
+      +'<circle cx="220" cy="35" r="2.5" fill="white" opacity="0.9"/>'
+      +'<circle cx="280" cy="55" r="1.5" fill="white" opacity="0.75"/>'
+      +'<circle cx="340" cy="42" r="2" fill="white" opacity="0.85"/>'
+      +'<circle cx="390" cy="68" r="1.5" fill="white" opacity="0.8"/>'
+      +'<circle cx="70" cy="100" r="1.5" fill="white" opacity="0.7"/>'
+      +'<circle cx="190" cy="95" r="1" fill="white" opacity="0.75"/>'
+      +'<circle cx="310" cy="88" r="1.5" fill="white" opacity="0.7"/>'
+      +'<circle cx="410" cy="50" r="1" fill="white" opacity="0.65"/>'
+      // 月
+      +'<circle cx="370" cy="80" r="22" fill="#fffbe6" opacity="0.95"/>'
+      +'<circle cx="380" cy="73" r="17" fill="#051228"/>'
+      // オーロラ
+      +'<path d="M0,180 Q100,140 200,165 Q310,190 430,150" stroke="#00ff88" stroke-width="3.5" fill="none" opacity="0.18"/>'
+      +'<path d="M0,200 Q110,162 220,185 Q330,208 430,170" stroke="#00ccff" stroke-width="2.5" fill="none" opacity="0.14"/>'
+      // 山
+      +'<path d="M0,420 L55,320 L95,358 L148,268 L192,308 L228,240 L265,278 L305,220 L346,258 L386,215 L430,245 L430,760 L0,760Z" fill="#040c1e"/>'
+      +'<path d="M228,240 L250,268 L206,268Z" fill="white" opacity="0.72"/>'
+      +'<path d="M305,220 L326,248 L284,248Z" fill="white" opacity="0.72"/>'
+      // 雪面
+      +'<path d="M-5,580 Q90,548 200,562 Q320,576 435,545 L435,760 L-5,760Z" fill="#030c1a"/>'
+      +'<path d="M-5,650 Q110,628 230,636 Q348,644 435,618 L435,760 L-5,760Z" fill="#8ab0d0" opacity="0.25"/>'
+      +'<path d="M-5,710 Q140,695 268,700 Q370,706 435,685 L435,760 L-5,760Z" fill="#c8dff0" opacity="0.48"/>'
+      +'<path d="M-5,745 L435,732 L435,760 L-5,760Z" fill="white" opacity="0.88"/>'
+      // 木
+      +'<polygon points="35,575 27,598 43,598" fill="#020810"/>'
+      +'<polygon points="35,588 24,612 46,612" fill="#020810"/>'
+      +'<rect x="32" y="611" width="6" height="14" fill="#10080a"/>'
+      +'<polygon points="390,570 382,592 398,592" fill="#020810"/>'
+      +'<polygon points="390,582 379,606 401,606" fill="#020810"/>'
+      +'<rect x="387" y="605" width="6" height="13" fill="#10080a"/>'
+      +'</svg>';
+    wrap.appendChild(svgWrap3);
+  }
+
+  var ov=document.createElement("div");ov.style.cssText="position:absolute;top:0;right:0;bottom:0;left:0;background:linear-gradient(to bottom,rgba(0,0,0,0.05) 0%,rgba(0,0,0,0) 40%,rgba(0,0,0,0.68) 100%)";wrap.appendChild(ov);
+  var dots=document.createElement("div");dots.style.cssText="position:absolute;top:20px;left:0;right:0;display:flex;justify-content:center;gap:8px;z-index:10";
+  for(var di=0;di<3;di++){
+    (function(idx2){var db=document.createElement("button");db.style.cssText="width:"+(idx2===S.splashIdx?"28":"8")+"px;height:8px;border-radius:4px;border:none;padding:0;cursor:pointer;background:"+(idx2===S.splashIdx?"rgba(255,255,255,.95)":"rgba(255,255,255,.4)");db.addEventListener("click",function(){R({splashIdx:idx2});});dots.appendChild(db);})(di);
+  }
+  wrap.appendChild(dots);
+  var tl=document.createElement("button");tl.style.cssText="position:absolute;top:0;left:0;width:40%;height:60%;z-index:9;background:none;border:none";tl.addEventListener("click",function(){R({splashIdx:(S.splashIdx-1+3)%3});});
+  var tr=document.createElement("button");tr.style.cssText="position:absolute;top:0;right:0;width:40%;height:60%;z-index:9;background:none;border:none";tr.addEventListener("click",function(){R({splashIdx:(S.splashIdx+1)%3});});
+  wrap.appendChild(tl);wrap.appendChild(tr);
+  var cont=document.createElement("div");cont.className="spc";
+  // ── バージョン3ロゴ ──
+  var logoWrap = document.createElement("div");
+  logoWrap.style.cssText = "display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin-bottom:4px";
+
+  // アイコン＋テキスト横並び
+  var logoRow = document.createElement("div");
+  logoRow.style.cssText = "display:flex;align-items:center;gap:14px";
+
+  // アプリアイコン（絵文字ベース・シンプル確実）
+  var iconBox = document.createElement("div");
+  iconBox.style.cssText = "width:68px;height:68px;border-radius:20px;background:linear-gradient(135deg,#FF6B2B,#FF8C55);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(255,107,43,.5);flex-shrink:0;overflow:hidden";
+
+  // SVGをHTMLテキストでインライン（setAttributeを使わない安全な方法）
+  var iconSvgWrap = document.createElement("div");
+  iconSvgWrap.style.cssText = "width:52px;height:52px;display:flex;align-items:center;justify-content:center";
+  iconSvgWrap.innerHTML = '<svg viewBox="0 0 52 52" width="52" height="52" xmlns="http://www.w3.org/2000/svg"><path d="M6 40 L20 18 L28 26 L36 12 L46 40 Z" fill="white" opacity="0.9"/><path d="M20 18 L24 12 L28 18 Z" fill="#FFD580"/><path d="M36 12 L39 7 L42 12 Z" fill="#FFD580"/><circle cx="16" cy="28" r="3" fill="#FFD580"/><line x1="16" y1="31" x2="16" y2="35" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="32" x2="13" y2="30" stroke="white" stroke-width="1.5" stroke-linecap="round"/><line x1="16" y1="32" x2="19" y2="30" stroke="white" stroke-width="1.5" stroke-linecap="round"/><line x1="15" y1="35" x2="13" y2="37" stroke="white" stroke-width="1.5" stroke-linecap="round"/><line x1="17" y1="35" x2="19" y2="37" stroke="white" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="38" x2="21" y2="38" stroke="#FFD580" stroke-width="2" stroke-linecap="round"/><path d="M34 32 C34 31 35 30 36 31 C37 30 38 31 38 32 C38 34 36 36 36 36 C36 36 34 34 34 32Z" fill="white"/></svg>';
+  iconBox.appendChild(iconSvgWrap);
+  logoRow.appendChild(iconBox);
+
+  // テキスト部分
+  var logoTextCol = document.createElement("div");
+  logoTextCol.style.cssText = "display:flex;flex-direction:column;gap:4px";
+
+  // SnowMatch
+  var lw = document.createElement("div");
+  lw.style.cssText = "font-weight:900;font-size:40px;color:#fff;letter-spacing:-2px;line-height:1;text-shadow:0 2px 20px rgba(0,0,0,.5)";
+  lw.appendChild(document.createTextNode("Snow"));
+  var ms = document.createElement("span");ms.style.color="#FFD580";ms.textContent="Match";lw.appendChild(ms);
+  logoTextCol.appendChild(lw);
+
+  // スノマ バッジ
+  var sunomaBadge = document.createElement("div");
+  sunomaBadge.style.cssText = "display:flex;align-items:center;gap:6px";
+  var line1=document.createElement("div");line1.style.cssText="height:1px;width:24px;background:rgba(255,255,255,.4)";
+  var sunomaText=document.createElement("span");sunomaText.style.cssText="font-size:12px;font-weight:800;color:rgba(255,255,255,.85);letter-spacing:4px";sunomaText.textContent="スノマ";
+  var line2=document.createElement("div");line2.style.cssText="height:1px;width:24px;background:rgba(255,255,255,.4)";
+  sunomaBadge.appendChild(line1);sunomaBadge.appendChild(sunomaText);sunomaBadge.appendChild(line2);
+  logoTextCol.appendChild(sunomaBadge);
+
+  logoRow.appendChild(logoTextCol);
+  logoWrap.appendChild(logoRow);
+  cont.appendChild(logoWrap);
+
+  var sub=document.createElement("div");sub.style.cssText="color:rgba(255,255,255,.85);font-size:13px;margin-top:2px;text-shadow:0 1px 8px rgba(0,0,0,.5)";sub.textContent="📹 あなたの滑りを動画に残そう　スキー・スノボ好きのためのコミュニティ";cont.appendChild(sub);
+  var badges=document.createElement("div");badges.style.cssText="display:flex;gap:6px;margin-top:16px;margin-bottom:28px;flex-wrap:wrap";
+  var bts=["🪪 本人確認済み","🤝 仲間マッチング","🔒 プライバシー保護"];
+  for(var bi=0;bi<bts.length;bi++){var bdg=document.createElement("span");bdg.style.cssText="background:rgba(255,255,255,.18);border-radius:20px;padding:5px 12px;font-size:11.5px;color:#fff;font-weight:700;border:1px solid rgba(255,255,255,.25)";bdg.textContent=bts[bi];badges.appendChild(bdg);}
+  cont.appendChild(badges);
+  var sb=document.createElement("button");sb.textContent="はじめる（無料登録）";sb.style.cssText="width:100%;padding:17px 0;border-radius:18px;background:linear-gradient(135deg,#FF6B2B,#FF8C55);color:#fff;font-weight:900;font-size:17px;box-shadow:0 8px 32px rgba(255,107,43,.55);margin-bottom:12px;font-family:inherit;border:none;cursor:pointer;display:block";sb.addEventListener("click",function(){R({pg:"onboard"});});cont.appendChild(sb);
+  var gb=document.createElement("button");gb.textContent="ゲストとして見る";gb.style.cssText="width:100%;padding:15px 0;border-radius:18px;background:rgba(255,255,255,.15);color:#fff;font-weight:800;font-size:15px;border:1.5px solid rgba(255,255,255,.4);font-family:inherit;cursor:pointer;display:block;margin-bottom:10px";
+  gb.addEventListener("click",function(){R({pg:"main",myProfile:{name:"ゲスト",nick:"ゲスト",age:25,act:"スノーボード",lv:"中級",resorts:[],bio:"ゲストです",isIns:false,price:5000,unit:"1時間",icon:"🏂",posts:[],ok:true,kycStatus:"approved"}});});cont.appendChild(gb);
+
+  // メールログインボタン（Supabase）
+  var emailLoginBtn=document.createElement("button");
+  emailLoginBtn.textContent="📧 メールでログイン";
+  emailLoginBtn.style.cssText="width:100%;padding:14px 0;border-radius:18px;background:rgba(255,255,255,0.2);color:#fff;font-weight:800;font-size:15px;border:2px solid rgba(255,255,255,0.5);font-family:inherit;cursor:pointer;margin-top:10px";
+  emailLoginBtn.addEventListener("click",function(){S.showLoginModal=true;render();});
+  cont.appendChild(emailLoginBtn);
+
+  var hasSaved=false;try{hasSaved=!!localStorage.getItem("sm2");}catch(e){}
+  var lb2=document.createElement("button");lb2.textContent=hasSaved?"📱 このデバイスの続きから":"📱 このデバイスの続きから";lb2.style.cssText="width:100%;padding:14px 0;border-radius:18px;background:"+(hasSaved?"rgba(255,255,255,0.3)":"rgba(255,255,255,0.12)")+";color:#fff;font-weight:"+(hasSaved?"900":"700")+";font-size:15px;border:2px solid rgba(255,255,255,"+(hasSaved?"0.7":"0.3")+");font-family:inherit;cursor:pointer;display:block";
+  lb2.addEventListener("click",function(){
+    try{var raw=localStorage.getItem("sm2");if(!raw){alert("保存されたデータが見つかりません");return;}var data=JSON.parse(raw);if(data.myProfile){S.myProfile=data.myProfile;S.pg="main";S.tab="explore";if(data.reg)S.reg=data.reg;if(data.liked)S.liked=data.liked;if(data.postLikes)S.postLikes=data.postLikes;if(data.matches)S.matches=data.matches;if(data.chatMsgs)S.chatMsgs=data.chatMsgs;render();}else{alert("データが見つかりません");}}catch(e2){alert("読み込みに失敗しました");}
+  });cont.appendChild(lb2);
+  var footer=document.createElement("div");footer.style.cssText="text-align:center;margin-top:20px;color:rgba(255,255,255,.5);font-size:11px;line-height:1.9";footer.textContent="登録無料 · 全員本人確認済 · いつでも退会可能";cont.appendChild(footer);
+  wrap.appendChild(cont);
+
+  // スワイプ対応
+  var tsX = 0;
+  wrap.addEventListener("touchstart", function(e){ tsX = e.touches[0].clientX; }, {passive:true});
+  wrap.addEventListener("touchend", function(e){
+    var dx = e.changedTouches[0].clientX - tsX;
+    if(Math.abs(dx) > 50) {
+      if(dx < 0) R({splashIdx:(S.splashIdx+1)%3});
+      else R({splashIdx:(S.splashIdx-1+3)%3});
+    }
+  }, {passive:true});
+
+  return wrap;
+}
+
+function renderOnboard(){
+  var wrap=d({class:"pg"});
+  var prog=d({style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"24px"}});
+  for(var pi=0;pi<3;pi++){
+    var dot=d({style:{width:"28px",height:"28px",borderRadius:"50%",background:pi<S.onStep?"#FF6B2B":pi===S.onStep?"#FF6B2B":"#E8E8E8",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"12px",fontWeight:"900",color:pi<=S.onStep?"#fff":"#9CA3AF",flexShrink:"0"}});
+    dot.textContent=pi<S.onStep?"✓":String(pi+1);
+    prog.appendChild(dot);
+    if(pi<2){var line=d({style:{flex:"1",height:"2px",background:pi<S.onStep?"#FF6B2B":"#E8E8E8",borderRadius:"2px"}});prog.appendChild(line);}
+  }
+  wrap.appendChild(prog);
+
+  if(S.onStep===0){
+    var t0=d({style:{fontWeight:"900",fontSize:"22px",color:"#1A1A2E",marginBottom:"6px"}});t0.textContent="SnowMatch会員として登録しよう";wrap.appendChild(t0);
+    var s0=d({style:{color:"#6B7280",fontSize:"13px",marginBottom:"20px"}});s0.textContent="3項目だけで今すぐ始められます！";wrap.appendChild(s0);
+    var quickFields=[["ニックネーム（表示名）","nick","text","例：ゆきな"],["メールアドレス","email","email","example@email.com"],["パスワード（8文字以上）","pw","password",""]];
+    for(var qfi=0;qfi<quickFields.length;qfi++){
+      (function(f){
+        var fw=d({style:{marginBottom:"14px"}});
+        var fl=d({style:{fontSize:"12px",fontWeight:"700",color:"#6B7280",marginBottom:"4px"}});fl.textContent=f[0];
+        var fi=i2({type:f[2],class:"inp"});fi.placeholder=f[3];fi.value=S.reg[f[1]]||"";
+        fi.addEventListener("input",function(e){S.reg[f[1]]=e.target.value;});
+        fw.appendChild(fl);fw.appendChild(fi);wrap.appendChild(fw);
+      })(quickFields[qfi]);
+    }
+    var tokCard=d({style:{background:"linear-gradient(135deg,#FFF0E8,#FFE4D6)",borderRadius:"16px",padding:"14px",marginBottom:"20px"}});
+    var tokT=d({style:{fontWeight:"800",fontSize:"13px",color:"#FF6B2B",marginBottom:"10px"}});tokT.textContent="🎁 会員登録特典";tokCard.appendChild(tokT);
+    var benefits=[["🛖","スノマラウンジ入室"],["💰","サービスの販売・価格設定"],["❤️","いいね・マッチング"],["📸","投稿・実績のアップロード"],["🪪","本人確認済みバッジ"]];
+    for(var bi=0;bi<benefits.length;bi++){
+      var br0=d({style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"6px"}});
+      var bio=d({style:{fontSize:"16px"}});bio.textContent=benefits[bi][0];
+      var bit=d({style:{fontSize:"12px",color:"#1A1A2E",fontWeight:"600"}});bit.textContent=benefits[bi][1];
+      br0.appendChild(bio);br0.appendChild(bit);tokCard.appendChild(br0);
+    }
+    wrap.appendChild(tokCard);
+    wrap.appendChild(obtn("次へ → （プロフィール設定）",function(){
+      if(!S.reg.nick||!S.reg.nick.trim()){alert("ニックネームを入力してください");return;}
+      if(!S.reg.email||!S.reg.email.trim()){alert("メールアドレスを入力してください");return;}
+      if(!S.reg.pw||S.reg.pw.length<8){alert("パスワードは8文字以上で入力してください");return;}
+      R({onStep:1});
+    },"obtn-full"));
+    var skip=d({style:{textAlign:"center",marginTop:"12px"}});
+    var skipBtn=document.createElement("button");skipBtn.style.cssText="background:none;border:none;color:#9CA3AF;font-size:13px;cursor:pointer;font-family:inherit;text-decoration:underline";
+    skipBtn.textContent="スキップして規約へ進む";
+    skipBtn.addEventListener("click",function(){
+      if(!S.reg.nick||!S.reg.nick.trim()){alert("ニックネームを入力してください");return;}
+      if(!S.reg.email||!S.reg.email.trim()){alert("メールアドレスを入力してください");return;}
+      if(!S.reg.pw||S.reg.pw.length<8){alert("パスワードは8文字以上で入力してください");return;}
+      R({onStep:2});
+    });
+    skip.appendChild(skipBtn);wrap.appendChild(skip);
+  }
+
+  if(S.onStep===1){
+    if(!S.reg.resorts)S.reg.resorts=[];
+    if(!S.reg.acts)S.reg.acts=[];
+    var t1=d({style:{fontWeight:"900",fontSize:"22px",color:"#1A1A2E",marginBottom:"4px"}});t1.textContent="プロフィール設定";wrap.appendChild(t1);
+    var s1=d({style:{color:"#6B7280",fontSize:"13px",marginBottom:"16px"}});s1.textContent="後からマイページでも変更できます";wrap.appendChild(s1);
+    var arDiv=d({style:{marginBottom:"14px"}});
+    var arLbl=d({style:{fontSize:"12px",fontWeight:"700",color:"#6B7280",marginBottom:"8px"}});arLbl.textContent="種目（複数選択OK）";arDiv.appendChild(arLbl);
+    var arRow=d({style:{display:"flex",flexWrap:"wrap",gap:"8px"}});
+    for(var ai=0;ai<ACTS.length;ai++){
+      (function(a){
+        var isOn=S.reg.acts.indexOf(a)>=0;
+        var c=document.createElement("button");c.className="chip"+(isOn?" on":"");c.textContent=a;
+        c.addEventListener("click",function(){var idx2=S.reg.acts.indexOf(a);if(idx2>=0)S.reg.acts.splice(idx2,1);else S.reg.acts.push(a);S.reg.act=S.reg.acts.join("・");render();});
+        arRow.appendChild(c);
+      })(ACTS[ai]);
+    }
+    arDiv.appendChild(arRow);wrap.appendChild(arDiv);
+    var lvDiv=d({style:{marginBottom:"14px"}});
+    var lvLbl=d({style:{fontSize:"12px",fontWeight:"700",color:"#6B7280",marginBottom:"8px"}});lvLbl.textContent="レベル";lvDiv.appendChild(lvLbl);
+    var lvRow=d({style:{display:"flex",flexWrap:"wrap",gap:"8px"}});
+    for(var li=0;li<LEVELS.length;li++){
+      (function(l){
+        var c=document.createElement("button");c.className="chip"+(S.reg.lv===l?" on":"");c.textContent=l;
+        c.addEventListener("click",function(){S.reg.lv=l;render();});lvRow.appendChild(c);
+      })(LEVELS[li]);
+    }
+    lvDiv.appendChild(lvRow);wrap.appendChild(lvDiv);
+    var rsDiv=d({style:{marginBottom:"14px"}});
+    var rsLbl=d({style:{fontSize:"12px",fontWeight:"700",color:"#6B7280",marginBottom:"6px"}});rsLbl.textContent="活動スキー場（複数可）";rsDiv.appendChild(rsLbl);
+    for(var areai=0;areai<AREAS.length;areai++){
+      (function(area){
+        var cnt=0;for(var ci=0;ci<S.reg.resorts.length;ci++){if(area.resorts.indexOf(S.reg.resorts[ci])>=0)cnt++;}
+        var aBtn=document.createElement("button");aBtn.className="chip"+(S.openAreaReg===area.area?" on":"");
+        aBtn.style.cssText="width:100%;text-align:left;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;padding:9px 14px";
+        var aL=document.createElement("span");aL.textContent=area.area;
+        var aR=document.createElement("span");aR.style.cssText="color:#6B7280;font-size:11px";aR.textContent=(cnt>0?cnt+"選択 ":" ")+(S.openAreaReg===area.area?"▲":"▼");
+        aBtn.appendChild(aL);aBtn.appendChild(aR);
+        aBtn.addEventListener("click",function(){S.openAreaReg=S.openAreaReg===area.area?null:area.area;render();});
+        rsDiv.appendChild(aBtn);
+        if(S.openAreaReg===area.area){
+          var rList=d({style:{background:"#fff",border:"1px solid #F0F0F0",borderRadius:"0 0 12px 12px",padding:"10px 12px",display:"flex",flexWrap:"wrap",gap:"8px",marginBottom:"6px"}});
+          for(var rsi=0;rsi<area.resorts.length;rsi++){
+            (function(res){
+              var sel=S.reg.resorts.indexOf(res)>=0;
+              var rc=document.createElement("button");rc.className="chip"+(sel?" on":"");rc.style.cssText="font-size:11px;padding:4px 10px";rc.textContent=res;
+              rc.addEventListener("click",function(){var idx2=S.reg.resorts.indexOf(res);if(idx2>=0)S.reg.resorts.splice(idx2,1);else S.reg.resorts.push(res);render();});
+              rList.appendChild(rc);
+            })(area.resorts[rsi]);
+          }
+          rsDiv.appendChild(rList);
+        }
+      })(AREAS[areai]);
+    }
+    wrap.appendChild(rsDiv);
+    var br1=d({style:{display:"flex",gap:"10px",marginTop:"8px",marginBottom:"8px"}});
+    br1.appendChild(obtn("← 戻る",function(){R({onStep:0});},"obtn-s"));
+    br1.appendChild(obtn("次へ →",function(){R({onStep:2});},""));
+    wrap.appendChild(br1);
+    var skip2=d({style:{textAlign:"center",marginTop:"4px"}});
+    var skipBtn2=document.createElement("button");skipBtn2.style.cssText="background:none;border:none;color:#9CA3AF;font-size:13px;cursor:pointer;font-family:inherit;text-decoration:underline";
+    skipBtn2.textContent="スキップして利用規約へ";
+    skipBtn2.addEventListener("click",function(){R({onStep:2});});
+    skip2.appendChild(skipBtn2);wrap.appendChild(skip2);
+  }
+
+  if(S.onStep===2){
+    var t2=d({style:{fontWeight:"900",fontSize:"22px",color:"#1A1A2E",marginBottom:"6px"}});t2.textContent="利用規約への同意";wrap.appendChild(t2);
+    var s2=d({style:{color:"#6B7280",fontSize:"13px",marginBottom:"16px"}});s2.textContent="最後のステップです！";wrap.appendChild(s2);
+    var termPoints=[
+      {icon:"🎿",text:"スキー場での無許可レッスン行為禁止"},
+      {icon:"📍",text:"活動は必ずコース内で（バックカントリー禁止）"},
+      {icon:"💳",text:"決済・資金管理はStripeが行います"},
+      {icon:"🔒",text:"個人情報はプライバシーポリシーに従い管理"},
+      {icon:"🚫",text:"18歳未満の利用禁止"}
+    ];
+    var termCard=d({style:{background:"#F9FAFB",borderRadius:"16px",padding:"14px",marginBottom:"16px"}});
+    for(var ti=0;ti<termPoints.length;ti++){
+      var tr=d({style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"10px"}});
+      var ticon=d({style:{fontSize:"18px",flexShrink:"0"}});ticon.textContent=termPoints[ti].icon;
+      var ttext=d({style:{fontSize:"13px",color:"#374151",fontWeight:"600"}});ttext.textContent=termPoints[ti].text;
+      tr.appendChild(ticon);tr.appendChild(ttext);termCard.appendChild(tr);
+    }
+    wrap.appendChild(termCard);
+    var termLink=d({style:{textAlign:"center",marginBottom:"16px"}});
+    var tl=document.createElement("button");tl.style.cssText="background:none;border:none;color:#FF6B2B;font-size:13px;cursor:pointer;font-family:inherit;text-decoration:underline";
+    tl.textContent="利用規約の全文を読む →";tl.addEventListener("click",function(){R({pg:"terms"});});
+    termLink.appendChild(tl);wrap.appendChild(termLink);
+    if(!S.reg.agreedTerms)S.reg.agreedTerms=false;
+    var agreeRow=d({style:{display:"flex",alignItems:"center",gap:"12px",background:"#fff",border:"2px solid "+(S.reg.agreedTerms?"#FF6B2B":"#E8E8E8"),borderRadius:"14px",padding:"14px",marginBottom:"20px",cursor:"pointer"}});
+    var agreeChk=d({style:{width:"24px",height:"24px",borderRadius:"6px",background:S.reg.agreedTerms?"#FF6B2B":"#fff",border:"2px solid "+(S.reg.agreedTerms?"#FF6B2B":"#D1D5DB"),display:"flex",alignItems:"center",justifyContent:"center",flexShrink:"0",fontSize:"14px",fontWeight:"900",color:"#fff"}});
+    agreeChk.textContent=S.reg.agreedTerms?"✓":"";
+    var agreeTxt=d({style:{fontSize:"14px",fontWeight:"700",color:"#1A1A2E"}});agreeTxt.textContent="利用規約・プライバシーポリシーに同意します";
+    agreeRow.appendChild(agreeChk);agreeRow.appendChild(agreeTxt);
+    agreeRow.addEventListener("click",function(){S.reg.agreedTerms=!S.reg.agreedTerms;render();});
+    wrap.appendChild(agreeRow);
+    var br2=d({style:{display:"flex",gap:"10px"}});
+    br2.appendChild(obtn("← 戻る",function(){R({onStep:1});},"obtn-s"));
+    br2.appendChild(obtn("本人確認へ →",function(){if(!S.reg.agreedTerms){alert("利用規約への同意が必要です");return;}R({pg:"kyc"});},""));
+    wrap.appendChild(br2);
+  }
+
+  return wrap;
+}
+
+function renderExplore(){
+  var wrap=d({class:"pg"});
+  var ht=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"4px"}});ht.textContent="🔍 仲間を探す";wrap.appendChild(ht);
+  var sub=d({style:{color:"#6B7280",fontSize:"13px",marginBottom:"12px"}});sub.textContent="エリア・種目で絞り込もう";wrap.appendChild(sub);
+
+  // 追い撮りバナー
+  var camBanner=document.createElement("div");
+  camBanner.style.cssText="background:linear-gradient(135deg,#0f3460,#16213e,#1a1a2e);border-radius:20px;padding:16px;margin-bottom:16px;cursor:pointer;position:relative;overflow:hidden";
+  camBanner.addEventListener("click",function(){S.camOnly=!S.camOnly;render();});
+  var cg1=document.createElement("div");cg1.style.cssText="position:absolute;top:-15px;right:-15px;width:80px;height:80px;background:radial-gradient(circle,rgba(34,197,94,0.3),transparent 70%);border-radius:50%";
+  camBanner.appendChild(cg1);
+  var cbRow=document.createElement("div");cbRow.style.cssText="display:flex;align-items:center;gap:14px;position:relative";
+  var cbIconWrap=document.createElement("div");cbIconWrap.style.cssText="width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,#22C55E,#16A34A);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;box-shadow:0 4px 14px rgba(34,197,94,0.4)";
+  cbIconWrap.textContent="🎥";
+  var cbInfo=document.createElement("div");cbInfo.style.cssText="flex:1";
+  var cbTitle=document.createElement("div");cbTitle.style.cssText="font-weight:900;color:#fff;font-size:16px;margin-bottom:3px";cbTitle.textContent="追い撮り・撮影カメラマン";
+  var cbSub2=document.createElement("div");cbSub2.style.cssText="font-size:12px;color:rgba(255,255,255,0.7);margin-bottom:8px";cbSub2.textContent="スノー仲間が一緒に滑りながら撮影します";
+  var camTagRow=document.createElement("div");camTagRow.style.cssText="display:flex;gap:5px;flex-wrap:wrap";
+  ["GoPro","Insta360","iPhone","スマホ","ビデオカメラ","ミラーレス"].forEach(function(t){
+    var tag=document.createElement("span");tag.style.cssText="background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.85);border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700";tag.textContent=t;camTagRow.appendChild(tag);
+  });
+  cbInfo.appendChild(cbTitle);cbInfo.appendChild(cbSub2);cbInfo.appendChild(camTagRow);
+  var cbArrow=document.createElement("div");cbArrow.style.cssText="color:rgba(255,255,255,0.4);font-size:22px;flex-shrink:0";cbArrow.textContent=S.camOnly?"✅":"›";
+  cbRow.appendChild(cbIconWrap);cbRow.appendChild(cbInfo);cbRow.appendChild(cbArrow);
+  camBanner.appendChild(cbRow);
+  if(S.camOnly){var cbActive=document.createElement("div");cbActive.style.cssText="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.1);font-size:12px;color:#86EFAC;font-weight:700;text-align:center";cbActive.textContent="🎥 追い撮り・カメラマンのみ表示中　タップで解除";camBanner.appendChild(cbActive);}
+  wrap.appendChild(camBanner);
+
+  // ランキング
+  var rankSec=document.createElement("div");rankSec.style.marginBottom="16px";
+  var rankHeader=document.createElement("div");rankHeader.style.cssText="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px";
+  var rankTitle=document.createElement("div");rankTitle.style.cssText="font-weight:900;font-size:16px;color:#1A1A2E";rankTitle.textContent="👑 人気ランキング";
+  var rankCats2=["総合","いいね","投稿数"];
+  if(!S.rankCat)S.rankCat="総合";
+  var rankCatSel=document.createElement("div");rankCatSel.style.cssText="display:flex;gap:4px";
+  rankCats2.forEach(function(c){
+    var rb=document.createElement("button");rb.style.cssText="padding:4px 10px;border-radius:10px;border:none;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;background:"+(S.rankCat===c?"#FF6B2B":"#F5F7FA")+";color:"+(S.rankCat===c?"#fff":"#6B7280");rb.textContent=c;
+    rb.addEventListener("click",function(){S.rankCat=c;render();});rankCatSel.appendChild(rb);
+  });
+  rankHeader.appendChild(rankTitle);rankHeader.appendChild(rankCatSel);rankSec.appendChild(rankHeader);
+  var rankData2=[];
+  for(var uri=0;uri<USERS.length;uri++){var u2=USERS[uri];rankData2.push({user:u2,likes:u2.likes||0,posts:u2.posts?u2.posts.length:0,matches:u2.rcnt||0,total:(u2.likes||0)+(u2.rcnt||0)*3+(u2.posts?u2.posts.length:0)*10});}
+  if(S.rankCat==="いいね")rankData2.sort(function(a,b){return b.likes-a.likes;});
+  else if(S.rankCat==="投稿数")rankData2.sort(function(a,b){return b.posts-a.posts;});
+  else rankData2.sort(function(a,b){return b.total-a.total;});
+  var podWrap=document.createElement("div");podWrap.style.cssText="display:flex;gap:8px;margin-bottom:10px";
+  var podOrder=[1,0,2];var podMedals=["🥈","🥇","🥉"];var podColors=["#C0C0C0","#FFD700","#CD7F32"];
+  var podBgs=["linear-gradient(135deg,#F5F5F5,#E8E8E8)","linear-gradient(135deg,#FFF9E6,#FFE680)","linear-gradient(135deg,#FFF0E0,#F0C080)"];
+  for(var pi=0;pi<3;pi++){
+    var rank=podOrder[pi];if(rank>=rankData2.length)continue;var rd3=rankData2[rank];
+    var pod=document.createElement("div");pod.style.cssText="flex:1;background:"+podBgs[pi]+";border-radius:16px;padding:12px 8px;text-align:center;cursor:pointer;border:2px solid "+(pi===1?"#FFD700":"transparent");
+    pod.addEventListener("click",function(r){return function(){R({selUser:r.user});};}(rd3));
+    var pMedal=document.createElement("div");pMedal.style.fontSize="18px";pMedal.textContent=podMedals[pi];
+    var pIcon=document.createElement("div");pIcon.style.cssText="font-size:"+(pi===1?"28":"22")+"px;margin:4px 0";pIcon.textContent=rd3.user.icon;
+    var pName=document.createElement("div");pName.style.cssText="font-weight:800;font-size:11px;color:#1A1A2E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis";pName.textContent=rd3.user.name;
+    var sv3=S.rankCat==="いいね"?rd3.likes:S.rankCat==="投稿数"?rd3.posts:rd3.total;
+    var pScore=document.createElement("div");pScore.style.cssText="font-weight:900;font-size:13px;margin-top:3px;color:"+podColors[pi];pScore.textContent=String(sv3)+(S.rankCat==="総合"?"pt":"");
+    pod.appendChild(pMedal);pod.appendChild(pIcon);pod.appendChild(pName);pod.appendChild(pScore);podWrap.appendChild(pod);
+  }
+  rankSec.appendChild(podWrap);
+  var rankScroll=document.createElement("div");rankScroll.style.cssText="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px";
+  for(var ri2=3;ri2<Math.min(rankData2.length,8);ri2++){
+    (function(rd4,ri3){
+      var rCard=document.createElement("div");rCard.style.cssText="flex-shrink:0;background:#fff;border-radius:14px;padding:10px 12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.06);cursor:pointer;min-width:80px";
+      rCard.addEventListener("click",function(){R({selUser:rd4.user});});
+      var rnNum=document.createElement("div");rnNum.style.cssText="font-size:11px;font-weight:700;color:#9CA3AF;margin-bottom:2px";rnNum.textContent=String(ri3+1)+"位";
+      var rnIco=document.createElement("div");rnIco.style.cssText="font-size:22px;margin:2px 0";rnIco.textContent=rd4.user.icon;
+      var rnName=document.createElement("div");rnName.style.cssText="font-weight:700;font-size:10px;color:#1A1A2E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70px";rnName.textContent=rd4.user.name;
+      var sv4=S.rankCat==="いいね"?rd4.likes:S.rankCat==="投稿数"?rd4.posts:rd4.total;
+      var rnScore=document.createElement("div");rnScore.style.cssText="font-weight:900;font-size:12px;color:#FF6B2B;margin-top:2px";rnScore.textContent=String(sv4)+(S.rankCat==="総合"?"pt":"");
+      rCard.appendChild(rnNum);rCard.appendChild(rnIco);rCard.appendChild(rnName);rCard.appendChild(rnScore);
+      rankScroll.appendChild(rCard);
+    })(rankData2[ri2],ri2);
+  }
+  if(rankData2.length>3)rankSec.appendChild(rankScroll);
+  wrap.appendChild(rankSec);
+
+  // フィルター
+  var at=d({style:{display:"flex",gap:"8px",overflowX:"auto",paddingBottom:"4px",marginBottom:"14px"}});
+  acr=at;
+  at.appendChild(chip2("すべて",!S.selAct&&!S.camOnly,function(){R({selAct:null,camOnly:false});}));
+  for(var ai3=0;ai3<ACTS.length;ai3++){
+    (function(a){
+      var isCamTab=(a==="🎥 追い撮り・撮影");
+      var isActive=isCamTab?S.camOnly:(S.selAct===a&&!S.camOnly);
+      at.appendChild(chip2(a,isActive,function(){
+        if(isCamTab){R({selAct:null,camOnly:!S.camOnly});}
+        else{R({selAct:S.selAct===a?null:a,camOnly:false});}
+      }));
+    })(ACTS[ai3]);
+  }
+  wrap.appendChild(at);
+
+  // エリア絞り込み
+  var ar=d({style:{display:"flex",gap:"8px",overflowX:"auto",paddingBottom:"8px",marginBottom:"14px"}});
+  ar.appendChild(chip2("すべて",!S.selArea,function(){R({selArea:null});}));
+  for(var areai2=0;areai2<AREAS.length;areai2++){
+    (function(area){ar.appendChild(chip2(area.area,S.selArea===area.area,function(){R({selArea:S.selArea===area.area?null:area.area});}));})(AREAS[areai2]);
+  }
+  wrap.appendChild(ar);
+
+  // おすすめ表示
+  if(S.myProfile&&S.myProfile.resorts&&S.myProfile.resorts.length>0){
+    var recBanner=document.createElement("div");recBanner.style.cssText="background:linear-gradient(135deg,#FFF0E8,#FFE4D6);border-radius:16px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:8px";
+    var recIco=document.createElement("div");recIco.style.cssText="font-size:18px";recIco.textContent="✨";
+    var recTxt=document.createElement("div");recTxt.style.cssText="font-size:12px;color:#FF6B2B;font-weight:700";recTxt.textContent="あなたのエリア・種目に近い順で表示しています";
+    recBanner.appendChild(recIco);recBanner.appendChild(recTxt);wrap.appendChild(recBanner);
+  }
+
+  // ユーザーリスト
+  var sortedUsers=USERS.slice();
+  if(S.myProfile){
+    sortedUsers.sort(function(a,b){
+      var sa=0,sb2=0;
+      if(S.myProfile.act&&(a.act===S.myProfile.act||a.act==="両方"))sa+=3;
+      if(S.myProfile.act&&(b.act===S.myProfile.act||b.act==="両方"))sb2+=3;
+      if(S.myProfile.resorts&&S.myProfile.resorts.length){
+        for(var ri=0;ri<a.resorts.length;ri++){if(S.myProfile.resorts.indexOf(a.resorts[ri])>=0){sa+=2;break;}}
+        for(var ri2=0;ri2<b.resorts.length;ri2++){if(S.myProfile.resorts.indexOf(b.resorts[ri2])>=0){sb2+=2;break;}}
+      }
+      sa+=(a.likes||0)*0.01;sb2+=(b.likes||0)*0.01;
+      return sb2-sa;
+    });
+  }
+  for(var ui=0;ui<sortedUsers.length;ui++){
+    (function(u){
+      var pA=!S.selArea;
+      if(S.selArea){for(var ri=0;ri<AREAS.length;ri++){if(AREAS[ri].area===S.selArea){pA=AREAS[ri].resorts.indexOf(u.resorts[0])>=0||u.resorts.some(function(r){return AREAS[ri].resorts.indexOf(r)>=0;});break;}}}
+      var pAc=!S.selAct||u.act===S.selAct||u.act==="両方"||(u.acts&&u.acts.indexOf(S.selAct)>=0);
+      if(S.blockedUsers&&S.blockedUsers.indexOf(u.id)>=0)return;
+      if(S.camOnly&&!u.isCam)return;
+      if(!pA||!pAc)return;
+      var card=d({class:"card",style:{cursor:"pointer",marginBottom:"12px"},onClick:function(){R({selUser:u});}});
+      var row=d({style:{display:"flex",gap:"12px"}});
+      if(u.profileImg){
+        var avWrap2=document.createElement("div");avWrap2.style.cssText="width:56px;height:56px;border-radius:18px;overflow:hidden;flex-shrink:0;border:2px solid #F0F0F0";
+        var avImg2=document.createElement("img");avImg2.src=u.profileImg;avImg2.style.cssText="width:100%;height:100%;object-fit:cover";
+        avWrap2.appendChild(avImg2);row.appendChild(avWrap2);
+      }else{row.appendChild(av(56,28,u.icon));}
+      var inf=d({style:{flex:"1"}});
+      var nl=d({style:{display:"flex",alignItems:"center",gap:"6px",marginBottom:"4px",flexWrap:"wrap"}});
+      var nm=d({style:{fontWeight:"800",color:"#1A1A2E",fontSize:"16px"}});nm.textContent=u.name;nl.appendChild(nm);
+      if(u.ok)nl.appendChild(sp({style:{background:"rgba(46,204,113,.15)",color:"#27AE60",borderRadius:"20px",padding:"2px 8px",fontSize:"11px",fontWeight:"700"}},"🪪"));
+      inf.appendChild(nl);
+      var bd=d({style:{marginBottom:"4px"}});
+      if(u.isCam){
+        var cb2=sp({style:{background:"#E8F5E9",color:"#2E7D32",display:"inline-block",padding:"3px 10px",borderRadius:"20px",fontSize:"11px",fontWeight:"700",marginRight:"6px"}},"🎥 追い撮り");bd.appendChild(cb2);
+        if(u.gear&&u.gear.length){
+          var gearRow=d({style:{display:"flex",gap:"4px",flexWrap:"wrap",marginTop:"4px"}});
+          u.gear.forEach(function(g){var gtag=d({style:{background:"#1a1a2e",color:"#fff",borderRadius:"8px",padding:"2px 8px",fontSize:"10px",fontWeight:"700"}});gtag.textContent=g;gearRow.appendChild(gtag);});
+          inf.appendChild(gearRow);
+        }
+      }
+      var actStr=u.acts?u.acts.join("・"):u.act;
+      bd.appendChild(sp({style:{background:"#EEF6FF",color:"#2196F3",borderRadius:"10px",padding:"2px 8px",fontSize:"11px",fontWeight:"700",marginRight:"6px"}},actStr));
+      bd.appendChild(sp({style:{background:"#F0F0F0",color:"#666",borderRadius:"10px",padding:"2px 8px",fontSize:"11px",fontWeight:"700"}},u.lv));
+      inf.appendChild(bd);
+      var lkRow=d({style:{display:"flex",alignItems:"center",gap:"6px",marginTop:"4px"}});
+      var lkCnt2=d({style:{color:"#9CA3AF",fontSize:"11px"}});lkCnt2.textContent="❤️ "+String(u.likes||0)+" いいね";lkRow.appendChild(lkCnt2);
+      if(u.price){
+        var pr=d({style:{display:"flex",alignItems:"center",gap:"8px",marginTop:"4px"}});
+        pr.appendChild(sp({style:{color:"#FF6B2B",fontWeight:"800",fontSize:"13px"}},"同行費用 ¥"+u.price.toLocaleString()+" / "+u.unit));inf.appendChild(pr);
+      }
+      inf.appendChild(lkRow);
+      row.appendChild(inf);
+      var lb=document.createElement("button");lb.style.cssText="font-size:22px;background:none;border:none;cursor:pointer;flex-shrink:0;padding:4px";
+      var isLk=S.liked.indexOf(u.id)>=0;lb.textContent=isLk?"💛":"🤍";
+      lb.addEventListener("click",function(e){
+        e.stopPropagation();var idx=S.liked.indexOf(u.id);
+        if(idx>=0){S.liked.splice(idx,1);}else{S.liked.push(u.id);if(!S.notifs)S.notifs=[];S.notifs.unshift({id:"n"+Date.now(),type:"like",icon:"❤️",msg:"あなたが"+u.name+"にいいねしました",time:"今",read:true});}
+        render();
+      });
+      row.appendChild(lb);card.appendChild(row);wrap.appendChild(card);
+    })(sortedUsers[ui]);
+  }
+  return wrap;
+}
+
+function renderChat(){
+  if(!S.chatUser){
+    var wrap=d({class:"pg"});var t=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"16px"}});t.textContent="💬 メッセージ";wrap.appendChild(t);
+    var has=false;
+    for(var ui=0;ui<USERS.length;ui++){
+      if(S.chatMsgs[String(USERS[ui].id)]){has=true;
+        (function(u){
+          var msgs=S.chatMsgs[String(u.id)]||[];var last=msgs[msgs.length-1];
+          var c=d({class:"card",style:{cursor:"pointer"},onClick:function(){R({chatUser:u});}});
+          var row=d({style:{display:"flex",alignItems:"center",gap:"12px"}});row.appendChild(av(48,24,u.icon));
+          var inf=d({style:{flex:"1"}});var nm=d({style:{fontWeight:"800",color:"#1A1A2E"}});nm.textContent=u.name;inf.appendChild(nm);
+          if(last){var le=d({style:{color:"#6B7280",fontSize:"13px",marginTop:"2px"}});le.textContent=last.t;inf.appendChild(le);}
+          row.appendChild(inf);if(last){var te=d({style:{color:"#6B7280",fontSize:"11px"}});te.textContent=last.time;row.appendChild(te);}
+          c.appendChild(row);wrap.appendChild(c);
+        })(USERS[ui]);
+      }
+    }
+    if(!has){var em=d({style:{color:"#6B7280",textAlign:"center",marginTop:"40px"}});em.textContent="まだメッセージはありません";wrap.appendChild(em);}
+    return wrap;
+  }
+  var cw=d({style:{display:"flex",flexDirection:"column",height:"100vh"}});
+  var hdr=d({class:"hdr"});
+  var bb=document.createElement("button");bb.style.cssText="color:#fff;font-size:22px;padding:0;background:none;border:none;cursor:pointer";bb.textContent="←";
+  bb.addEventListener("click",function(){R({chatUser:null});});
+  hdr.appendChild(bb);hdr.appendChild(av(38,20,S.chatUser.icon));
+  var ci=d({style:{flex:"1"}});
+  var cnm=d({style:{fontWeight:"800",color:"#fff",fontSize:"15px"}});cnm.textContent=S.chatUser.name;
+  var cdet=d({style:{color:"rgba(255,255,255,.8)",fontSize:"11px"}});cdet.textContent=(S.chatUser.lv||"")+((S.chatUser.lv&&S.chatUser.act)?"・":"")+(S.chatUser.act||"");
+  ci.appendChild(cnm);ci.appendChild(cdet);hdr.appendChild(ci);
+  if(S.chatUser&&S.chatUser.price&&S.chatUser.price>0){
+    var chatBookBtn=document.createElement("button");chatBookBtn.style.cssText="background:rgba(255,255,255,0.25);border:1.5px solid rgba(255,255,255,0.5);border-radius:12px;padding:6px 12px;color:#fff;font-size:11px;font-weight:800;font-family:inherit;cursor:pointer;flex-shrink:0";chatBookBtn.textContent="予約する";
+    chatBookBtn.addEventListener("click",function(){R({bookUser:S.chatUser});});hdr.appendChild(chatBookBtn);
+  }
+  cw.appendChild(hdr);
+  var ma=d({style:{flex:"1",overflowY:"auto",padding:"16px",background:"#F5F7FA"}});
+  var msgs=S.chatMsgs[String(S.chatUser.id)]||[];
+  for(var mi=0;mi<msgs.length;mi++){
+    var m=msgs[mi];var isMe=m.f==="m";
+    var mRow=d({style:{display:"flex",justifyContent:isMe?"flex-end":"flex-start",marginBottom:"10px",gap:"8px",alignItems:"flex-end"}});
+    if(!isMe){var mIco=d({style:{fontSize:"20px",flexShrink:"0"}});mIco.textContent=S.chatUser.icon;mRow.appendChild(mIco);}
+    var mBox=d({style:{maxWidth:"72%"}});
+    if(!isMe){var mName=d({style:{fontSize:"11px",color:"#9CA3AF",marginBottom:"2px",fontWeight:"700"}});mName.textContent=S.chatUser.name;mBox.appendChild(mName);}
+    var mBub=d({style:{background:isMe?"linear-gradient(135deg,#FF6B2B,#FF8C55)":"#fff",color:isMe?"#fff":"#1A1A2E",padding:"10px 16px",borderRadius:isMe?"18px 18px 4px 18px":"18px 18px 18px 4px",fontSize:"14px",lineHeight:"1.6",boxShadow:"0 2px 8px rgba(0,0,0,.08)"}});
+    mBub.textContent=m.t;
+    var mTime=d({style:{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:"4px",marginTop:"3px"}});
+    var mt=d({style:{fontSize:"10px",opacity:".6"}});mt.textContent=m.time;
+    if(isMe){var rd=d({style:{fontSize:"10px",color:"rgba(255,255,255,0.7)"}});rd.textContent="既読";mTime.appendChild(rd);}
+    mTime.appendChild(mt);mBub.appendChild(mTime);mBox.appendChild(mBub);mRow.appendChild(mBox);ma.appendChild(mRow);
+  }
+  cw.appendChild(ma);
+  var quickBar=d({style:{display:"flex",gap:"6px",padding:"8px 16px",background:"#fff",overflowX:"auto",borderTop:"1px solid #F0F0F0"}});
+  var quickBtns=[{lbl:"📅 今週末どうですか？",msg:"今週末一緒に滑りませんか？"},{lbl:"🎥 追い撮りお願いしたい",msg:"追い撮りをお願いしたいです！どのくらいの費用でしょうか？"},{lbl:"💰 費用を教えてください",msg:"費用・条件を教えていただけますか？"},{lbl:"🙋 よろしくお願いします！",msg:"はじめまして！スノマで見つけました。よろしくお願いします！"}];
+  quickBtns.forEach(function(qb){
+    var qbtn=document.createElement("button");qbtn.style.cssText="flex-shrink:0;padding:5px 12px;background:#F5F7FA;border:1px solid #E8E8E8;border-radius:16px;font-size:11px;font-weight:700;color:#6B7280;font-family:inherit;cursor:pointer;white-space:nowrap";
+    qbtn.textContent=qb.lbl;
+    qbtn.addEventListener("click",function(){
+      var cid=String(S.chatUser.id);if(!S.chatMsgs[cid])S.chatMsgs[cid]=[];
+      var now=new Date();var hm=now.getHours()+":"+String(now.getMinutes()).padStart(2,"0");
+      S.chatMsgs[cid].push({f:"m",t:qb.msg,time:hm});S.chatIn="";render();
+    });
+    quickBar.appendChild(qbtn);
+  });
+  cw.appendChild(quickBar);
+  var ir=d({style:{padding:"10px 16px 12px",background:"#fff",display:"flex",gap:"10px",borderTop:"none"}});
+  var ci2=document.createElement("input");ci2.type="text";ci2.className="inp";ci2.style.cssText="flex:1;border-radius:20px";
+  ci2.placeholder="メッセージを入力...";ci2.value=S.chatIn||"";
+  ci2.addEventListener("input",function(ev){S.chatIn=ev.target.value;});
+  ci2.addEventListener("keydown",function(ev){if(ev.key==="Enter")sendMsg();});
+  var sb=obtn("送信",sendMsg,"");sb.style.padding="10px 18px";
+  ir.appendChild(ci2);ir.appendChild(sb);cw.appendChild(ir);
+  return cw;
+}
+
+function renderMarket(){
+  var wrap=d({class:"pg"});
+  if(!S.myProfile||!S.myProfile.ok){
+    var locked=d({style:{textAlign:"center",padding:"40px 20px"}});
+    var lico=d({style:{fontSize:"56px",marginBottom:"12px"}});lico.textContent="🔒";
+    var lt=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"8px"}});lt.textContent="会員限定コンテンツ";
+    var ls=d({style:{color:"#6B7280",fontSize:"13px",lineHeight:"1.7",marginBottom:"20px"}});ls.textContent="スノマラウンジはSnowMatch会員のみ参加できます。本人確認を完了してご参加ください。";
+    locked.appendChild(lico);locked.appendChild(lt);locked.appendChild(ls);wrap.appendChild(locked);return wrap;
+  }
+  var hd=d({style:{marginBottom:"14px"}});
+  var ht=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"4px"}});ht.textContent="🛖 スノマラウンジ";
+  var hs=d({style:{color:"#6B7280",fontSize:"13px"}});hs.textContent="会員限定 · 仲間と語ろう・チェックイン・レポート";
+  hd.appendChild(ht);hd.appendChild(hs);wrap.appendChild(hd);
+  var tabs=d({style:{display:"flex",gap:"0",marginBottom:"16px",background:"#F5F7FA",borderRadius:"16px",padding:"4px"}});
+  var tabDefs=[["room","💬 雑談部屋"],["qa","📖 Q&A"],["checkin","📍 チェックイン"],["report","📊 レポート"]];
+  for(var ti=0;ti<tabDefs.length;ti++){
+    (function(id,lbl){
+      var tb=document.createElement("button");
+      tb.style.cssText="flex:1;padding:8px 4px;border-radius:12px;border:none;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;background:"+(S.marketTab===id?"#fff":"transparent")+";color:"+(S.marketTab===id?"#FF6B2B":"#6B7280")+";box-shadow:"+(S.marketTab===id?"0 2px 8px rgba(0,0,0,0.1)":"none");
+      tb.textContent=lbl;tb.addEventListener("click",function(){S.marketTab=id;S.openRoom=null;render();});tabs.appendChild(tb);
+    })(tabDefs[ti][0],tabDefs[ti][1]);
+  }
+  wrap.appendChild(tabs);
+
+  if(S.marketTab==="room"){
+    if(S.openRoom){
+      var room=null;for(var ri=0;ri<ROOMS_SAMPLE.length;ri++){if(ROOMS_SAMPLE[ri].id===S.openRoom){room=ROOMS_SAMPLE[ri];break;}}
+      if(!room){S.openRoom=null;render();return wrap;}
+      var chatWrap=d({style:{display:"flex",flexDirection:"column",height:"calc(100vh - 160px)"}});
+      var rHdr=d({style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"12px",paddingBottom:"12px",borderBottom:"1px solid #F0F0F0"}});
+      var backBtn=document.createElement("button");backBtn.style.cssText="font-size:22px;background:none;border:none;cursor:pointer;padding:0;flex-shrink:0";backBtn.textContent="←";
+      backBtn.addEventListener("click",function(){S.openRoom=null;render();});
+      var rInfo=d({style:{flex:"1"}});
+      var rTitle=d({style:{fontWeight:"800",fontSize:"15px",color:"#1A1A2E"}});rTitle.textContent=room.icon+" "+room.title;
+      var rMeta=d({style:{fontSize:"11px",color:"#9CA3AF"}});rMeta.textContent=room.members+"人参加中 · "+room.cat;
+      rInfo.appendChild(rTitle);rInfo.appendChild(rMeta);rHdr.appendChild(backBtn);rHdr.appendChild(rInfo);
+      wrap.insertBefore(rHdr,wrap.firstChild);
+      var ma=d({style:{flex:"1",overflowY:"auto",marginBottom:"12px"}});
+      var rmsgs=room.msgs.concat(S.rooms[room.id]||[]);
+      for(var mi=0;mi<rmsgs.length;mi++){
+        var m=rmsgs[mi];var isMe=(S.myProfile&&(S.myProfile.nick||S.myProfile.name)===m.user);
+        var mRow=d({style:{display:"flex",justifyContent:isMe?"flex-end":"flex-start",marginBottom:"10px",gap:"8px",alignItems:"flex-end"}});
+        if(!isMe){var mIco=d({style:{fontSize:"20px",flexShrink:"0"}});mIco.textContent=m.icon;mRow.appendChild(mIco);}
+        var mBox=d({style:{maxWidth:"72%"}});
+        if(!isMe){var mName=d({style:{fontSize:"11px",color:"#9CA3AF",marginBottom:"2px",fontWeight:"700"}});mName.textContent=m.user;mBox.appendChild(mName);}
+        var mBub=d({style:{background:isMe?"linear-gradient(135deg,#FF6B2B,#FF8C55)":"#fff",color:isMe?"#fff":"#1A1A2E",padding:"10px 14px",borderRadius:isMe?"18px 18px 4px 18px":"18px 18px 18px 4px",fontSize:"13px",lineHeight:"1.6",boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}});
+        mBub.textContent=m.t;var mTime=d({style:{fontSize:"10px",color:isMe?"rgba(255,255,255,0.7)":"#9CA3AF",marginTop:"3px",textAlign:isMe?"right":"left"}});mTime.textContent=m.time;
+        mBox.appendChild(mBub);mBox.appendChild(mTime);mRow.appendChild(mBox);ma.appendChild(mRow);
+      }
+      chatWrap.appendChild(ma);
+      var ir=d({style:{display:"flex",gap:"8px",alignItems:"center",background:"#fff",padding:"10px 0",borderTop:"1px solid #F0F0F0"}});
+      var rci=document.createElement("input");rci.type="text";rci.className="inp";rci.style.cssText="flex:1;border-radius:20px;font-size:14px";
+      rci.placeholder="メッセージを入力...";rci.value=S.roomInput||"";
+      rci.addEventListener("input",function(e){S.roomInput=e.target.value;});
+      rci.addEventListener("keydown",function(e){if(e.key==="Enter")sendRoomMsg(room.id);});
+      var rsb=document.createElement("button");rsb.className="obtn";rsb.style.padding="10px 18px";rsb.textContent="送信";
+      rsb.addEventListener("click",function(){sendRoomMsg(room.id);});
+      ir.appendChild(rci);ir.appendChild(rsb);chatWrap.appendChild(ir);wrap.appendChild(chatWrap);return wrap;
+    }
+    var cats2=["すべて","スノーボード","スキー","初心者","情報共有","動画"];
+    var catRow=d({style:{display:"flex",gap:"8px",overflowX:"auto",paddingBottom:"4px",marginBottom:"14px"}});
+    if(!S.marketCat)S.marketCat="すべて";
+    cats2.forEach(function(c){
+      var cb=document.createElement("button");cb.className="chip"+(S.marketCat===c?" on":"");cb.style.cssText="font-size:11px;padding:5px 12px;white-space:nowrap";cb.textContent=c;
+      cb.addEventListener("click",function(){S.marketCat=c;render();});catRow.appendChild(cb);
+    });
+    wrap.appendChild(catRow);
+    var rooms2=ROOMS_SAMPLE.filter(function(r){return S.marketCat==="すべて"||r.cat===S.marketCat;});
+    rooms2.forEach(function(room){
+      var card=d({class:"card",style:{cursor:"pointer",marginBottom:"12px"},onClick:function(){S.openRoom=room.id;render();}});
+      var tr=d({style:{display:"flex",gap:"12px",alignItems:"center",marginBottom:"10px"}});
+      var ico=d({style:{width:"48px",height:"48px",borderRadius:"16px",background:"linear-gradient(135deg,#FFF0E8,#FFE4D6)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"24px",flexShrink:"0"}});ico.textContent=room.icon;
+      var info=d({style:{flex:"1"}});
+      var rt=d({style:{fontWeight:"800",fontSize:"14px",color:"#1A1A2E",marginBottom:"3px"}});rt.textContent=room.title;
+      var rm=d({style:{display:"flex",alignItems:"center",gap:"8px"}});
+      var catBdg=d({style:{background:"#EEF6FF",color:"#2196F3",borderRadius:"8px",padding:"2px 8px",fontSize:"10px",fontWeight:"700"}});catBdg.textContent=room.cat;
+      var memEl=d({style:{fontSize:"12px",color:"#9CA3AF"}});memEl.textContent="👥 "+room.members+"人";
+      rm.appendChild(catBdg);rm.appendChild(memEl);info.appendChild(rt);info.appendChild(rm);
+      var arr=d({style:{color:"#D1D5DB",fontSize:"20px",flexShrink:"0"}});arr.textContent="›";
+      tr.appendChild(ico);tr.appendChild(info);tr.appendChild(arr);card.appendChild(tr);
+      var lastMsg=room.msgs[room.msgs.length-1];
+      if(lastMsg){var lm=d({style:{background:"#F5F7FA",borderRadius:"10px",padding:"8px 12px",fontSize:"12px",color:"#6B7280",lineHeight:"1.5"}});var lmUser=document.createElement("span");lmUser.style.cssText="font-weight:700;color:#1A1A2E";lmUser.textContent=lastMsg.user+": ";var lmTxt=document.createTextNode(lastMsg.t.length>35?lastMsg.t.slice(0,35)+"...":lastMsg.t);lm.appendChild(lmUser);lm.appendChild(lmTxt);card.appendChild(lm);}
+      wrap.appendChild(card);
+    });
+  }
+
+  if(S.marketTab==="qa"){
+    if(!S.openQA){
+      var qaTitle=d({style:{fontWeight:"900",fontSize:"16px",color:"#1A1A2E",marginBottom:"4px"}});qaTitle.textContent="📖 スノースポーツQ&A";wrap.appendChild(qaTitle);
+      var qaSub=d({style:{color:"#6B7280",fontSize:"13px",marginBottom:"16px"}});qaSub.textContent="初心者から上級者まで役立つ情報";wrap.appendChild(qaSub);
+      for(var qi=0;qi<QA_DATA.length;qi++){
+        (function(cat){
+          var catCard=d({class:"card",style:{cursor:"pointer",marginBottom:"12px"},onClick:function(){S.openQA=cat.cat;render();}});
+          var catRow=d({style:{display:"flex",alignItems:"center",gap:"14px"}});
+          var catIco=d({style:{width:"48px",height:"48px",borderRadius:"16px",background:"linear-gradient(135deg,#FFF0E8,#FFE4D6)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"24px",flexShrink:"0"}});catIco.textContent=cat.cat.split(" ")[0];
+          var catInfo=d({style:{flex:"1"}});
+          var catName=d({style:{fontWeight:"800",fontSize:"15px",color:"#1A1A2E",marginBottom:"3px"}});catName.textContent=cat.cat;
+          var catCnt=d({style:{fontSize:"12px",color:"#9CA3AF"}});catCnt.textContent=cat.items.length+"つのQ&A";
+          catInfo.appendChild(catName);catInfo.appendChild(catCnt);
+          var catArr=d({style:{color:"#D1D5DB",fontSize:"20px"}});catArr.textContent="›";
+          catRow.appendChild(catIco);catRow.appendChild(catInfo);catRow.appendChild(catArr);catCard.appendChild(catRow);wrap.appendChild(catCard);
+        })(QA_DATA[qi]);
+      }
+    } else {
+      var backBtn2=d({style:{display:"flex",alignItems:"center",gap:"6px",marginBottom:"14px",cursor:"pointer",color:"#FF6B2B",fontWeight:"700",fontSize:"13px"},onClick:function(){S.openQA=null;render();}});
+      backBtn2.appendChild(document.createElement("span")).textContent="←";backBtn2.appendChild(document.createElement("span")).textContent="カテゴリに戻る";wrap.appendChild(backBtn2);
+      var curCat=null;for(var qi2=0;qi2<QA_DATA.length;qi2++){if(QA_DATA[qi2].cat===S.openQA){curCat=QA_DATA[qi2];break;}}
+      if(curCat){
+        var catHeader=d({style:{fontWeight:"900",fontSize:"16px",color:"#1A1A2E",marginBottom:"16px"}});catHeader.textContent=curCat.cat;wrap.appendChild(catHeader);
+        for(var ii=0;ii<curCat.items.length;ii++){
+          (function(item,idx2){
+            var isOpen=(S.openQAItem===idx2+"-"+S.openQA);
+            var qCard=d({class:"card",style:{marginBottom:"10px",cursor:"pointer",border:"2px solid "+(isOpen?"#FF6B2B":"transparent")},onClick:function(){S.openQAItem=isOpen?null:(idx2+"-"+S.openQA);render();}});
+            var qRow=d({style:{display:"flex",alignItems:"flex-start",gap:"10px"}});
+            var qBadge=d({style:{background:isOpen?"#FF6B2B":"#FFF0E8",color:isOpen?"#fff":"#FF6B2B",borderRadius:"10px",padding:"2px 10px",fontSize:"12px",fontWeight:"900",flexShrink:"0",marginTop:"2px"}});qBadge.textContent="Q";
+            var qText=d({style:{fontWeight:"700",fontSize:"14px",color:"#1A1A2E",flex:"1",lineHeight:"1.5"}});qText.textContent=item.q;
+            var qArr=d({style:{color:"#D1D5DB",fontSize:"18px",flexShrink:"0"}});qArr.textContent="›";
+            qRow.appendChild(qBadge);qRow.appendChild(qText);qRow.appendChild(qArr);qCard.appendChild(qRow);
+            if(isOpen){var aRow=d({style:{marginTop:"12px",paddingTop:"12px",borderTop:"1px solid #FFE4D6",display:"flex",gap:"10px",alignItems:"flex-start"}});var aBadge=d({style:{background:"#22C55E",color:"#fff",borderRadius:"10px",padding:"2px 10px",fontSize:"12px",fontWeight:"900",flexShrink:"0",marginTop:"2px"}});aBadge.textContent="A";var aText=d({style:{fontSize:"13px",color:"#374151",lineHeight:"1.8",flex:"1",whiteSpace:"pre-wrap"}});aText.textContent=item.a;aRow.appendChild(aBadge);aRow.appendChild(aText);qCard.appendChild(aRow);}
+            wrap.appendChild(qCard);
+          })(curCat.items[ii],ii);
+        }
+      }
+    }
+  }
+
+  if(S.marketTab==="checkin"){
+    var ciAddBtn=d({style:{display:"flex",justifyContent:"flex-end",marginBottom:"12px"}});
+    var ciab=document.createElement("button");ciab.className="obtn";ciab.style.cssText="font-size:13px;padding:8px 16px";ciab.textContent="📍 チェックインする";
+    ciab.addEventListener("click",function(){S.showCheckin=true;render();});ciAddBtn.appendChild(ciab);wrap.appendChild(ciAddBtn);
+    var allCI=CHECKIN_SAMPLE.concat(S.checkins||[]);
+    allCI.forEach(function(ci){
+      var card=d({class:"card",style:{marginBottom:"12px"}});
+      var tr=d({style:{display:"flex",gap:"12px",alignItems:"center",marginBottom:"8px"}});
+      var ico=d({style:{fontSize:"24px",flexShrink:"0"}});ico.textContent=ci.icon;
+      var info=d({style:{flex:"1"}});var name2=d({style:{fontWeight:"800",fontSize:"14px",color:"#1A1A2E"}});name2.textContent=ci.user;
+      var resort2=d({style:{display:"flex",alignItems:"center",gap:"4px",marginTop:"2px"}});
+      var pin=d({style:{fontSize:"14px"}});pin.textContent="📍";var rname=d({style:{fontWeight:"700",fontSize:"13px",color:"#FF6B2B"}});rname.textContent=ci.resort;
+      resort2.appendChild(pin);resort2.appendChild(rname);info.appendChild(name2);info.appendChild(resort2);
+      var time2=d({style:{fontSize:"11px",color:"#9CA3AF",flexShrink:"0"}});time2.textContent=ci.time;
+      tr.appendChild(ico);tr.appendChild(info);tr.appendChild(time2);card.appendChild(tr);
+      var snow2=d({style:{background:"#F0F9FF",borderRadius:"10px",padding:"8px 12px",fontSize:"13px",color:"#0369A1",fontWeight:"600",marginBottom:"10px"}});snow2.textContent="❄️ "+ci.snow;card.appendChild(snow2);
+      var lkRow=d({style:{display:"flex",alignItems:"center",gap:"6px"}});var lkBtn=document.createElement("button");lkBtn.style.cssText="font-size:18px;background:none;border:none;cursor:pointer;padding:0";lkBtn.textContent="🤙";var lkCnt=d({style:{fontSize:"12px",color:"#6B7280",fontWeight:"700"}});lkCnt.textContent=ci.likes+" いいね！";lkRow.appendChild(lkBtn);lkRow.appendChild(lkCnt);card.appendChild(lkRow);wrap.appendChild(card);
+    });
+  }
+
+  if(S.marketTab==="report"){
+    var rpAddBtn=d({style:{display:"flex",justifyContent:"flex-end",marginBottom:"12px"}});
+    var rpab=document.createElement("button");rpab.className="obtn";rpab.style.cssText="font-size:13px;padding:8px 16px";rpab.textContent="📊 レポートを書く";
+    rpab.addEventListener("click",function(){S.showReport=true;render();});rpAddBtn.appendChild(rpab);wrap.appendChild(rpAddBtn);
+    var allRP=REPORT_SAMPLE.concat(S.reports||[]);
+    allRP.forEach(function(rp){
+      var card=d({class:"card",style:{marginBottom:"12px"}});
+      var tr=d({style:{display:"flex",gap:"10px",alignItems:"center",marginBottom:"10px"}});
+      var ico=d({style:{fontSize:"22px"}});ico.textContent=rp.icon;
+      var info=d({style:{flex:"1"}});var resort2=d({style:{fontWeight:"800",fontSize:"15px",color:"#1A1A2E"}});resort2.textContent=rp.resort;var uinfo=d({style:{fontSize:"12px",color:"#9CA3AF"}});uinfo.textContent=rp.user+" · "+rp.date;
+      info.appendChild(resort2);info.appendChild(uinfo);tr.appendChild(ico);tr.appendChild(info);card.appendChild(tr);
+      var scores=d({style:{display:"flex",gap:"16px",background:"#F5F7FA",borderRadius:"12px",padding:"10px 14px",marginBottom:"10px"}});
+      var sc1=d({style:{textAlign:"center"}});var sl1=d({style:{fontSize:"11px",color:"#6B7280",marginBottom:"2px"}});sl1.textContent="雪質";var sv1=d({style:{fontSize:"13px"}});sv1.textContent=rp.snow;sc1.appendChild(sl1);sc1.appendChild(sv1);
+      var sc2=d({style:{textAlign:"center"}});var sl2=d({style:{fontSize:"11px",color:"#6B7280",marginBottom:"2px"}});sl2.textContent="混雑度";var sv2=d({style:{fontSize:"13px"}});sv2.textContent=rp.crowd;sc2.appendChild(sl2);sc2.appendChild(sv2);
+      scores.appendChild(sc1);scores.appendChild(sc2);card.appendChild(scores);
+      var comment2=d({style:{fontSize:"13px",color:"#374151",lineHeight:"1.7",marginBottom:"10px"}});comment2.textContent=rp.comment;card.appendChild(comment2);
+      var lkRow=d({style:{display:"flex",alignItems:"center",gap:"6px"}});var lkBtn=document.createElement("button");lkBtn.style.cssText="font-size:16px;background:none;border:none;cursor:pointer;padding:0";lkBtn.textContent="❤️";var lkCnt=d({style:{fontSize:"12px",color:"#6B7280",fontWeight:"700"}});lkCnt.textContent=String(rp.likes)+" 参考になった";lkRow.appendChild(lkBtn);lkRow.appendChild(lkCnt);card.appendChild(lkRow);wrap.appendChild(card);
+    });
+  }
+  return wrap;
+}
+
+function sendRoomMsg(roomId){
+  var t=(S.roomInput||"").trim();if(!t)return;
+  if(!S.rooms)S.rooms={};if(!S.rooms[roomId])S.rooms[roomId]=[];
+  var now=new Date();var hm=now.getHours()+":"+String(now.getMinutes()).padStart(2,"0");
+  S.rooms[roomId].push({user:(S.myProfile&&(S.myProfile.nick||S.myProfile.name))||"あなた",icon:(S.myProfile&&S.myProfile.icon)||"🏂",t:t,time:hm});
+  S.roomInput="";render();
+}
+
+function renderBookings(){
+  var wrap=d({class:"pg"});
+  var t=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"16px"}});t.textContent="🎿 予約履歴";wrap.appendChild(t);
+  if(!S.matches||!S.matches.length){
+    var em=d({style:{textAlign:"center",padding:"40px 20px"}});
+    var eico=d({style:{fontSize:"52px",marginBottom:"12px"}});eico.textContent="🎿";
+    var et=d({style:{fontWeight:"900",fontSize:"18px",color:"#1A1A2E",marginBottom:"8px"}});et.textContent="まだ予約がありません";
+    var es=d({style:{color:"#6B7280",fontSize:"13px",marginBottom:"16px"}});es.textContent="探すページから仲間を見つけて予約しよう！";
+    em.appendChild(eico);em.appendChild(et);em.appendChild(es);
+    em.appendChild(obtn("仲間を探す",function(){R({tab:"explore"});},"obtn-full"));
+    wrap.appendChild(em);return wrap;
+  }
+  for(var mi=0;mi<S.matches.length;mi++){
+    var bk=S.matches[mi];
+    var card=d({class:"card",style:{marginBottom:"12px"}});
+    var tr=d({style:{display:"flex",gap:"12px",alignItems:"center",marginBottom:"10px"}});
+    var ico=d({style:{fontSize:"28px"}});ico.textContent=bk.user.icon;
+    var info=d({style:{flex:"1"}});
+    var nm=d({style:{fontWeight:"800",fontSize:"16px",color:"#1A1A2E"}});nm.textContent=bk.user.name;
+    var dt=d({style:{fontSize:"12px",color:"#9CA3AF",marginTop:"2px"}});dt.textContent="予約日："+bk.date;
+    info.appendChild(nm);info.appendChild(dt);tr.appendChild(ico);tr.appendChild(info);
+    var status=d({style:{background:"#F0FDF4",color:"#16A34A",borderRadius:"10px",padding:"4px 10px",fontSize:"12px",fontWeight:"700"}});status.textContent="✅ 確定";
+    tr.appendChild(status);card.appendChild(tr);
+    var fee=d({style:{background:"#F9FAFB",borderRadius:"12px",padding:"10px 14px",fontSize:"13px",color:"#374151"}});fee.textContent="同行費用：¥"+bk.total.toLocaleString()+"　振込予定："+bk.payoutDate;
+    card.appendChild(fee);wrap.appendChild(card);
+  }
+  return wrap;
+}
+
+
+// ============================================
+// Supabase 認証・データ保存
+// ============================================
+
+function LoginModal(){
+  var loginEmail="";
+  var loginPw="";
+  return Modal(false,function(){S.showLoginModal=false;render();},function(box){
+    var title=document.createElement("div");title.style.cssText="font-weight:900;font-size:18px;color:#1A1A2E;margin-bottom:16px";title.textContent="📧 メールでログイン";box.appendChild(title);
+
+    var el=document.createElement("div");el.style.cssText="font-size:12px;font-weight:700;color:#6B7280;margin-bottom:6px";el.textContent="メールアドレス";box.appendChild(el);
+    var ei=document.createElement("input");ei.type="email";ei.className="inp";ei.style.marginBottom="12px";ei.placeholder="example@email.com";
+    ei.addEventListener("input",function(e){loginEmail=e.target.value;});
+    box.appendChild(ei);
+
+    var pl=document.createElement("div");pl.style.cssText="font-size:12px;font-weight:700;color:#6B7280;margin-bottom:6px";pl.textContent="パスワード";box.appendChild(pl);
+    var pi=document.createElement("input");pi.type="password";pi.className="inp";pi.style.marginBottom="16px";
+    pi.addEventListener("input",function(e){loginPw=e.target.value;});
+    box.appendChild(pi);
+
+    var errMsg=document.createElement("div");errMsg.style.cssText="color:#EF4444;font-size:12px;margin-bottom:10px;display:none";box.appendChild(errMsg);
+
+    var loginBtn=document.createElement("button");loginBtn.className="obtn obtn-full";loginBtn.textContent="ログイン";
+    loginBtn.addEventListener("click",function(){
+      if(!loginEmail||!loginPw){errMsg.textContent="メールアドレスとパスワードを入力してください";errMsg.style.display="block";return;}
+      if(!sb){errMsg.textContent="接続エラーが発生しました";errMsg.style.display="block";return;}
+      loginBtn.disabled=true;loginBtn.textContent="ログイン中...";
+      sb.auth.signInWithPassword({email:loginEmail,password:loginPw}).then(function(res){
+        if(res.error){
+          errMsg.textContent="ログインに失敗しました: "+res.error.message;errMsg.style.display="block";
+          loginBtn.disabled=false;loginBtn.textContent="ログイン";
+          return;
+        }
+        currentUser=res.data.user;
+        loadProfileFromSupabase();
+      }).catch(function(e){
+        errMsg.textContent="接続エラーが発生しました";errMsg.style.display="block";
+        loginBtn.disabled=false;loginBtn.textContent="ログイン";
+      });
+    });
+    box.appendChild(loginBtn);
+  });
+}
+
+function loadProfileFromSupabase(){
+  if(!sb||!currentUser){S.showLoginModal=false;render();return;}
+  sb.from("profiles").select("*").eq("id",currentUser.id).single().then(function(res){
+    if(res.error||!res.data){
+      alert("プロフィールが見つかりませんでした");
+      S.showLoginModal=false;render();
+      return;
+    }
+    var p=res.data;
+    S.myProfile={
+      uid:p.id,nick:p.nick,name:p.real_name,age:p.age,email:p.email,
+      act:p.act,acts:p.acts||[],lv:p.lv,resorts:p.resorts||[],bio:p.bio,
+      icon:p.icon||"🏂",profileImg:p.profile_img,isIns:p.is_ins,isCam:p.is_cam,
+      price:p.price,unit:p.unit,gear:p.gear||[],sns:p.sns||{},
+      ok:p.is_verified,kycStatus:p.kyc_status
+    };
+    saveD();
+    S.showLoginModal=false;
+    R({pg:"main",tab:"explore"});
+  }).catch(function(e){
+    console.error(e);
+    S.showLoginModal=false;render();
+  });
+}
+
+function signUpToSupabase(){
+  if(!sb){
+    alert("接続エラー：Supabaseが初期化されていません");
+    finishLocalRegistration();
+    return;
+  }
+  var email=(S.reg.email||"").trim();
+  var pw=S.reg.pw||"";
+  if(!email||!pw){
+    alert("メールアドレスとパスワードが必要です");
+    finishLocalRegistration();
+    return;
+  }
+  sb.auth.signUp({email:email,password:pw}).then(function(res){
+    if(res.error){
+      // 既に登録済みメールの場合はログインを試す
+      if(res.error.message && res.error.message.indexOf("already")>=0){
+        sb.auth.signInWithPassword({email:email,password:pw}).then(function(res2){
+          if(res2.error){alert("登録エラー: "+res2.error.message);finishLocalRegistration();return;}
+          currentUser=res2.data.user;
+          saveProfileToSupabase();
+        });
+        return;
+      }
+      alert("登録エラー: "+res.error.message);
+      finishLocalRegistration();
+      return;
+    }
+    currentUser=res.data.user;
+    saveProfileToSupabase();
+  }).catch(function(e){
+    console.error(e);
+    finishLocalRegistration();
+  });
+}
+
+function saveProfileToSupabase(){
+  if(!sb||!currentUser){finishLocalRegistration();return;}
+  var profileRow={
+    id: currentUser.id,
+    nick: S.reg.nick||"",
+    real_name: S.reg.real||"",
+    age: S.reg.age?parseInt(S.reg.age):null,
+    email: S.reg.email||"",
+    act: S.reg.act||"",
+    acts: S.reg.acts||[],
+    lv: S.reg.lv||"中級",
+    resorts: S.reg.resorts||[],
+    bio: S.reg.bio||"",
+    icon: "🏂",
+    is_verified: true,
+    kyc_status: "approved"
+  };
+  sb.from("profiles").upsert(profileRow).then(function(res){
+    if(res.error){console.error("Profile save error:",res.error);}
+    finishLocalRegistration();
+  }).catch(function(e){
+    console.error(e);
+    finishLocalRegistration();
+  });
+}
+
+function finishLocalRegistration(){
+  if(!S.myProfile)S.myProfile={};
+  S.myProfile.nick=S.reg.nick;S.myProfile.name=S.reg.real||"";S.myProfile.age=S.reg.age||"";
+  S.myProfile.email=S.reg.email;S.myProfile.act=S.reg.act||"";S.myProfile.lv=S.reg.lv||"中級";
+  S.myProfile.acts=S.reg.acts||[];S.myProfile.resorts=S.reg.resorts||[];
+  S.myProfile.bio=S.reg.bio||"";S.myProfile.icon="🏂";
+  S.myProfile.kycStatus="approved";S.myProfile.ok=true;
+  if(currentUser)S.myProfile.uid=currentUser.id;
+  saveD();
+  R({pg:"main",showWelcome:true});
+}
+
+function renderKyc(){
+  var wrap=d({class:"pg"});
+  if(S.kycStep===0||!S.kycStep){
+    var ico=d({style:{fontSize:"56px",textAlign:"center",marginBottom:"12px"}});ico.textContent="🪪";wrap.appendChild(ico);
+    var t=d({style:{fontWeight:"900",fontSize:"22px",color:"#1A1A2E",textAlign:"center",marginBottom:"8px"}});t.textContent="本人確認（KYC）";wrap.appendChild(t);
+    var s=d({style:{color:"#6B7280",fontSize:"13px",textAlign:"center",lineHeight:"1.7",marginBottom:"24px"}});s.textContent="安心・安全のために本人確認を行います。確認後は「本人確認済み」バッジが表示されます。";wrap.appendChild(s);
+    var steps=d({style:{background:"#F9FAFB",borderRadius:"16px",padding:"14px",marginBottom:"20px"}});
+    var ksteps=[["📱","SMS認証","携帯番号で確認"],["🪪","身分証確認","免許証・マイナンバー等"],["✅","審査完了","通常1〜2分で完了"]];
+    for(var ki=0;ki<ksteps.length;ki++){
+      var kr=d({style:{display:"flex",alignItems:"center",gap:"12px",marginBottom:ki<2?"12px":"0"}});
+      var kico=d({style:{width:"36px",height:"36px",borderRadius:"12px",background:"#FFF0E8",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px",flexShrink:"0"}});kico.textContent=ksteps[ki][0];
+      var kinfo=d({style:{flex:"1"}});
+      var kt=d({style:{fontWeight:"800",fontSize:"13px",color:"#1A1A2E"}});kt.textContent=ksteps[ki][1];
+      var ks=d({style:{fontSize:"11px",color:"#6B7280"}});ks.textContent=ksteps[ki][2];
+      kinfo.appendChild(kt);kinfo.appendChild(ks);kr.appendChild(kico);kr.appendChild(kinfo);steps.appendChild(kr);
+    }
+    wrap.appendChild(steps);
+    wrap.appendChild(obtn("本人確認をはじめる",function(){R({kycStep:1});},"obtn-full"));
+    var skip=document.createElement("button");skip.style.cssText="width:100%;margin-top:10px;padding:10px;background:none;border:none;color:#9CA3AF;font-size:13px;cursor:pointer;font-family:inherit;text-decoration:underline";
+    skip.textContent="後で確認する（一部機能が制限されます）";
+    skip.addEventListener("click",function(){
+      if(!S.myProfile)S.myProfile={};
+      S.myProfile.nick=S.reg.nick;S.myProfile.name=S.reg.real;S.myProfile.age=S.reg.age;
+      S.myProfile.email=S.reg.email;S.myProfile.act=S.reg.act;S.myProfile.lv=S.reg.lv;
+      S.myProfile.resorts=S.reg.resorts||[];S.myProfile.bio=S.reg.bio||"";
+      S.myProfile.icon="🏂";S.myProfile.ok=false;S.myProfile.kycStatus="pending";
+      saveD();R({pg:"main"});
+    });
+    wrap.appendChild(skip);
+  } else if(S.kycStep===1){
+    var t2=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"16px"}});t2.textContent="📱 SMS認証";wrap.appendChild(t2);
+    var pl=d({style:{fontSize:"12px",fontWeight:"700",color:"#6B7280",marginBottom:"6px"}});pl.textContent="携帯電話番号";wrap.appendChild(pl);
+    var pi2=i2({type:"tel",class:"inp"});pi2.placeholder="090-0000-0000";pi2.style.marginBottom="12px";wrap.appendChild(pi2);
+    wrap.appendChild(obtn("認証コードを送信",function(){R({kycStep:2});},"obtn-full"));
+    wrap.appendChild(obtn("← 戻る",function(){R({kycStep:0});},"obtn-s obtn-full"));
+  } else if(S.kycStep===2){
+    var t3=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"16px"}});t3.textContent="📱 認証コードを入力";wrap.appendChild(t3);
+    var cl=d({style:{fontSize:"12px",fontWeight:"700",color:"#6B7280",marginBottom:"6px"}});cl.textContent="SMSで届いた4桁のコード";wrap.appendChild(cl);
+    var ci2=i2({type:"number",class:"inp"});ci2.placeholder="0000";ci2.style.cssText="margin-bottom:12px;font-size:24px;text-align:center;letter-spacing:8px";wrap.appendChild(ci2);
+    wrap.appendChild(obtn("次へ（身分証確認）",function(){R({kycStep:3});},"obtn-full"));
+    wrap.appendChild(obtn("← 戻る",function(){R({kycStep:1});},"obtn-s obtn-full"));
+  } else if(S.kycStep===3){
+    var t4=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"8px"}});t4.textContent="🪪 身分証を提出";wrap.appendChild(t4);
+    var s4=d({style:{color:"#6B7280",fontSize:"13px",marginBottom:"16px"}});s4.textContent="運転免許証・マイナンバーカード・パスポートのいずれか";wrap.appendChild(s4);
+    var kycImgSrc=null;
+    var dz=d({style:{border:"2px dashed #E8E8E8",borderRadius:"16px",padding:"20px",textAlign:"center",marginBottom:"14px",cursor:"pointer",position:"relative",overflow:"hidden"}});
+    var dico=d({style:{fontSize:"40px",marginBottom:"8px"}});dico.textContent="📄";
+    var dtx=d({style:{color:"#6B7280",fontSize:"13px"}});dtx.textContent="タップして写真を選択";
+    dz.appendChild(dico);dz.appendChild(dtx);
+
+    // ファイル選択input
+    var kycFile=document.createElement("input");kycFile.type="file";kycFile.accept="image/*";
+    kycFile.style.cssText="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer";
+    kycFile.addEventListener("change",function(e){
+      var file=e.target.files[0];if(!file)return;
+      var rd=new FileReader();
+      rd.onload=function(ev){
+        kycImgSrc=ev.target.result;
+        dico.textContent="✅";dico.style.color="#22C55E";
+        dtx.textContent="写真が選択されました（"+file.name+")";dtx.style.color="#22C55E";
+        dz.style.border="2px solid #22C55E";dz.style.background="#F0FDF4";
+      };
+      rd.readAsDataURL(file);
+    });
+    dz.appendChild(kycFile);
+    wrap.appendChild(dz);
+    var kycSubmitBtn=document.createElement("button");kycSubmitBtn.className="obtn obtn-full";kycSubmitBtn.textContent="提出して審査へ →";
+    kycSubmitBtn.addEventListener("click",function(){
+      kycSubmitBtn.disabled=true;
+      kycSubmitBtn.textContent="登録処理中...";
+      signUpToSupabase();
+    });
+    wrap.appendChild(kycSubmitBtn);
+    wrap.appendChild(obtn("← 戻る",function(){R({kycStep:2});},"obtn-s obtn-full"));
+  }
+  return wrap;
+}
+
+function renderProfile(){
+  var wrap=d({style:{paddingBottom:"80px"}});
+  var kycOk=(S.myProfile&&(S.myProfile.kycStatus==="approved"||S.myProfile.ok));
+  var hero=d({style:{background:"linear-gradient(160deg,#FF6B2B,#FF8C55 60%,#FFD580)",padding:"28px 20px 24px",position:"relative"}});
+  var eb=b2({style:{position:"absolute",top:"16px",right:"16px",background:"rgba(255,255,255,.22)",borderRadius:"20px",padding:"6px 14px",color:"#fff",fontSize:"12px",fontWeight:"700",border:"none",cursor:"pointer"}},"✏️ 編集");
+  eb.addEventListener("click",function(){R({pg:"onboard",onStep:0});});hero.appendChild(eb);
+  var hr=d({style:{display:"flex",gap:"14px",alignItems:"center"}});
+  var aw=d({style:{position:"relative",flexShrink:"0",cursor:"pointer"}});
+  if(S.myProfile&&S.myProfile.profileImg){var ai=mk("img",{src:S.myProfile.profileImg});ai.style.cssText="width:72px;height:72px;border-radius:22px;object-fit:cover;border:3px solid rgba(255,255,255,.6)";aw.appendChild(ai);}
+  else{
+    // スキーヤーシルエットアイコン
+    var silhouette=document.createElement("div");
+    silhouette.style.cssText="width:72px;height:72px;border-radius:22px;background:#E8E8E8;display:flex;align-items:center;justify-content:center;border:3px solid rgba(255,255,255,.6);overflow:hidden";
+    silhouette.innerHTML='<svg viewBox="0 0 72 72" width="72" height="72" xmlns="http://www.w3.org/2000/svg"><rect width="72" height="72" fill="#DCDCDC"/><circle cx="36" cy="24" r="13" fill="#B0B0B0"/><rect x="8" y="42" width="56" height="4" rx="2" fill="#B0B0B0" opacity="0.6"/><ellipse cx="36" cy="58" rx="24" ry="16" fill="#B0B0B0"/><circle cx="36" cy="21" r="10" fill="#C8C8C8"/><ellipse cx="36" cy="19" rx="8" ry="5" fill="#B8B8B8" opacity="0.8"/><rect x="26" y="16" width="20" height="8" rx="4" fill="#A0A0A0" opacity="0.6"/></svg>';
+    aw.appendChild(silhouette);
+  }
+  var cam=d({style:{position:"absolute",bottom:"-4px",right:"-4px",background:"#fff",borderRadius:"12px",width:"24px",height:"24px",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"13px",boxShadow:"0 2px 6px rgba(0,0,0,.2)"}});cam.textContent="📷";aw.appendChild(cam);
+  var pi=i2({type:"file",accept:"image/*"});pi.style.cssText="position:absolute;top:0;right:0;bottom:0;left:0;opacity:0;cursor:pointer;border-radius:22px";
+  pi.addEventListener("change",function(e){var file=e.target.files[0];if(!file)return;var fr=new FileReader();fr.onload=function(ev){S.myProfile.profileImg=ev.target.result;saveD();render();};fr.readAsDataURL(file);e.target.value="";});
+  aw.appendChild(pi);hr.appendChild(aw);
+  var hi=d({});var hn=d({style:{display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap"}});
+  hn.appendChild(sp({style:{fontWeight:"900",fontSize:"22px",color:"#fff"}},(S.myProfile&&(S.myProfile.nick||S.myProfile.name))||"名前未設定"));
+  if(kycOk)hn.appendChild(sp({style:{background:"rgba(255,255,255,.25)",borderRadius:"20px",padding:"2px 8px",fontSize:"11px",color:"#fff",fontWeight:"700"}},"🪪 本人確認済"));
+  hi.appendChild(hn);
+  var agd=d({style:{color:"rgba(255,255,255,.85)",fontSize:"13px",marginTop:"2px"}});agd.textContent=((S.myProfile&&S.myProfile.act)||"")+"・"+((S.myProfile&&S.myProfile.lv)||"");hi.appendChild(agd);
+
+  // フォロー・フォロワー数
+  var followRow=document.createElement("div");followRow.style.cssText="display:flex;gap:24px;margin-top:10px";
+  var fwBtn=document.createElement("button");fwBtn.style.cssText="background:none;border:none;cursor:pointer;text-align:left;padding:0";
+  var fwNum=document.createElement("div");fwNum.style.cssText="font-weight:900;color:#fff;font-size:18px;line-height:1";fwNum.textContent=String(S.following.length);
+  var fwLbl=document.createElement("div");fwLbl.style.cssText="font-size:11px;color:rgba(255,255,255,.75);margin-top:2px";fwLbl.textContent="フォロー中";
+  fwBtn.appendChild(fwNum);fwBtn.appendChild(fwLbl);
+  fwBtn.addEventListener("click",function(){S.showFollowList=true;S.followListType="following";render();});
+  var frBtn=document.createElement("button");frBtn.style.cssText="background:none;border:none;cursor:pointer;text-align:left;padding:0";
+  var frNum=document.createElement("div");frNum.style.cssText="font-weight:900;color:#fff;font-size:18px;line-height:1";frNum.textContent=String(S.followers.length);
+  var frLbl=document.createElement("div");frLbl.style.cssText="font-size:11px;color:rgba(255,255,255,.75);margin-top:2px";frLbl.textContent="フォロワー";
+  frBtn.appendChild(frNum);frBtn.appendChild(frLbl);
+  frBtn.addEventListener("click",function(){S.showFollowList=true;S.followListType="followers";render();});
+  followRow.appendChild(fwBtn);followRow.appendChild(frBtn);hi.appendChild(followRow);
+
+  hr.appendChild(hi);hero.appendChild(hr);wrap.appendChild(hero);
+  var body=d({style:{padding:"16px 16px 0"}});
+
+  // ── プロフィール完成度バー ──
+  var profItems2 = [
+    {label:"プロフィール写真", done:!!(S.myProfile&&S.myProfile.profileImg)},
+    {label:"自己紹介文", done:!!(S.myProfile&&S.myProfile.bio&&S.myProfile.bio.length>5)},
+    {label:"活動スキー場", done:!!(S.myProfile&&S.myProfile.resorts&&S.myProfile.resorts.length>0)},
+    {label:"価格設定", done:!!(S.myProfile&&S.myProfile.price&&S.myProfile.price>0)},
+    {label:"板の情報", done:!!(S.myProfile&&S.myProfile.board&&S.myProfile.board.length>0)},
+    {label:"投稿・実績", done:!!(S.myProfile&&S.myProfile.posts&&S.myProfile.posts.length>0)}
+  ];
+  var doneCount2=0;
+  profItems2.forEach(function(it){if(it.done)doneCount2++;});
+  var pct2=Math.round(doneCount2/profItems2.length*100);
+
+  if(pct2 < 100){
+    var compCard=document.createElement("div");
+    compCard.style.cssText="background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:20px;padding:14px 16px;margin-bottom:12px";
+    var compRow=document.createElement("div");compRow.style.cssText="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px";
+    var compLeft=document.createElement("div");
+    var compTitle2=document.createElement("div");compTitle2.style.cssText="font-weight:800;color:#fff;font-size:13px;margin-bottom:2px";compTitle2.textContent="📋 プロフィールを完成させよう";
+    var compSub2=document.createElement("div");compSub2.style.cssText="font-size:11px;color:rgba(255,255,255,0.6)";compSub2.textContent="完成度が高いほどマッチングしやすい！";
+    compLeft.appendChild(compTitle2);compLeft.appendChild(compSub2);
+    var compPct=document.createElement("div");compPct.style.cssText="font-weight:900;font-size:24px;color:#FF6B2B";compPct.textContent=pct2+"%";
+    compRow.appendChild(compLeft);compRow.appendChild(compPct);compCard.appendChild(compRow);
+    var compBg=document.createElement("div");compBg.style.cssText="background:rgba(255,255,255,0.15);border-radius:6px;height:8px;margin-bottom:10px";
+    var compFill=document.createElement("div");compFill.style.cssText="background:linear-gradient(135deg,#FF6B2B,#FFD580);border-radius:6px;height:8px;width:"+pct2+"%";
+    compBg.appendChild(compFill);compCard.appendChild(compBg);
+    // 未完成項目
+    var notDone=profItems2.filter(function(it){return !it.done;});
+    var notDoneRow=document.createElement("div");notDoneRow.style.cssText="display:flex;flex-wrap:wrap;gap:6px";
+    notDone.forEach(function(it){
+      var tag=document.createElement("div");
+      tag.style.cssText="background:rgba(255,255,255,0.12);border-radius:10px;padding:3px 10px;font-size:11px;color:rgba(255,255,255,0.8);font-weight:700";
+      tag.textContent="+ "+it.label;
+      notDoneRow.appendChild(tag);
+    });
+    compCard.appendChild(notDoneRow);
+    body.appendChild(compCard);
+  }
+
+  // ── 自己紹介カード ──
+  var bioCard = document.createElement("div");
+  bioCard.className = "card"; bioCard.style.marginBottom = "12px";
+  var bioHeader = document.createElement("div");
+  bioHeader.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin-bottom:8px";
+  var bioTitle = document.createElement("div");
+  bioTitle.style.cssText = "font-weight:800;color:#1A1A2E;font-size:14px";
+  bioTitle.textContent = "📝 自己紹介";
+  bioHeader.appendChild(bioTitle);
+  bioCard.appendChild(bioHeader);
+
+  var bioTA = document.createElement("textarea");
+  bioTA.className = "inp"; bioTA.rows = 4;
+  bioTA.style.cssText = "resize:vertical;margin-bottom:8px;font-size:13.5px";
+  bioTA.placeholder = "自己紹介・得意なこと・価格など自由に書いてください（例：スノボ歴15年。価格：¥5,000/2時間）";
+  bioTA.value = (S.myProfile && S.myProfile.bio) || "";
+  bioTA.addEventListener("input", function(e){ S.myProfile.bio = e.target.value; });
+  bioCard.appendChild(bioTA);
+
+  var bioSaveBtn = document.createElement("button");
+  bioSaveBtn.className = "obtn obtn-full";
+  bioSaveBtn.style.cssText = "font-size:13px;padding:10px";
+  bioSaveBtn.textContent = "💾 保存する";
+  bioSaveBtn.addEventListener("click", function(){
+    S.myProfile.bio = bioTA.value;
+    saveD();
+    bioSaveBtn.textContent = "✅ 保存しました！";
+    bioSaveBtn.style.background = "#22C55E";
+    setTimeout(function(){ bioSaveBtn.textContent = "💾 保存する"; bioSaveBtn.style.background = ""; }, 2000);
+  });
+  bioCard.appendChild(bioSaveBtn);
+  body.appendChild(bioCard);
+
+  // ── 活動スキー場タグ ──
+  if(S.myProfile && S.myProfile.resorts && S.myProfile.resorts.length) {
+    var rsCard = document.createElement("div");
+    rsCard.className = "card"; rsCard.style.marginBottom = "12px";
+    var rsTitle = document.createElement("div");
+    rsTitle.style.cssText = "font-weight:800;color:#1A1A2E;font-size:14px;margin-bottom:8px";
+    rsTitle.textContent = "🗻 活動スキー場";
+    rsCard.appendChild(rsTitle);
+    for(var rsi=0; rsi<S.myProfile.resorts.length; rsi++) {
+      var tag = document.createElement("span");
+      tag.className = "tag";
+      tag.textContent = "⛰️ " + S.myProfile.resorts[rsi];
+      rsCard.appendChild(tag);
+    }
+    body.appendChild(rsCard);
+  }
+
+  // ── 実績・経歴カード ──
+  if(S.myProfile && S.myProfile.isIns) {
+    var insCard = document.createElement("div");
+    insCard.className = "card"; insCard.style.marginBottom = "12px";
+    var insTitle = document.createElement("div");
+    insTitle.style.cssText = "font-weight:800;color:#1A1A2E;font-size:14px;margin-bottom:10px";
+    insTitle.textContent = "🏅 経歴・実績";
+    insCard.appendChild(insTitle);
+
+    // 料金
+    var priceRow = document.createElement("div");
+    priceRow.style.cssText = "display:flex;justify-content:space-between;align-items:center;background:#FFF0E8;border-radius:12px;padding:10px 14px;margin-bottom:10px";
+    var priceL = document.createElement("div");
+    priceL.style.cssText = "font-size:12px;font-weight:700;color:#FF6B2B";
+    priceL.textContent = "💰 同行・撮影費用";
+    var priceV = document.createElement("div");
+    priceV.style.cssText = "font-size:18px;font-weight:900;color:#1A1A2E";
+    priceV.textContent = "¥" + ((S.myProfile.price||0).toLocaleString()) + " / " + (S.myProfile.unit||"1時間");
+    priceRow.appendChild(priceL); priceRow.appendChild(priceV);
+    insCard.appendChild(priceRow);
+
+    // 資格入力欄
+    var certLbl = document.createElement("div");
+    certLbl.style.cssText = "font-size:12px;font-weight:700;color:#6B7280;margin-bottom:6px";
+    certLbl.textContent = "🏅 資格・認定（例：JSBA会員、スキー歴20年）";
+    insCard.appendChild(certLbl);
+
+    var certInp = document.createElement("input");
+    certInp.type = "text"; certInp.className = "inp";
+    certInp.style.marginBottom = "10px";
+    certInp.placeholder = "例：JSBA会員・スキー歴10年";
+    certInp.value = (S.myProfile.certText)||"";
+    certInp.addEventListener("input", function(e){ S.myProfile.certText=e.target.value; saveD(); });
+    insCard.appendChild(certInp);
+
+
+
+    // 資格バッジ表示
+    if(S.myProfile.certText && S.myProfile.certText.trim()) {
+      var certBadge = document.createElement("div");
+      certBadge.style.cssText = "margin-top:8px;display:flex;flex-wrap:wrap;gap:6px";
+      var certs = S.myProfile.certText.split(/[,、]/);
+      for(var ci=0; ci<certs.length; ci++){
+        if(!certs[ci].trim()) continue;
+        var cb = document.createElement("div");
+        cb.style.cssText = "background:linear-gradient(135deg,#1565C0,#1976D2);color:#fff;border-radius:20px;padding:4px 12px;font-size:11px;font-weight:800";
+        cb.textContent = "🏅 " + certs[ci].trim();
+        certBadge.appendChild(cb);
+      }
+      insCard.appendChild(certBadge);
+    }
+
+    body.appendChild(insCard);
+  }
+
+
+
+  // ── 機材・セッティングカード ──
+  var gearCard = document.createElement("div");
+  gearCard.className = "card"; gearCard.style.marginBottom = "12px";
+
+  var gearHeader = document.createElement("div");
+  gearHeader.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin-bottom:12px";
+  var gearTitle = document.createElement("div");
+  gearTitle.style.cssText = "font-weight:800;color:#1A1A2E;font-size:14px";
+  gearTitle.textContent = "🎿 機材・セッティング";
+  gearHeader.appendChild(gearTitle);
+  gearCard.appendChild(gearHeader);
+
+  // スタイル選択
+  var styleLabel = document.createElement("div");
+  styleLabel.style.cssText = "font-size:12px;font-weight:700;color:#6B7280;margin-bottom:8px";
+  styleLabel.textContent = "メインスタイル（複数選択可）";
+  gearCard.appendChild(styleLabel);
+
+  var styles = ["🏁 カービング","🌀 グラトリ","🛹 パーク・ジブ","🌨️ パウダー・BC","🌀 ハーフパイプ","🏔️ フリーラン","⛷️ アルペン","🐢 モーグル","🎥 追い撮り・撮影"];
+  if(!S.myProfile.styles) S.myProfile.styles = [];
+  var styleRow = document.createElement("div");
+  styleRow.style.cssText = "display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px";
+  styles.forEach(function(st){
+    var isOn = S.myProfile.styles.indexOf(st) >= 0;
+    var sb3 = document.createElement("button");
+    sb3.className = "chip" + (isOn?" on":"");
+    sb3.style.cssText = "font-size:12px;padding:6px 12px";
+    sb3.textContent = st;
+    sb3.addEventListener("click", function(){
+      var idx = S.myProfile.styles.indexOf(st);
+      if(idx >= 0) S.myProfile.styles.splice(idx,1);
+      else S.myProfile.styles.push(st);
+      saveD(); render();
+    });
+    styleRow.appendChild(sb3);
+  });
+  gearCard.appendChild(styleRow);
+
+  // 板の名前
+  var boardLabel = document.createElement("div");
+  boardLabel.style.cssText = "font-size:12px;font-weight:700;color:#6B7280;margin-bottom:6px";
+  boardLabel.textContent = "🏂 板・スキー";
+  gearCard.appendChild(boardLabel);
+  var boardInp = document.createElement("input");
+  boardInp.type = "text"; boardInp.className = "inp";
+  boardInp.style.marginBottom = "10px";
+  boardInp.placeholder = "例：BURTON Custom X 158cm / HEAD Rebels iGSR";
+  boardInp.value = (S.myProfile.board) || "";
+  boardInp.addEventListener("input", function(e){ S.myProfile.board = e.target.value; });
+  gearCard.appendChild(boardInp);
+
+  // セッティング（スタンス・角度など）
+  var setLabel = document.createElement("div");
+  setLabel.style.cssText = "font-size:12px;font-weight:700;color:#6B7280;margin-bottom:6px";
+  setLabel.textContent = "⚙️ セッティング・スタンスなど";
+  gearCard.appendChild(setLabel);
+  // テンプレート形式のセッティング入力
+  if(!S.myProfile.stanceW2) S.myProfile.stanceW2 = "";
+  if(!S.myProfile.frontAngle) S.myProfile.frontAngle = "";
+  if(!S.myProfile.backAngle) S.myProfile.backAngle = "";
+  if(!S.myProfile.bindingName) S.myProfile.bindingName = "";
+
+  var settingBox = document.createElement("div");
+  settingBox.style.cssText = "background:#F9FAFB;border-radius:16px;padding:14px;margin-bottom:12px;border:1.5px solid #E8E8E8";
+
+  // スタンス幅
+  var row1 = document.createElement("div");
+  row1.style.cssText = "display:flex;align-items:center;gap:8px;margin-bottom:10px";
+  var lbl1 = document.createElement("div");lbl1.style.cssText="font-size:13px;font-weight:700;color:#6B7280;white-space:nowrap;width:80px";lbl1.textContent="スタンス";
+  var inp1 = document.createElement("input");inp1.type="number";inp1.className="inp";inp1.style.cssText="flex:1;text-align:center";inp1.placeholder="55";inp1.value=S.myProfile.stanceW2||"";
+  inp1.addEventListener("input",function(e){S.myProfile.stanceW2=e.target.value;saveD();});
+  var unit1 = document.createElement("div");unit1.style.cssText="font-size:13px;font-weight:700;color:#6B7280;white-space:nowrap";unit1.textContent="cm";
+  row1.appendChild(lbl1);row1.appendChild(inp1);row1.appendChild(unit1);
+  settingBox.appendChild(row1);
+
+  // 前後角度
+  var row2 = document.createElement("div");
+  row2.style.cssText = "display:flex;align-items:center;gap:8px;margin-bottom:10px";
+  var lbl2f = document.createElement("div");lbl2f.style.cssText="font-size:13px;font-weight:700;color:#6B7280;white-space:nowrap;width:30px";lbl2f.textContent="前";
+  var inp2f = document.createElement("input");inp2f.type="number";inp2f.className="inp";inp2f.style.cssText="flex:1;text-align:center";inp2f.placeholder="15";inp2f.value=S.myProfile.frontAngle||"";
+  inp2f.addEventListener("input",function(e){S.myProfile.frontAngle=e.target.value;saveD();});
+  var unit2f = document.createElement("div");unit2f.style.cssText="font-size:13px;font-weight:700;color:#6B7280";unit2f.textContent="°";
+  var lbl2b = document.createElement("div");lbl2b.style.cssText="font-size:13px;font-weight:700;color:#6B7280;white-space:nowrap;width:30px;margin-left:8px";lbl2b.textContent="後";
+  var inp2b = document.createElement("input");inp2b.type="number";inp2b.className="inp";inp2b.style.cssText="flex:1;text-align:center";inp2b.placeholder="-9";inp2b.value=S.myProfile.backAngle||"";
+  inp2b.addEventListener("input",function(e){S.myProfile.backAngle=e.target.value;saveD();});
+  var unit2b = document.createElement("div");unit2b.style.cssText="font-size:13px;font-weight:700;color:#6B7280";unit2b.textContent="°";
+  row2.appendChild(lbl2f);row2.appendChild(inp2f);row2.appendChild(unit2f);
+  row2.appendChild(lbl2b);row2.appendChild(inp2b);row2.appendChild(unit2b);
+  settingBox.appendChild(row2);
+
+  // ビンディング
+  var row3 = document.createElement("div");
+  row3.style.cssText = "display:flex;align-items:center;gap:8px";
+  var lbl3 = document.createElement("div");lbl3.style.cssText="font-size:13px;font-weight:700;color:#6B7280;white-space:nowrap;width:80px";lbl3.textContent="ビンディング";
+  var inp3 = document.createElement("input");inp3.type="text";inp3.className="inp";inp3.style.flex="1";inp3.placeholder="例：Union Force";inp3.value=S.myProfile.bindingName||"";
+  inp3.addEventListener("input",function(e){S.myProfile.bindingName=e.target.value;saveD();});
+  row3.appendChild(lbl3);row3.appendChild(inp3);
+  settingBox.appendChild(row3);
+
+  gearCard.appendChild(settingBox);
+  var setTA = {value:""};
+
+  // カメラ機材（追い撮りをするユーザー向け）
+  var camLabel2 = document.createElement("div");
+  camLabel2.style.cssText = "font-size:12px;font-weight:700;color:#6B7280;margin-bottom:8px";
+  camLabel2.textContent = "📷 撮影機材（追い撮りをする方）";
+  gearCard.appendChild(camLabel2);
+  var camGears = ["GoPro","Insta360","iPhone","Androidスマホ","ミラーレス一眼","ビデオカメラ","ドローン（許可エリアのみ）","アクションカム"];
+  if(!S.myProfile.camGear) S.myProfile.camGear=[];
+  var camGearRow=document.createElement("div");camGearRow.style.cssText="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px";
+  camGears.forEach(function(cg){
+    var isOn=S.myProfile.camGear.indexOf(cg)>=0;
+    var cgBtn=document.createElement("button");
+    cgBtn.className="chip"+(isOn?" on":"");
+    cgBtn.style.cssText="font-size:11px;padding:5px 10px";
+    cgBtn.textContent=cg;
+    cgBtn.addEventListener("click",function(){
+      var idx=S.myProfile.camGear.indexOf(cg);
+      if(idx>=0)S.myProfile.camGear.splice(idx,1);else S.myProfile.camGear.push(cg);
+      saveD();render();
+    });
+    camGearRow.appendChild(cgBtn);
+  });
+  gearCard.appendChild(camGearRow);
+
+  // 保存ボタン
+  var gearSaveBtn = document.createElement("button");
+  gearSaveBtn.className = "obtn obtn-full";
+  gearSaveBtn.style.cssText = "font-size:13px;padding:10px";
+  gearSaveBtn.textContent = "💾 保存する";
+  gearSaveBtn.addEventListener("click", function(){
+    S.myProfile.board = boardInp.value;
+    saveD();
+    gearSaveBtn.textContent = "✅ 保存しました！";
+    gearSaveBtn.style.background = "#22C55E";
+    setTimeout(function(){ gearSaveBtn.textContent = "💾 保存する"; gearSaveBtn.style.background = ""; }, 2000);
+  });
+  gearCard.appendChild(gearSaveBtn);
+  body.appendChild(gearCard);
+
+  // ── 価格設定カード ──
+  var priceCard = document.createElement("div");
+  priceCard.className = "card"; priceCard.style.marginBottom = "12px";
+
+  var priceHeader = document.createElement("div");
+  priceHeader.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin-bottom:12px";
+  var priceTitle = document.createElement("div");
+  priceTitle.style.cssText = "font-weight:800;color:#1A1A2E;font-size:14px";
+  priceTitle.textContent = "💰 同行費用の設定";
+  var priceNote = document.createElement("div");
+  priceNote.style.cssText = "font-size:11px;color:#9CA3AF";
+  priceNote.textContent = "交通費・リフト券・謝礼などの内訳";
+  priceHeader.appendChild(priceTitle); priceHeader.appendChild(priceNote);
+  priceCard.appendChild(priceHeader);
+
+  // 価格入力
+  var priceRow = document.createElement("div");
+  priceRow.style.cssText = "display:flex;align-items:center;gap:8px;margin-bottom:12px";
+  var yenLabel = document.createElement("div");
+  yenLabel.style.cssText = "font-size:20px;font-weight:900;color:#1A1A2E;flex-shrink:0";
+  yenLabel.textContent = "¥";
+  var priceInp = document.createElement("input");
+  priceInp.type = "number"; priceInp.className = "inp";
+  priceInp.style.flex = "1";
+  priceInp.placeholder = "例：5000";
+  priceInp.value = (S.myProfile && S.myProfile.price) ? String(S.myProfile.price) : "";
+  priceInp.addEventListener("input", function(e){
+    S.myProfile.price = parseInt(e.target.value) || 0;
+    saveD();
+    // 保存済みフィードバック
+    var sv = document.getElementById("price-saved-msg");
+    if(sv){ sv.style.opacity="1"; setTimeout(function(){ if(sv)sv.style.opacity="0"; }, 1500); }
+  });
+  var perLabel = document.createElement("div");
+  perLabel.style.cssText = "font-size:14px;font-weight:700;color:#6B7280;flex-shrink:0";
+  perLabel.textContent = "/";
+  priceRow.appendChild(yenLabel); priceRow.appendChild(priceInp); priceRow.appendChild(perLabel);
+
+  // 時間単位選択
+  var unitSel = document.createElement("select");
+  unitSel.className = "inp"; unitSel.style.cssText = "flex:0 0 100px;background:#fff";
+  var units = ["1時間","2時間","3時間","4時間","半日","1日","30分","要相談"];
+  for(var ui=0; ui<units.length; ui++){
+    var op = document.createElement("option");
+    op.value = units[ui]; op.textContent = units[ui];
+    if(S.myProfile && S.myProfile.unit === units[ui]) op.selected = true;
+    unitSel.appendChild(op);
+  }
+  unitSel.addEventListener("change", function(e){
+    S.myProfile.unit = e.target.value; saveD();
+    var sv = document.getElementById("price-saved-msg");
+    if(sv){ sv.style.opacity="1"; setTimeout(function(){ if(sv)sv.style.opacity="0"; }, 1500); }
+  });
+  priceRow.appendChild(unitSel);
+  priceCard.appendChild(priceRow);
+
+  // プレビュー
+  var pricePreview = document.createElement("div");
+  pricePreview.style.cssText = "background:#FFF0E8;border-radius:12px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between";
+  var previewLabel = document.createElement("div");
+  previewLabel.style.cssText = "font-size:12px;color:#FF6B2B;font-weight:700";
+  previewLabel.textContent = "同行費用の目安";
+  var previewVal = document.createElement("div");
+  previewVal.style.cssText = "font-size:16px;font-weight:900;color:#1A1A2E";
+  var pPrice = (S.myProfile && S.myProfile.price) ? S.myProfile.price : 0;
+  var pUnit = (S.myProfile && S.myProfile.unit) ? S.myProfile.unit : "1時間";
+  previewVal.textContent = pPrice > 0 ? ("¥" + pPrice.toLocaleString() + " / " + pUnit) : "未設定";
+  pricePreview.appendChild(previewLabel); pricePreview.appendChild(previewVal);
+  priceCard.appendChild(pricePreview);
+
+  // 費用内訳の説明
+  var costNote = document.createElement("div");
+  costNote.style.cssText = "background:#FFF9E6;border:1.5px solid #F59E0B;border-radius:12px;padding:12px;margin-bottom:12px";
+  var cnTitle = document.createElement("div");
+  cnTitle.style.cssText = "font-weight:800;color:#92400E;font-size:12px;margin-bottom:6px";
+  cnTitle.textContent = "⚠️ 重要：ご利用上の注意";
+  var cnBody = document.createElement("div");
+  cnBody.style.cssText = "font-size:11.5px;color:#78350F;line-height:1.8";
+  cnBody.textContent = "スキー場での無許可レッスン行為は禁止です。この費用はあくまで同行・撮影・仲間として一緒に滑る際の交通費・リフト券・諸経費の目安として設定してください。SNS動画撮影・滑りを一緒に見る・同行してもらうなどの目的の範囲でご利用ください。【重要】活動は必ずコース内で行ってください。バックカントリー・コース外での活動は遭難・雪崩などの重大事故につながります。無許可レッスンやコース外活動によるいかなる事故・処分についても当社は一切の責任を負いません。";
+  costNote.appendChild(cnTitle); costNote.appendChild(cnBody);
+  priceCard.appendChild(costNote);
+
+  // 費用内訳チップ
+  var breakdownTitle = document.createElement("div");
+  breakdownTitle.style.cssText = "font-size:12px;font-weight:700;color:#6B7280;margin-bottom:8px";
+  breakdownTitle.textContent = "費用の内訳（該当するものを選択）";
+  priceCard.appendChild(breakdownTitle);
+
+  var breakdowns = ["🚗 交通費","🎫 リフト券代","🏨 宿泊費","📷 撮影機材費","🤝 同行謝礼","🍜 食事代"];
+  if(!S.myProfile.costBreakdown) S.myProfile.costBreakdown = [];
+  var bdRow = document.createElement("div");
+  bdRow.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px";
+  breakdowns.forEach(function(bd){
+    var isOn = S.myProfile.costBreakdown.indexOf(bd) >= 0;
+    var bdBtn = document.createElement("button");
+    bdBtn.className = "chip" + (isOn?" on":"");
+    bdBtn.style.cssText = "font-size:11px;padding:5px 10px";
+    bdBtn.textContent = bd;
+    bdBtn.addEventListener("click", function(){
+      var idx = S.myProfile.costBreakdown.indexOf(bd);
+      if(idx >= 0) S.myProfile.costBreakdown.splice(idx,1);
+      else S.myProfile.costBreakdown.push(bd);
+      saveD(); render();
+    });
+    bdRow.appendChild(bdBtn);
+  });
+  priceCard.appendChild(bdRow);
+
+  // 価格なしオプション
+  var noPriceRow = document.createElement("div");
+  noPriceRow.style.cssText = "margin-top:10px;display:flex;align-items:center;gap:8px;cursor:pointer";
+  var noPriceChk = document.createElement("div");
+  var noPrice = (S.myProfile && !S.myProfile.price);
+  noPriceChk.style.cssText = "width:20px;height:20px;border-radius:6px;border:2px solid " + (noPrice?"#FF6B2B":"#D1D5DB") + ";background:" + (noPrice?"#FF6B2B":"#fff") + ";display:flex;align-items:center;justify-content:center;flex-shrink:0";
+  if(noPrice){ var nc=document.createElement("span");nc.style.cssText="color:#fff;font-size:11px;font-weight:900";nc.textContent="✓";noPriceChk.appendChild(nc); }
+  var noPriceLbl = document.createElement("div");
+  noPriceLbl.style.cssText = "font-size:13px;color:#6B7280";
+  noPriceLbl.textContent = "価格は相談・無料で使いたい";
+  noPriceRow.appendChild(noPriceChk); noPriceRow.appendChild(noPriceLbl);
+  noPriceRow.addEventListener("click", function(){
+    S.myProfile.price = 0; saveD(); render();
+  });
+  priceCard.appendChild(noPriceRow);
+
+  // 自動保存メッセージ
+  var savedMsg = document.createElement("div");
+  savedMsg.id = "price-saved-msg";
+  savedMsg.style.cssText = "text-align:center;font-size:12px;color:#22C55E;font-weight:700;margin-top:8px;opacity:0;transition:opacity 0.3s";
+  savedMsg.textContent = "✅ 保存しました";
+  priceCard.appendChild(savedMsg);
+  body.appendChild(priceCard);
+
+  var ph=d({style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"12px"}});
+  var ptit=d({style:{fontWeight:"900",fontSize:"16px",color:"#1A1A2E"}});ptit.textContent="🎥 投稿・実績";ph.appendChild(ptit);
+  var ab=obtn(kycOk?"＋ 追加":"🔒 認証後",function(){if(kycOk)R({addPost:true});},"");ab.style.padding="8px 16px";ab.style.fontSize="13px";if(!kycOk)ab.disabled=true;ph.appendChild(ab);body.appendChild(ph);
+  if(!kycOk){var lk=d({style:{background:"#fff",borderRadius:"18px",padding:"20px",textAlign:"center",boxShadow:"0 2px 12px rgba(0,0,0,.06)",marginBottom:"14px"}});var lkic=d({style:{fontSize:"32px",marginBottom:"6px"}});lkic.textContent="🔒";var lkt=d({style:{fontWeight:"800",color:"#1A1A2E",marginBottom:"4px"}});lkt.textContent="本人確認後に投稿できます";lk.appendChild(lkic);lk.appendChild(lkt);body.appendChild(lk);}
+  else if(!S.myProfile||!S.myProfile.posts||!S.myProfile.posts.length){
+    var ep=d({style:{background:"#fff",borderRadius:"18px",overflow:"hidden",boxShadow:"0 2px 12px rgba(0,0,0,.06)",marginBottom:"14px"}});
+
+    // 空投稿メッセージ
+    var epTop=d({style:{padding:"24px",textAlign:"center"}});
+    var epic=d({style:{fontSize:"40px",marginBottom:"8px"}});epic.textContent="📹";
+    var ept=d({style:{fontWeight:"800",color:"#1A1A2E",marginBottom:"6px"}});ept.textContent="まだ投稿がありません";
+    var eps=d({style:{color:"#6B7280",fontSize:"13px",marginBottom:"14px"}});eps.textContent="滑りの動画や写真を投稿しよう！";
+    epTop.appendChild(epic);epTop.appendChild(ept);epTop.appendChild(eps);
+    epTop.appendChild(obtn("最初の投稿をする",function(){R({addPost:true});},"obtn-full"));
+    ep.appendChild(epTop);
+
+    // SNSリンク欄
+    if(!S.myProfile.sns) S.myProfile.sns={};
+    var snsDiv2=d({style:{borderTop:"1px solid #F0F0F0",padding:"16px 20px"}});
+    var snsTitle2=d({style:{fontWeight:"800",fontSize:"13px",color:"#1A1A2E",marginBottom:"12px"}});
+    snsTitle2.textContent="📱 SNSアカウントを登録";
+    snsDiv2.appendChild(snsTitle2);
+    var snsItems2=[
+      {id:"instagram",bg:"linear-gradient(135deg,#E1306C,#833AB4,#F77737)",icon:"📷",ph:"https://instagram.com/yourname"},
+      {id:"tiktok",bg:"#000",icon:"🎵",ph:"https://tiktok.com/@yourname"},
+      {id:"youtube",bg:"#FF0000",icon:"▶️",ph:"https://youtube.com/@yourname"},
+      {id:"x",bg:"#000",icon:"✕",ph:"https://x.com/yourname"},
+      {id:"facebook",bg:"#1877F2",icon:"f",ph:"https://facebook.com/yourname"}
+    ];
+    snsItems2.forEach(function(sns){
+      var snsRow2=d({style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"10px"}});
+      var snsIco2=document.createElement("div");
+      snsIco2.style.cssText="width:36px;height:36px;border-radius:10px;background:"+sns.bg+";display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;font-weight:900;font-size:14px";
+      snsIco2.textContent=sns.icon;
+      var snsLabel2=document.createElement("div");snsLabel2.style.cssText="font-size:11px;font-weight:700;color:#6B7280;width:70px;flex-shrink:0";snsLabel2.textContent=sns.id.charAt(0).toUpperCase()+sns.id.slice(1);
+      var snsInp2=document.createElement("input");snsInp2.type="url";snsInp2.className="inp";snsInp2.style.cssText="flex:1;font-size:11px;padding:8px 10px";
+      snsInp2.placeholder=sns.ph;snsInp2.value=(S.myProfile.sns[sns.id])||"";
+      snsInp2.addEventListener("input",function(e){S.myProfile.sns[sns.id]=e.target.value;saveD();});
+      snsRow2.appendChild(snsIco2);snsRow2.appendChild(snsLabel2);snsRow2.appendChild(snsInp2);
+      snsDiv2.appendChild(snsRow2);
+    });
+    var snsSaveBtn2=document.createElement("button");snsSaveBtn2.className="obtn obtn-full";snsSaveBtn2.style.cssText="font-size:13px;padding:10px;margin-top:4px";snsSaveBtn2.textContent="💾 SNSリンクを保存";
+    snsSaveBtn2.addEventListener("click",function(){
+      saveD();snsSaveBtn2.textContent="✅ 保存しました！";snsSaveBtn2.style.background="#22C55E";
+      setTimeout(function(){snsSaveBtn2.textContent="💾 SNSリンクを保存";snsSaveBtn2.style.background="";},2000);
+    });
+    snsDiv2.appendChild(snsSaveBtn2);
+    ep.appendChild(snsDiv2);
+    body.appendChild(ep);
+  }else{for(var pi2=0;pi2<S.myProfile.posts.length;pi2++)body.appendChild(PostCard(S.myProfile.posts[pi2]));}
+  // お問い合わせ・退会
+  var supportDiv=d({style:{padding:"16px 20px 4px",display:"flex",flexDirection:"column",gap:"8px"}});
+
+  var contactBtn2=document.createElement("button");contactBtn2.style.cssText="padding:12px;background:#F9FAFB;border:1.5px solid #E8E8E8;border-radius:14px;font-size:13px;font-weight:700;color:#374151;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px";
+  contactBtn2.innerHTML="<span>📧</span><span>お問い合わせ</span>";
+  contactBtn2.addEventListener("click",function(){S.showContact=true;render();});
+  supportDiv.appendChild(contactBtn2);
+
+  var deleteBtn3=document.createElement("button");deleteBtn3.style.cssText="padding:12px;background:#FFF5F5;border:1.5px solid #FECACA;border-radius:14px;font-size:13px;font-weight:700;color:#EF4444;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px";
+  deleteBtn3.innerHTML="<span>🚪</span><span>退会する</span>";
+  deleteBtn3.addEventListener("click",function(){S.showDeleteAccount=true;render();});
+  supportDiv.appendChild(deleteBtn3);
+  wrap.appendChild(supportDiv);
+
+  var rd=d({style:{padding:"8px 0 20px",textAlign:"center"}});
+  var rb=b2({style:{background:"none",border:"none",color:"#9CA3AF",fontSize:"12px",fontFamily:"inherit",cursor:"pointer",textDecoration:"underline"}},"登録情報をリセット・やり直す");
+  rb.addEventListener("click",function(){if(window.confirm("登録情報と投稿をすべて削除してやり直しますか？")){clearD();S.myProfile=null;S.pg="splash";S.tab="explore";S.matches=[];S.liked=[];S.postLikes={};render();}});
+  rd.appendChild(rb);body.appendChild(rd);wrap.appendChild(body);return wrap;
+}
+
+function CheckinModal(){
+  var ciResort = AREAS[0].resorts[0];
+  var ciSnow = "";
+  return Modal(false,function(){S.showCheckin=false;render();},function(box){
+    var title=document.createElement("div");title.style.cssText="font-weight:900;font-size:18px;color:#1A1A2E;margin-bottom:14px";title.textContent="📍 チェックイン";box.appendChild(title);
+    var rl=document.createElement("div");rl.style.cssText="font-size:12px;font-weight:700;color:#6B7280;margin-bottom:6px";rl.textContent="ゲレンデを選択";box.appendChild(rl);
+
+    var rSel=document.createElement("select");rSel.className="inp";rSel.style.marginBottom="12px";
+    var flatResorts=[];
+    for(var ai=0;ai<AREAS.length;ai++){for(var ri=0;ri<AREAS[ai].resorts.length;ri++){flatResorts.push(AREAS[ai].resorts[ri]);}}
+    for(var fi=0;fi<flatResorts.length;fi++){var op=document.createElement("option");op.value=flatResorts[fi];op.textContent=flatResorts[fi];rSel.appendChild(op);}
+    rSel.addEventListener("change",function(e){ciResort=e.target.value;});
+    box.appendChild(rSel);
+
+    var sl=document.createElement("div");sl.style.cssText="font-size:12px;font-weight:700;color:#6B7280;margin-bottom:6px";sl.textContent="雪のコンディション・ひとこと";box.appendChild(sl);
+    var sta=document.createElement("textarea");sta.className="inp";sta.rows=3;sta.placeholder="例：膝上パウダー最高！視界良好";sta.style.marginBottom="14px";
+    sta.addEventListener("input",function(e){ciSnow=e.target.value;});
+    box.appendChild(sta);
+
+    var sb=document.createElement("button");sb.className="obtn obtn-full";sb.textContent="📍 チェックインする";
+    sb.addEventListener("click",function(){
+      var snow=ciSnow.trim();
+      if(!snow){alert("コンディションを入力してください");return;}
+      var resort=rSel.value||ciResort;
+      var now=new Date();var hm=now.getHours()+":"+String(now.getMinutes()).padStart(2,"0");
+      var ci={id:"c"+Date.now(),user:(S.myProfile&&(S.myProfile.nick||S.myProfile.name))||"あなた",icon:(S.myProfile&&S.myProfile.icon)||"🏂",resort:resort,snow:snow,time:hm,likes:0};
+      if(!S.checkins)S.checkins=[];
+      S.checkins.unshift(ci);
+      saveD();
+      sb.textContent="✅ チェックインしました！";sb.style.background="#22C55E";
+      setTimeout(function(){S.showCheckin=false;S.marketTab="checkin";R({tab:"market"});},1000);
+    });
+    box.appendChild(sb);
+  });
+}
+function ReportModal(){
+  return Modal(false,function(){S.showReport=false;render();},function(box){
+    var title=d({style:{fontWeight:"900",fontSize:"18px",color:"#1A1A2E",marginBottom:"14px"}});title.textContent="📊 滑りレポートを書く";box.appendChild(title);
+    var rl=d({style:{fontSize:"12px",fontWeight:"700",color:"#6B7280",marginBottom:"6px"}});rl.textContent="ゲレンデ";box.appendChild(rl);
+    var rSel=document.createElement("select");rSel.className="inp";rSel.style.marginBottom="12px";
+    var flatResorts2=[];AREAS.forEach(function(a){a.resorts.forEach(function(r){flatResorts2.push(r);});});
+    flatResorts2.forEach(function(r){var op=document.createElement("option");op.value=r;op.textContent=r;rSel.appendChild(op);});
+    box.appendChild(rSel);
+    // 雪質評価
+    var snl=d({style:{fontSize:"12px",fontWeight:"700",color:"#6B7280",marginBottom:"6px"}});snl.textContent="雪質";box.appendChild(snl);
+    if(!S._rpSnow)S._rpSnow=3;
+    var snRow=d({style:{display:"flex",gap:"6px",marginBottom:"12px"}});
+    for(var si=1;si<=5;si++){
+      (function(n){
+        var sb2=document.createElement("button");sb2.style.cssText="font-size:22px;background:none;border:none;cursor:pointer;padding:2px";sb2.textContent=n<=S._rpSnow?"⭐":"☆";
+        sb2.addEventListener("click",function(){S._rpSnow=n;render();});snRow.appendChild(sb2);
+      })(si);
+    }
+    box.appendChild(snRow);
+    // 混雑度
+    var cdl=d({style:{fontSize:"12px",fontWeight:"700",color:"#6B7280",marginBottom:"6px"}});cdl.textContent="混雑度（少ない★が良い）";box.appendChild(cdl);
+    if(!S._rpCrowd)S._rpCrowd=2;
+    var cdRow=d({style:{display:"flex",gap:"6px",marginBottom:"12px"}});
+    for(var ci2=1;ci2<=5;ci2++){
+      (function(n){
+        var sb3=document.createElement("button");sb3.style.cssText="font-size:22px;background:none;border:none;cursor:pointer;padding:2px";sb3.textContent=n<=S._rpCrowd?"⭐":"☆";
+        sb3.addEventListener("click",function(){S._rpCrowd=n;render();});cdRow.appendChild(sb3);
+      })(ci2);
+    }
+    box.appendChild(cdRow);
+    var cl=d({style:{fontSize:"12px",fontWeight:"700",color:"#6B7280",marginBottom:"6px"}});cl.textContent="コメント";box.appendChild(cl);
+    var cta=document.createElement("textarea");cta.className="inp";cta.rows=3;cta.placeholder="今日の感想・おすすめポイントなど";cta.style.marginBottom="14px";box.appendChild(cta);
+    var sub2=document.createElement("button");sub2.className="obtn obtn-full";sub2.textContent="📊 レポートを投稿する";
+    sub2.addEventListener("click",function(){
+      var comment=cta.value.trim();if(!comment){alert("コメントを入力してください");return;}
+      var snStr="";for(var i=0;i<S._rpSnow;i++)snStr+="⭐";
+      var cdStr="";for(var i=0;i<S._rpCrowd;i++)cdStr+="⭐";
+      var rp={id:"r"+Date.now(),user:(S.myProfile&&(S.myProfile.nick||S.myProfile.name))||"あなた",icon:(S.myProfile&&S.myProfile.icon)||"🏂",resort:rSel.value,snow:snStr,crowd:cdStr,comment:comment,date:new Date().toLocaleDateString("ja-JP"),likes:0};
+      if(!S.reports)S.reports=[];S.reports.unshift(rp);
+      saveD();
+      sub2.textContent="✅ 投稿しました！";sub2.style.background="#22C55E";
+      setTimeout(function(){
+        S.showReport=false;S.marketTab="report";S._rpSnow=3;S._rpCrowd=2;R({tab:"market"});
+      },800);
+    });
+    box.appendChild(sub2);
+  });
+}
+
+
+function NotifPanel(){
+  return Modal(false, function(){ S.showNotif=false; render(); }, function(box){
+    var title=document.createElement("div");
+    title.style.cssText="font-weight:900;font-size:18px;color:#1A1A2E;margin-bottom:4px";
+    title.textContent="🔔 通知";
+    box.appendChild(title);
+
+    var sub=document.createElement("div");
+    sub.style.cssText="font-size:12px;color:#9CA3AF;margin-bottom:16px";
+    sub.textContent="最近のアクティビティ";
+    box.appendChild(sub);
+
+    if(!S.notifs||!S.notifs.length){
+      var em=document.createElement("div");
+      em.style.cssText="text-align:center;color:#9CA3AF;padding:30px 0;font-size:14px";
+      em.textContent="まだ通知はありません";
+      box.appendChild(em);
+      return;
+    }
+
+    var typeColors={
+      like:"#FFE4E4", msg:"#E4F0FF", match:"#E4FFE4",
+      book:"#FFF4E4", review:"#F4E4FF"
+    };
+    var typeBorders={
+      like:"#FFB3B3", msg:"#90CAF9", match:"#A5D6A7",
+      book:"#FFCC80", review:"#CE93D8"
+    };
+
+    for(var ni=0;ni<S.notifs.length;ni++){
+      (function(notif){
+        var row=document.createElement("div");
+        row.style.cssText="display:flex;align-items:center;gap:12px;padding:12px;border-radius:16px;margin-bottom:8px;background:"+(notif.read?"#F9FAFB":typeColors[notif.type]||"#FFF0E8")+";border:1.5px solid "+(notif.read?"#F0F0F0":typeBorders[notif.type]||"#FFD580")+";cursor:pointer;transition:opacity 0.2s";
+
+        var icoBox=document.createElement("div");
+        icoBox.style.cssText="width:42px;height:42px;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,0.08)";
+        icoBox.textContent=notif.icon;
+
+        var info=document.createElement("div");info.style.cssText="flex:1;min-width:0";
+        var msg=document.createElement("div");
+        msg.style.cssText="font-size:13px;color:#1A1A2E;line-height:1.5;font-weight:"+(notif.read?"400":"700");
+        msg.textContent=notif.msg;
+        var time2=document.createElement("div");
+        time2.style.cssText="font-size:11px;color:#9CA3AF;margin-top:3px";
+        time2.textContent=notif.time;
+        info.appendChild(msg);info.appendChild(time2);
+
+        if(!notif.read){
+          var dot=document.createElement("div");
+          dot.style.cssText="width:8px;height:8px;border-radius:4px;background:#FF6B2B;flex-shrink:0";
+          row.appendChild(icoBox);row.appendChild(info);row.appendChild(dot);
+        } else {
+          row.appendChild(icoBox);row.appendChild(info);
+        }
+
+        // タップで関連画面へ
+        row.addEventListener("click",function(){
+          notif.read=true;
+          S.showNotif=false;
+          if(notif.type==="msg"||notif.type==="match") R({tab:"chat"});
+          else if(notif.type==="book") R({tab:"bookings"});
+          else R({tab:"explore"});
+        });
+        box.appendChild(row);
+      })(S.notifs[ni]);
+    }
+
+    // 全部消去ボタン
+    var clearBtn=document.createElement("button");
+    clearBtn.style.cssText="width:100%;padding:10px;background:none;border:none;color:#9CA3AF;font-size:12px;font-family:inherit;cursor:pointer;margin-top:4px;text-decoration:underline";
+    clearBtn.textContent="すべての通知を消去";
+    clearBtn.addEventListener("click",function(){ S.notifs=[]; render(); });
+    box.appendChild(clearBtn);
+  });
+}
+
+function FollowListModal(){
+  return Modal(false,function(){S.showFollowList=false;render();},function(box){
+    var isFollowing=(S.followListType==="following");
+    var title=document.createElement("div");
+    title.style.cssText="font-weight:900;font-size:18px;color:#1A1A2E;margin-bottom:16px";
+    title.textContent=isFollowing?"フォロー中":"フォロワー";
+    box.appendChild(title);
+
+    // タブ切り替え
+    var tabRow=document.createElement("div");tabRow.style.cssText="display:flex;gap:0;margin-bottom:16px;background:#F5F7FA;border-radius:14px;padding:4px";
+    var twBtn=document.createElement("button");twBtn.style.cssText="flex:1;padding:8px;border-radius:10px;border:none;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;background:"+(isFollowing?"#fff":"transparent")+";color:"+(isFollowing?"#FF6B2B":"#6B7280");
+    twBtn.textContent="フォロー中 "+S.following.length;
+    twBtn.addEventListener("click",function(){S.followListType="following";render();});
+    var trBtn=document.createElement("button");trBtn.style.cssText="flex:1;padding:8px;border-radius:10px;border:none;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;background:"+(isFollowing?"transparent":"#fff")+";color:"+(isFollowing?"#6B7280":"#FF6B2B");
+    trBtn.textContent="フォロワー "+S.followers.length;
+    trBtn.addEventListener("click",function(){S.followListType="followers";render();});
+    tabRow.appendChild(twBtn);tabRow.appendChild(trBtn);box.appendChild(tabRow);
+
+    var ids=isFollowing?S.following:S.followers;
+    if(!ids||!ids.length){
+      var em=document.createElement("div");em.style.cssText="text-align:center;color:#9CA3AF;padding:30px 0;font-size:14px";
+      em.textContent=isFollowing?"まだフォローしていません":"フォロワーはいません";
+      box.appendChild(em);return;
+    }
+
+    for(var fi=0;fi<ids.length;fi++){
+      var uid=ids[fi];
+      var u=null;
+      for(var ui=0;ui<USERS.length;ui++){if(USERS[ui].id===uid){u=USERS[ui];break;}}
+      if(!u)continue;
+      (function(u){
+        var row=document.createElement("div");
+        row.style.cssText="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #F0F0F0;cursor:pointer";
+        row.addEventListener("click",function(){S.showFollowList=false;R({selUser:u});});
+        var ico=document.createElement("div");ico.style.cssText="font-size:28px;flex-shrink:0";ico.textContent=u.icon;
+        var info=document.createElement("div");info.style.cssText="flex:1";
+        var nm=document.createElement("div");nm.style.cssText="font-weight:800;font-size:14px;color:#1A1A2E";nm.textContent=u.name;
+        var meta=document.createElement("div");meta.style.cssText="font-size:12px;color:#9CA3AF;margin-top:2px";meta.textContent=u.act+"・"+u.lv;
+        info.appendChild(nm);info.appendChild(meta);
+        // フォローボタン
+        var isF=S.following.indexOf(u.id)>=0;
+        var fBtn=document.createElement("button");
+        fBtn.style.cssText="padding:6px 14px;border-radius:12px;border:1.5px solid "+(isF?"#E8E8E8":"#FF6B2B")+";background:"+(isF?"#F5F7FA":"#FF6B2B")+";color:"+(isF?"#6B7280":"#fff")+";font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;flex-shrink:0";
+        fBtn.textContent=isF?"フォロー中":"フォローする";
+        fBtn.addEventListener("click",function(e){
+          e.stopPropagation();
+          var idx2=S.following.indexOf(u.id);
+          if(idx2>=0){S.following.splice(idx2,1);}else{S.following.push(u.id);}
+          render();
+        });
+        row.appendChild(ico);row.appendChild(info);row.appendChild(fBtn);
+        box.appendChild(row);
+      })(u);
+    }
+  });
+}
+
+function ContactModal(){
+  var contactMsg="";
+  return Modal(false,function(){S.showContact=false;render();},function(box){
+    var title=document.createElement("div");title.style.cssText="font-weight:900;font-size:18px;color:#1A1A2E;margin-bottom:6px";title.textContent="📧 お問い合わせ";box.appendChild(title);
+    var sub=document.createElement("div");sub.style.cssText="color:#6B7280;font-size:13px;margin-bottom:16px";sub.textContent="ご意見・ご要望・トラブル報告などお気軽にどうぞ";box.appendChild(sub);
+
+    var catLabel=document.createElement("div");catLabel.style.cssText="font-size:12px;font-weight:700;color:#6B7280;margin-bottom:8px";catLabel.textContent="お問い合わせ種別";box.appendChild(catLabel);
+    var cats=["不具合・バグ報告","ユーザーへの苦情","機能のご要望","その他"];
+    var selectedCat=cats[0];
+    var catRow=document.createElement("div");catRow.style.cssText="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px";
+    cats.forEach(function(c){
+      var cb=document.createElement("button");cb.className="chip"+(c===selectedCat?" on":"");cb.style.cssText="font-size:12px;padding:5px 12px";cb.textContent=c;
+      cb.addEventListener("click",function(){selectedCat=c;catRow.querySelectorAll("button").forEach(function(b){b.className="chip"+(b.textContent===c?" on":"");});});
+      catRow.appendChild(cb);
+    });
+    box.appendChild(catRow);
+
+    var msgLabel=document.createElement("div");msgLabel.style.cssText="font-size:12px;font-weight:700;color:#6B7280;margin-bottom:6px";msgLabel.textContent="内容";box.appendChild(msgLabel);
+    var msgTA=document.createElement("textarea");msgTA.className="inp";msgTA.rows=4;msgTA.placeholder="お問い合わせ内容を入力してください";msgTA.style.marginBottom="14px";
+    msgTA.addEventListener("input",function(e){contactMsg=e.target.value;});
+    box.appendChild(msgTA);
+
+    var sendBtn=document.createElement("button");sendBtn.className="obtn obtn-full";sendBtn.textContent="送信する";
+    sendBtn.addEventListener("click",function(){
+      if(!contactMsg.trim()){alert("内容を入力してください");return;}
+      sendBtn.textContent="✅ 送信しました！";sendBtn.style.background="#22C55E";
+      setTimeout(function(){S.showContact=false;render();alert("お問い合わせありがとうございます。\n運営より順次ご回答いたします。");},1000);
+    });
+    box.appendChild(sendBtn);
+  });
+}
+
+function DeleteAccountModal(){
+  return Modal(false,function(){S.showDeleteAccount=false;render();},function(box){
+    var ico=document.createElement("div");ico.style.cssText="font-size:48px;text-align:center;margin-bottom:12px";ico.textContent="⚠️";box.appendChild(ico);
+    var title=document.createElement("div");title.style.cssText="font-weight:900;font-size:18px;color:#1A1A2E;margin-bottom:8px;text-align:center";title.textContent="退会する";box.appendChild(title);
+    var sub=document.createElement("div");sub.style.cssText="color:#6B7280;font-size:13px;margin-bottom:16px;text-align:center;line-height:1.7";sub.textContent="退会すると全てのデータが削除されます。\nこの操作は取り消せません。";box.appendChild(sub);
+
+    var warns=["プロフィール・投稿データが削除されます","マッチング・予約履歴が削除されます","ラウンジの投稿が削除されます","再登録時に本人確認が必要になります"];
+    var warnCard=document.createElement("div");warnCard.style.cssText="background:#FFF5F5;border:1.5px solid #FECACA;border-radius:14px;padding:14px;margin-bottom:16px";
+    warns.forEach(function(w){
+      var wr=document.createElement("div");wr.style.cssText="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:13px;color:#DC2626";
+      var wi=document.createElement("span");wi.textContent="✕";var wt=document.createElement("span");wt.textContent=w;
+      wr.appendChild(wi);wr.appendChild(wt);warnCard.appendChild(wr);
+    });
+    box.appendChild(warnCard);
+
+    var confirmRow=document.createElement("div");confirmRow.style.cssText="display:flex;gap:10px";
+    var cancelBtn=document.createElement("button");cancelBtn.className="obtn obtn-s";cancelBtn.style.flex="1";cancelBtn.textContent="キャンセル";
+    cancelBtn.addEventListener("click",function(){S.showDeleteAccount=false;render();});
+    var deleteBtn2=document.createElement("button");deleteBtn2.style.cssText="flex:1;padding:12px;border-radius:14px;background:#EF4444;color:#fff;font-weight:900;font-size:14px;border:none;cursor:pointer";deleteBtn2.textContent="退会する";
+    deleteBtn2.addEventListener("click",function(){
+      deleteBtn2.textContent="処理中...";
+      setTimeout(function(){try{localStorage.removeItem("sm2");}catch(e){}location.reload();},1000);
+    });
+    confirmRow.appendChild(cancelBtn);confirmRow.appendChild(deleteBtn2);box.appendChild(confirmRow);
+  });
+}
+
+function WelcomeModal(){
+  return Modal(false, function(){ S.showWelcome=false; render(); }, function(box){
+    box.style.cssText += "text-align:center;padding-bottom:28px";
+
+    // ヘッダー
+    var confetti = document.createElement("div");
+    confetti.style.cssText = "font-size:52px;margin-bottom:8px";
+    confetti.textContent = "🎉";
+    box.appendChild(confetti);
+
+    var wTitle = document.createElement("div");
+    wTitle.style.cssText = "font-weight:900;font-size:22px;color:#1A1A2E;margin-bottom:6px";
+    wTitle.textContent = "SnowMatchへようこそ！";
+    box.appendChild(wTitle);
+
+    var wName = document.createElement("div");
+    wName.style.cssText = "font-size:14px;color:#6B7280;margin-bottom:20px";
+    wName.textContent = (S.myProfile&&(S.myProfile.nick||S.myProfile.name)||"")+"さん、本人確認が完了しました🪪";
+    box.appendChild(wName);
+
+    // プロフィール完成度バー
+    var profScore = 0;
+    var profItems = [
+      {label:"プロフィール写真", done:!!(S.myProfile&&S.myProfile.profileImg)},
+      {label:"自己紹介文", done:!!(S.myProfile&&S.myProfile.bio&&S.myProfile.bio.length>5)},
+      {label:"活動スキー場", done:!!(S.myProfile&&S.myProfile.resorts&&S.myProfile.resorts.length>0)},
+      {label:"価格設定", done:!!(S.myProfile&&S.myProfile.price&&S.myProfile.price>0)},
+      {label:"機材・板の情報", done:!!(S.myProfile&&S.myProfile.board&&S.myProfile.board.length>0)},
+      {label:"投稿・実績", done:!!(S.myProfile&&S.myProfile.posts&&S.myProfile.posts.length>0)}
+    ];
+    var doneCount = 0;
+    profItems.forEach(function(it){ if(it.done) doneCount++; });
+    var pct = Math.round(doneCount/profItems.length*100);
+
+    var barWrap = document.createElement("div");
+    barWrap.style.cssText = "background:#F5F7FA;border-radius:16px;padding:14px 16px;margin-bottom:16px;text-align:left";
+    var barTitle = document.createElement("div");
+    barTitle.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin-bottom:8px";
+    var btLeft = document.createElement("div");
+    btLeft.style.cssText = "font-weight:800;font-size:13px;color:#1A1A2E";
+    btLeft.textContent = "📋 プロフィール完成度";
+    var btRight = document.createElement("div");
+    btRight.style.cssText = "font-weight:900;font-size:16px;color:#FF6B2B";
+    btRight.textContent = pct+"%";
+    barTitle.appendChild(btLeft); barTitle.appendChild(btRight);
+    barWrap.appendChild(barTitle);
+
+    var barBg = document.createElement("div");
+    barBg.style.cssText = "background:#E8E8E8;border-radius:8px;height:10px;margin-bottom:12px";
+    var barFill = document.createElement("div");
+    barFill.style.cssText = "background:linear-gradient(135deg,#FF6B2B,#FF8C55);border-radius:8px;height:10px;width:"+pct+"%";
+    barBg.appendChild(barFill); barWrap.appendChild(barBg);
+
+    profItems.forEach(function(it){
+      var row = document.createElement("div");
+      row.style.cssText = "display:flex;align-items:center;gap:8px;margin-bottom:6px";
+      var chk = document.createElement("div");
+      chk.style.cssText = "width:18px;height:18px;border-radius:5px;background:"+(it.done?"#22C55E":"#E8E8E8")+";display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px";
+      chk.textContent = it.done?"✓":"";
+      var lbl = document.createElement("div");
+      lbl.style.cssText = "font-size:12px;color:"+(it.done?"#1A1A2E":"#9CA3AF")+";font-weight:"+(it.done?"700":"400");
+      lbl.textContent = it.label;
+      row.appendChild(chk); row.appendChild(lbl);
+      barWrap.appendChild(row);
+    });
+    box.appendChild(barWrap);
+
+    // 次のステップ
+    var stepTitle = document.createElement("div");
+    stepTitle.style.cssText = "font-weight:800;font-size:14px;color:#1A1A2E;margin-bottom:10px;text-align:left";
+    stepTitle.textContent = "🚀 まずやってみよう";
+    box.appendChild(stepTitle);
+
+    var steps3 = [
+      {icon:"📸", title:"プロフィール写真を設定", desc:"マイページから写真を追加", tab:"profile"},
+      {icon:"🔍", title:"仲間を探してみる", desc:"探すページで気になる人にいいね！", tab:"explore"},
+      {icon:"🛖", title:"ラウンジで挨拶する", desc:"雑談部屋で最初の一言を！", tab:"market"}
+    ];
+    steps3.forEach(function(st){
+      var sRow = document.createElement("div");
+      sRow.style.cssText = "display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border-radius:14px;margin-bottom:8px;cursor:pointer;border:1.5px solid #F0F0F0";
+      sRow.addEventListener("click", function(){
+        S.showWelcome=false;
+        R({tab:st.tab});
+      });
+      var sIco = document.createElement("div");
+      sIco.style.cssText = "width:36px;height:36px;border-radius:12px;background:linear-gradient(135deg,#FFF0E8,#FFE4D6);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0";
+      sIco.textContent = st.icon;
+      var sInfo = document.createElement("div"); sInfo.style.flex="1";
+      var sT = document.createElement("div"); sT.style.cssText="font-weight:700;font-size:13px;color:#1A1A2E"; sT.textContent=st.title;
+      var sD = document.createElement("div"); sD.style.cssText="font-size:11px;color:#9CA3AF;margin-top:1px"; sD.textContent=st.desc;
+      sInfo.appendChild(sT); sInfo.appendChild(sD);
+      var arr = document.createElement("div"); arr.style.cssText="color:#D1D5DB;font-size:18px"; arr.textContent="›";
+      sRow.appendChild(sIco); sRow.appendChild(sInfo); sRow.appendChild(arr);
+      box.appendChild(sRow);
+    });
+
+    var closeBtn = document.createElement("button");
+    closeBtn.className = "obtn obtn-full";
+    closeBtn.style.cssText = "margin-top:14px;font-size:15px;padding:14px";
+    closeBtn.textContent = "さっそく始める！ 🏂";
+    closeBtn.addEventListener("click", function(){ S.showWelcome=false; render(); });
+    box.appendChild(closeBtn);
+  });
+}
+
+
+function render(){
+  var app=document.getElementById("app");app.innerHTML="";
+  if(S.pg==="splash"){app.appendChild(renderSplash());return;}
+  if(S.pg==="onboard"){app.appendChild(renderOnboard());return;}
+  if(S.pg==="terms"){app.appendChild(renderTerms());return;}
+  if(S.pg==="kyc"){app.appendChild(renderKyc());return;}
+  var cf=S.tab==="chat"&&S.chatUser;
+  if(!cf){
+    var hdr=d({class:"hdr"});
+    hdr.appendChild(sp({style:{fontSize:"20px",fontWeight:"900",color:"#fff",letterSpacing:"-.5px"}},"SnowMatch"));
+    hdr.appendChild(sp({style:{fontSize:"11px",color:"rgba(255,255,255,.85)",marginLeft:"4px",flex:"1"}},"スキー・スノボ仲間を見つけよう"));
+    // 通知ベルボタン
+    var unreadNotifs = 0;
+    for(var ni=0;ni<S.notifs.length;ni++){if(!S.notifs[ni].read)unreadNotifs++;}
+    var bellWrap=document.createElement("div");bellWrap.style.cssText="position:relative;flex-shrink:0;margin-left:auto";
+    var bellBtn=document.createElement("button");bellBtn.style.cssText="font-size:22px;background:rgba(255,255,255,0.2);border:none;border-radius:12px;width:38px;height:38px;cursor:pointer;display:flex;align-items:center;justify-content:center";
+    bellBtn.textContent="🔔";
+    bellBtn.addEventListener("click",function(){S.showNotif=!S.showNotif;for(var i=0;i<S.notifs.length;i++)S.notifs[i].read=true;render();});
+    if(unreadNotifs>0){
+      var bellBdg=document.createElement("div");bellBdg.style.cssText="position:absolute;top:-4px;right:-4px;background:#FF3B30;color:#fff;border-radius:10px;min-width:16px;height:16px;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center;padding:0 3px";
+      bellBdg.textContent=String(unreadNotifs);bellWrap.appendChild(bellBdg);
+    }
+    bellWrap.appendChild(bellBtn);hdr.appendChild(bellWrap);
+    app.appendChild(hdr);
+  }
+  if(S.tab==="explore")app.appendChild(renderExplore());
+  else if(S.tab==="chat")app.appendChild(renderChat());
+  else if(S.tab==="market")app.appendChild(renderMarket());
+  else if(S.tab==="bookings")app.appendChild(renderBookings());
+  else if(S.tab==="profile")app.appendChild(renderProfile());
+  if(!cf){
+    var nav=d({class:"nav"});var navItems=[{id:"explore",ic:"🔍",lbl:"探す"},{id:"chat",ic:"💬",lbl:"チャット"},{id:"market",ic:"🛖",lbl:"ラウンジ"},{id:"bookings",ic:"🎿",lbl:"予約"},{id:"profile",ic:"👤",lbl:"マイページ"}];
+    for(var ni=0;ni<navItems.length;ni++){
+      (function(item){var ne=b2({class:"ni"+(S.tab===item.id?" on":"")});var nic=d({style:{fontSize:"22px",marginBottom:"2px"}});nic.textContent=item.ic;ne.appendChild(nic);ne.appendChild(document.createTextNode(item.lbl));ne.addEventListener("click",function(){if(item.id!=="chat")S.chatUser=null;R({tab:item.id});});nav.appendChild(ne);})(navItems[ni]);
+    }
+    app.appendChild(nav);
+  }
+  if(S.selUser){
+    if(S.selUser.isCam)app.appendChild(CamModal(S.selUser));
+    else if(S.selUser.isIns)app.appendChild(InsModal(S.selUser));
+    else{
+      (function(u){
+        app.appendChild(Modal(false,function(){R({selUser:null});},function(box){
+          var row=d({style:{display:"flex",justifyContent:"space-between",marginBottom:"16px"}});row.appendChild(av(72,38,u.icon));
+          var cb=b2({style:{padding:"6px 14px",background:"#F5F7FA",border:"1.5px solid #E8E8E8",borderRadius:"20px",fontSize:"13px",fontWeight:"700",color:"#6B7280",cursor:"pointer"}},"← 戻る");cb.addEventListener("click",function(){R({selUser:null});});row.appendChild(cb);box.appendChild(row);
+          var nr=d({style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"4px"}});nr.appendChild(sp({style:{fontWeight:"900",fontSize:"22px",color:"#1A1A2E"}},u.name));if(u.ok)nr.appendChild(sp({style:{fontSize:"12px",color:"#2ECC71",fontWeight:"700"}},"🪪 確認済"));box.appendChild(nr);
+          var ag=d({style:{color:"#6B7280",fontSize:"13px",marginBottom:"10px"}});ag.textContent=u.age+"歳";box.appendChild(ag);
+          var bd=d({style:{marginBottom:"10px"}});bd.appendChild(sp({style:{background:"#FFF0E8",color:"#FF6B2B",display:"inline-block",padding:"3px 10px",borderRadius:"20px",fontSize:"11px",fontWeight:"700",marginRight:"6px"}},u.act));bd.appendChild(sp({style:{background:"#FFF0E8",color:"#FF6B2B",display:"inline-block",padding:"3px 10px",borderRadius:"20px",fontSize:"11px",fontWeight:"700",marginRight:"6px"}},u.lv));box.appendChild(bd);
+          var rr=d({style:{marginBottom:"12px"}});for(var rsi=0;rsi<u.resorts.length;rsi++)rr.appendChild(sp({class:"tag"},"⛰️ "+u.resorts[rsi]));box.appendChild(rr);
+          box.appendChild(p2({style:{color:"#6B7280",fontSize:"14px",lineHeight:"1.7",marginBottom:"20px"}},u.bio));
+          var br=d({style:{display:"flex",gap:"10px"}});var isLk=S.liked.indexOf(u.id)>=0;
+          br.appendChild(obtn(isLk?"💛 いいね済み":"🤍 いいね",function(){var idx=S.liked.indexOf(u.id);if(idx>=0)S.liked.splice(idx,1);else S.liked.push(u.id);render();},"obtn-s"));
+          br.appendChild(obtn("💬 メッセージ",function(){R({selUser:null,chatUser:u,tab:"chat"});},""));box.appendChild(br);
+        }));
+      })(S.selUser);
+    }
+  }
+  if(S.bookUser)app.appendChild(BookModal(S.bookUser));
+  if(S.confirmed)app.appendChild(ConfirmedModal(S.confirmed));
+  if(S.addPost)app.appendChild(AddPostModal());
+  if(S.postDetail)app.appendChild(PostDetailModal(S.postDetail));
+
+  if(S.showFollowList)app.appendChild(FollowListModal());
+  if(S.showNotif)app.appendChild(NotifPanel());
+  if(S.showWelcome)app.appendChild(WelcomeModal());
+  if(S.showCheckin)app.appendChild(CheckinModal());
+  if(S.showReport)app.appendChild(ReportModal());
+  if(S.showContact)app.appendChild(ContactModal());
+  if(S.showDeleteAccount)app.appendChild(DeleteAccountModal());
+  if(S.showLoginModal)app.appendChild(LoginModal());
+}
+
+try{window._hs=!!localStorage.getItem("sm2");}catch(e){window._hs=false;}
+render();
+</script>
+</body>
+</html>
