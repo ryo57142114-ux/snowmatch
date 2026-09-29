@@ -1577,6 +1577,7 @@ function loadProfileFromSupabase(){
     };
     saveD();
     S.showLoginModal=false;
+    loadUsersFromSupabase();
     R({pg:"main",tab:"explore"});
   }).catch(function(e){
     console.error(e);
@@ -1623,7 +1624,7 @@ function EditProfileModal(){
     function label(txt){var l=document.createElement("div");l.style.cssText="font-size:12px;font-weight:700;color:#6B7280;margin-bottom:6px";l.textContent=txt;box.appendChild(l);}
     function input(key,type,ph){var i=document.createElement("input");i.type=type;i.className="inp";i.style.marginBottom="12px";i.placeholder=ph||"";i.value=f[key];i.addEventListener("input",function(e){f[key]=e.target.value;});box.appendChild(i);}
     function select(key,opts){var s=document.createElement("select");s.className="inp";s.style.marginBottom="12px";for(var k=0;k<opts.length;k++){var o=document.createElement("option");o.value=opts[k];o.textContent=opts[k];if(opts[k]===f[key])o.selected=true;s.appendChild(o);}if(!f[key])f[key]=opts[0];s.addEventListener("change",function(e){f[key]=e.target.value;});box.appendChild(s);}
-    label("ニックネーム");input("nick","text","例：chama");
+    label("ニックネーム");input("nick","text","例：ゆきんこ");
     label("年齢");input("age","number","例：30");
     label("種目");select("act",ACTS);
     label("レベル");select("lv",["初級","中級","上級","エキスパート"]);
@@ -1645,6 +1646,32 @@ function EditProfileModal(){
     });
     box.appendChild(btn);
   });
+}
+
+// Supabaseに登録された実ユーザーを「探す」に表示する
+function loadUsersFromSupabase(){
+  if(!sb||!currentUser)return;
+  sb.from("profiles").select("*").neq("id",currentUser.id).limit(100).then(function(res){
+    if(res.error){console.error("Users load error:",res.error);return;}
+    var rows=res.data||[];
+    // 以前読み込んだ実ユーザーを一度外す
+    for(var i=USERS.length-1;i>=0;i--){if(USERS[i].isReal)USERS.splice(i,1);}
+    var real=[];
+    for(var j=0;j<rows.length;j++){
+      var p=rows[j];
+      if(!p.nick)continue; // 名前未設定の人は表示しない
+      real.push({
+        id:"sb_"+p.id,uid:p.id,isReal:true,
+        name:p.nick,age:p.age||"",act:p.act||"",lv:p.lv||"",
+        resorts:p.resorts||[],icon:p.icon||"🏂",profileImg:p.profile_img||null,
+        isIns:!!p.is_ins,isCam:!!p.is_cam,price:p.price||null,unit:p.unit||"",
+        bio:p.bio||"",gear:p.gear||[],sns:p.sns||{},
+        posts:[],likes:0,ok:!!p.is_verified
+      });
+    }
+    for(var k=real.length-1;k>=0;k--)USERS.unshift(real[k]);
+    if(S.pg==="main")render();
+  }).catch(function(e){console.error("Users load error:",e);});
 }
 
 function signUpToSupabase(){
@@ -2788,7 +2815,7 @@ function render(){
 }
 
 try{window._hs=!!localStorage.getItem("sm2");}catch(e){window._hs=false;}
-if(sb){sb.auth.getSession().then(function(r){if(r&&r.data&&r.data.session){currentUser=r.data.session.user;}}).catch(function(){});}
+if(sb){sb.auth.getSession().then(function(r){if(r&&r.data&&r.data.session){currentUser=r.data.session.user;loadUsersFromSupabase();}}).catch(function(){});}
 render();
 </script>
 </body>
