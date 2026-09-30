@@ -88,52 +88,16 @@ var ACTS=["スキー","スノーボード","両方","🎥 追い撮り・撮影"
 var FEE=0.18;
 function calcF(p){var f=Math.round(p*FEE);return{fee:f,payout:p-f};}
 var USERS=[
-  {id:1,name:"ゆきな",age:26,act:"スノーボード",lv:"中級",resorts:["白馬八方尾根","ニセコグラン比羅夫"],icon:"🏂",isIns:false,bio:"週末ライダー！パウダー大好き❄️",posts:[],likes:24,ok:true},
-  {id:2,name:"こうすけ",age:32,act:"スキー",lv:"エキスパート",resorts:["蔵王温泉スキー場","白馬八方尾根"],icon:"⛷️",isIns:true,price:8000,unit:"2時間",bio:"元レーサー。カービングからパウダーまで一緒に滑りましょう！",phrase:"パウダーもコブも、できないをできるに。",exp:"スキー歴20年 / 全日本スキー選手権出場",certs:["スキー歴20年"],comps:[{name:"全日本スキー選手権",year:2019,rank:8},{name:"北海道スキー選手権",year:2021,rank:2}],posts:[{id:"p1",type:"video",url:"https://www.tiktok.com",cap:"先週の白馬！膝上パウダー",likes:42}],likes:87,ok:true},
-  {id:3,name:"あおい",age:29,act:"両方",lv:"上級",resorts:["ニセコグラン比羅夫","富良野スキー場"],icon:"🎿",isIns:false,bio:"北海道粉雪LOVEr🌨️",posts:[],likes:41,ok:true},
-  {id:8,name:"たくみ",age:28,act:"スノーボード",lv:"上級",resorts:["白馬八方尾根","ニセコグラン比羅夫","苗場スキー場"],icon:"🎥",isIns:false,isCam:true,price:4000,unit:"30分",bio:"スノボ歴10年のフリーカメラマン。GoProとミラーレス両方対応。追い撮り・パーク撮影得意です！",phrase:"あなたの滑りを最高の映像に残します。",camServices:["🎿 追い撮り","🛹 パーク・ジブ撮影","📸 写真撮影","✂️ 動画編集"],gear:["GoPro Hero12","Insta360 X3","DJI OM6"],posts:[{id:"pc1",type:"video",url:"https://www.tiktok.com",cap:"先週の白馬での追い撮りサンプル📹",likes:88}],likes:156,ok:true},
-  {id:9,name:"さおり",age:25,act:"スキー",lv:"中級",resorts:["蔵王温泉スキー場","野沢温泉"],icon:"📸",isIns:false,isCam:true,price:3000,unit:"30分",bio:"一眼レフ・GoProで撮影します。女性カメラマンなので女性の方も安心！編集込みプランもあり。",phrase:"思い出を形に残しましょう！",camServices:["🎿 追い撮り","📸 写真撮影","✂️ 動画編集込み"],gear:["GoPro Hero11","iPhone 15 Pro","Sony α7C"],posts:[],likes:89,ok:true},
-  {id:5,name:"けんじコーチ",age:38,act:"スキー",lv:"上級",resorts:["志賀高原","野沢温泉"],icon:"⛷️",isIns:true,price:6000,unit:"1時間",bio:"スキー歴20年。白馬・ニセコをホームゲレンデにしています。",phrase:"スキーは一生の趣味。一緒に楽しみましょう。",exp:"スキー歴15年 / 白馬エリアが得意",certs:["スキー歴20年"],comps:[],posts:[],likes:112,ok:true},
-  {id:6,name:"りな",age:27,act:"スノーボード",lv:"エキスパート",resorts:["白馬八方尾根","ニセコグラン比羅夫","苗場スキー場"],icon:"🏂",isIns:true,price:7000,unit:"2時間",bio:"JSBA会員。グラトリ・パーク・フリーランが得意！",phrase:"スノーボードの楽しさ、全部伝えます。",exp:"JSBA会員 / ハーフパイプ元日本代表",certs:["JSBA会員"],comps:[{name:"全日本スノーボード選手権 ハーフパイプ",year:2020,rank:3},{name:"JPSAプロスノーボードツアー",year:2022,rank:5}],posts:[{id:"p6",type:"video",url:"https://www.instagram.com",cap:"先週の白馬でグラトリ練習📸",likes:88}],likes:203,ok:true},
-  {id:7,name:"ひろし",age:45,act:"スキー",lv:"エキスパート",resorts:["野沢温泉","志賀高原","菅平高原"],icon:"⛷️",isIns:true,price:10000,unit:"2時間",bio:"スキー歴15年。国際大会出場経験あり。上級者・競技者と一緒に滑るのが好きです。",phrase:"一緒に最高の一本を滑りましょう。",exp:"スキー歴15年 / 元デモ選手 / W杯出場経験",certs:["スキー歴15年","スキー歴20年"],comps:[{name:"スキーワールドカップ",year:2015,rank:12},{name:"全日本スキー技術選手権",year:2018,rank:1},{name:"全日本スキー技術選手権",year:2019,rank:2}],posts:[],likes:156,ok:true}
 ];
 var ROOMS_SAMPLE=[
-  {id:"r1",icon:"🏂",title:"グラトリ上達したい人集まれ！",cat:"スノーボード",members:24,msgs:[
-    {user:"ゆきな",icon:"🏂",t:"ollie安定してきたけどBS180がなかなか…",time:"08:12"},
-    {user:"りな",icon:"🏂",t:"私もそこで詰まりました！踏み切りのタイミングが全て。",time:"08:15"},
-    {user:"たつや",icon:"🏂",t:"後ろ足重心を意識したら一気に変わったよ！",time:"08:20"}
-  ],last:"後ろ足重心を意識したら一気に変わったよ！"},
-  {id:"r2",icon:"⛷️",title:"カービングターンを極めたい",cat:"スキー",members:18,msgs:[
-    {user:"こうすけ",icon:"⛷️",t:"外足荷重の感覚がつかめない人いる？",time:"09:30"},
-    {user:"けんじ",icon:"⛷️",t:"骨盤の向きが大事！ローテーションしすぎると外れる。",time:"09:35"},
-    {user:"まさき",icon:"⛷️",t:"動画撮って見返すのが一番の近道でした",time:"09:40"}
-  ],last:"動画撮って見返すのが一番の近道でした"},
-  {id:"r3",icon:"🌨️",title:"パウダー情報・今シーズンの積雪",cat:"情報共有",members:42,msgs:[
-    {user:"あおい",icon:"🎿",t:"ニセコ今週末どうですか？",time:"10:00"},
-    {user:"ゆきな",icon:"🏂",t:"昨日行ってきた！まだ膝上あったよ！",time:"10:05"},
-    {user:"こうすけ",icon:"⛷️",t:"明日早朝便で行きます。一緒に行ける人いたら！",time:"10:10"}
-  ],last:"明日早朝便で行きます。一緒に行ける人いたら！"},
-  {id:"r4",icon:"🎥",title:"滑り動画を見せ合おう・フォーム分析",cat:"動画",members:15,msgs:[
-    {user:"りな",icon:"🏂",t:"今日の滑りをTikTokに上げました！フォームどうでしょう",time:"11:00"},
-    {user:"けんじ",icon:"⛷️",t:"上体がちょっと被り気味かな。でも全体的に綺麗！",time:"11:08"},
-    {user:"あおい",icon:"🎿",t:"私もアップしたので見てください！",time:"11:20"}
-  ],last:"私もアップしたので見てください！"},
-  {id:"r5",icon:"🏔️",title:"初心者・今シーズン始めた人の部屋",cat:"初心者",members:31,msgs:[
-    {user:"はな",icon:"🏂",t:"リフトの乗り降りがまだ怖いです…",time:"12:00"},
-    {user:"ゆきな",icon:"🏂",t:"わかる！最初は降り場でターンせず直進が楽だよ",time:"12:05"},
-    {user:"りな",icon:"🏂",t:"私も最初そこで転びまくりました笑 すぐ慣れます！",time:"12:10"}
-  ],last:"すぐ慣れます！"}
+  {id:"r1",icon:"🏂",title:"グラトリ上達したい人集まれ！",cat:"スノーボード",members:0,msgs:[],last:""},
+  {id:"r2",icon:"⛷️",title:"カービングターンを極めたい",cat:"スキー",members:0,msgs:[],last:""},
+  {id:"r3",icon:"🌨️",title:"パウダー情報・今シーズンの積雪",cat:"情報共有",members:0,msgs:[],last:""},
+  {id:"r4",icon:"🎥",title:"滑り動画を見せ合おう・フォーム分析",cat:"動画",members:0,msgs:[],last:""},
+  {id:"r5",icon:"🏔️",title:"初心者・今シーズン始めた人の部屋",cat:"初心者",members:0,msgs:[],last:""}
 ];
-var CHECKIN_SAMPLE=[
-  {id:"c1",user:"ゆきな",icon:"🏂",resort:"白馬八方尾根",snow:"パウダー最高❄️",time:"08:30",likes:12},
-  {id:"c2",user:"こうすけ",icon:"⛷️",resort:"ニセコグラン比羅夫",snow:"膝上パウダー！視界良好",time:"09:15",likes:8},
-  {id:"c3",user:"あおい",icon:"🎿",resort:"野沢温泉",snow:"圧雪バーン。スピード出る！",time:"10:00",likes:5}
-];
-var REPORT_SAMPLE=[
-  {id:"r1",user:"ゆきな",icon:"🏂",resort:"白馬八方尾根",snow:"⭐⭐⭐⭐⭐",crowd:"⭐⭐⭐",comment:"朝一のパウダーが最高でした！リフト待ちほぼなし。",date:"2024/4/1",likes:24},
-  {id:"r2",user:"こうすけ",icon:"⛷️",resort:"ニセコグラン比羅夫",snow:"⭐⭐⭐⭐⭐",crowd:"⭐⭐",comment:"インバウンドが多いが雪質は別格。コブも良い感じ。",date:"2024/4/1",likes:18},
-  {id:"r3",user:"りな",icon:"🏂",resort:"苗場スキー場",snow:"⭐⭐⭐",crowd:"⭐⭐⭐⭐",comment:"週末なので混雑あり。でもパークのコンディション最高！",date:"2024/3/31",likes:11}
-];
+var CHECKIN_SAMPLE=[];
+var REPORT_SAMPLE=[];
 
 var QA_DATA=[
   {cat:"🏂 スノーボード",items:[
@@ -165,7 +129,7 @@ var QA_DATA=[
 
 var TERMS=[{id:"a",icon:"🩹",title:"怪我・事故は自己責任",body:"スキー中の怪我や事故についてSnowMatchは責任を負いません。"},{id:"b",icon:"🛡️",title:"スポーツ保険への加入を推奨",body:"万が一に備えスポーツ傷害保険への加入を強くお勧めします。"},{id:"c",icon:"🚫",title:"勧誘・マルチ行為の禁止",body:"宗教・投資等の勧誘行為は厳禁。違反次第アカウント停止します。"},{id:"d",icon:"🤝",title:"ハラスメント行為の禁止",body:"性的ハラスメント・ストーキング・差別的言動を一切禁じます。"},{id:"e",icon:"✅",title:"虚偽情報の登録禁止",body:"資格・経歴の偽りなど虚偽記載は禁止。即アカウント停止します。"},{id:"f",icon:"🪪",title:"本人確認への協力義務",body:"全ユーザーに本人確認書類の提出を義務付けます。"},{id:"g",icon:"💳",title:"Stripe決済",body:"決済・資金管理はStripeが行います。SnowMatchはお金を預かりません。完了確認後にStripeが自動で振込します。"},{id:"h",icon:"🔒",title:"個人情報保護",body:"本名は本人確認のみ使用し他のユーザーには公開されません。"},{id:"i",icon:"🎿",title:"スキー場ルール・無許可レッスン禁止",body:"スキー場で許可なくレッスン行為を行うことは禁止されています。SnowMatchは『一緒に滑る仲間を見つける』コミュニティです。許可なき場所での指導・レッスン行為は行わないでください。SNSの動画撮影・滑りを一緒に見る・同行してもらう・仲間になるという目的の範囲でご利用ください。【重要】活動は必ずコース内で行ってください。バックカントリー・コース外への立入は遭難・雪崩・転落などの重大事故につながる危険があります。コース外での活動は当社では一切推奨せず、万が一の事故についても当社は責任を負いません。"}];
 
-var S={pg:"splash",blockedUsers:[],reportedUsers:[],showContact:false,showDeleteAccount:false,unreadChat:0,unreadBook:0,showWelcome:false,showNotif:false,following:[],followers:[2,5],showFollowList:false,followListType:"following",notifs:[{id:"n1",type:"like",icon:"❤️",msg:"こうすけがあなたにいいねしました",time:"5分前",read:false},{id:"n2",type:"msg",icon:"💬",msg:"ゆきなさんからメッセージが届きました",time:"12分前",read:false},{id:"n3",type:"match",icon:"🎿",msg:"けんじコーチとマッチングしました！",time:"1時間前",read:true},{id:"n4",type:"book",icon:"✅",msg:"予約が確定しました。一緒に楽しみましょう！",time:"2時間前",read:true},{id:"n5",type:"review",icon:"⭐",msg:"りなに口コミが投稿されました",time:"昨日",read:true}],rooms:{},checkins:[],reports:[],marketTab:"room",rankCat:"総合",openQA:null,openQAItem:null,showCheckin:false,showReport:false,openRoom:null,roomInput:"",splashIdx:0,onStep:0,kycStep:0,tab:"explore",selArea:null,selResort:null,openArea:null,openAreaReg:null,selAct:null,insOnly:false,camOnly:false,selCert:null,selUser:null,chatUser:null,chatMsgs:{"2":[{f:"t",t:"今週末、白馬一緒に滑りませんか？追い撮りもお願いしたいです！",time:"10:30"},{f:"m",t:"もちろん！どのコースが好みですか？リフトで一緒に上がりながら相談しましょう",time:"10:45"}]},chatIn:"",liked:[],matches:[],bookUser:null,confirmed:null,postLikes:{},addPost:false,postDetail:null,reviewTarget:null,reviewRating:5,reviewComment:"",selPayment:"card",npType:"video",npCap:"",npImgSrc:null,npVideoSrc:null,npUrlInput:"",termChecks:{},myProfile:null,reg:{role:"user",nick:"",real:"",age:"",email:"",pw:"",act:"スノーボード",lv:"中級",resorts:[],bio:"",isIns:false,isCam:false,price:5000,unit:"1時間",camPrice:3000,camUnit:"30分",camMenu:[],icon:"🏂"}};
+var S={pg:"splash",blockedUsers:[],reportedUsers:[],showContact:false,showDeleteAccount:false,unreadChat:0,unreadBook:0,showWelcome:false,showNotif:false,following:[],followers:[],showFollowList:false,followListType:"following",notifs:[],rooms:{},checkins:[],reports:[],marketTab:"room",rankCat:"総合",openQA:null,openQAItem:null,showCheckin:false,showReport:false,openRoom:null,roomInput:"",splashIdx:0,onStep:0,kycStep:0,tab:"explore",selArea:null,selResort:null,openArea:null,openAreaReg:null,selAct:null,insOnly:false,camOnly:false,selCert:null,selUser:null,chatUser:null,chatMsgs:{},chatIn:"",liked:[],matches:[],bookUser:null,confirmed:null,postLikes:{},addPost:false,postDetail:null,reviewTarget:null,reviewRating:5,reviewComment:"",selPayment:"card",npType:"video",npCap:"",npImgSrc:null,npVideoSrc:null,npUrlInput:"",termChecks:{},myProfile:null,reg:{role:"user",nick:"",real:"",age:"",email:"",pw:"",act:"スノーボード",lv:"中級",resorts:[],bio:"",isIns:false,isCam:false,price:5000,unit:"1時間",camPrice:3000,camUnit:"30分",camMenu:[],icon:"🏂"}};
 
 function saveD(){try{localStorage.setItem("sm2",JSON.stringify({myProfile:S.myProfile,reg:S.reg,liked:S.liked,postLikes:S.postLikes,matches:S.matches,chatMsgs:S.chatMsgs}));}catch(e){}syncProfileToSupabase();}
 // プロフィール変更をSupabaseへ同期（1秒まとめて送信）
@@ -189,7 +153,12 @@ function syncProfileToSupabase(){
     });
   },1000);
 }
-function loadD(){try{var r=localStorage.getItem("sm2");if(!r)return false;var d=JSON.parse(r);if(d.myProfile){S.myProfile=d.myProfile;S.pg="main";}if(d.reg){S.reg=d.reg;if(!S.reg.resorts)S.reg.resorts=[];}if(d.liked)S.liked=d.liked;if(d.postLikes)S.postLikes=d.postLikes;if(d.matches)S.matches=d.matches;if(d.chatMsgs)S.chatMsgs=d.chatMsgs;return!!d.myProfile;}catch(e){return false;}}
+function loadD(){try{var r=localStorage.getItem("sm2");if(!r)return false;var d=JSON.parse(r);if(d.myProfile){S.myProfile=d.myProfile;S.pg="main";}if(d.reg){S.reg=d.reg;if(!S.reg.resorts)S.reg.resorts=[];}if(d.liked)S.liked=d.liked;if(d.postLikes)S.postLikes=d.postLikes;if(d.matches)S.matches=d.matches;if(d.chatMsgs)S.chatMsgs=d.chatMsgs;cleanDemoData();return!!d.myProfile;}catch(e){return false;}}
+function cleanDemoData(){
+  var k;for(k in S.chatMsgs){if(S.chatMsgs.hasOwnProperty(k)&&String(k).indexOf("sb_")!==0)delete S.chatMsgs[k];}
+  function keepReal(a){return (a||[]).filter(function(x){return String(x).indexOf("sb_")===0;});}
+  S.liked=keepReal(S.liked);S.matches=keepReal(S.matches);S.following=keepReal(S.following);S.followers=keepReal(S.followers);
+}
 function clearD(){try{localStorage.removeItem("sm2");}catch(e){}}
 
 function R(u){if(u){var k=Object.keys(u);for(var i=0;i<k.length;i++)S[k[i]]=u[k[i]];}render();}
@@ -882,7 +851,7 @@ function renderSplash(){
   var hasSaved=false;try{hasSaved=!!localStorage.getItem("sm2");}catch(e){}
   var lb2=document.createElement("button");lb2.textContent=hasSaved?"📱 このデバイスの続きから":"📱 このデバイスの続きから";lb2.style.cssText="width:100%;padding:14px 0;border-radius:18px;background:"+(hasSaved?"rgba(255,255,255,0.3)":"rgba(255,255,255,0.12)")+";color:#fff;font-weight:"+(hasSaved?"900":"700")+";font-size:15px;border:2px solid rgba(255,255,255,"+(hasSaved?"0.7":"0.3")+");font-family:inherit;cursor:pointer;display:block";
   lb2.addEventListener("click",function(){
-    try{var raw=localStorage.getItem("sm2");if(!raw){alert("保存されたデータが見つかりません");return;}var data=JSON.parse(raw);if(data.myProfile){S.myProfile=data.myProfile;S.pg="main";S.tab="explore";if(data.reg)S.reg=data.reg;if(data.liked)S.liked=data.liked;if(data.postLikes)S.postLikes=data.postLikes;if(data.matches)S.matches=data.matches;if(data.chatMsgs)S.chatMsgs=data.chatMsgs;render();}else{alert("データが見つかりません");}}catch(e2){alert("読み込みに失敗しました");}
+    try{var raw=localStorage.getItem("sm2");if(!raw){alert("保存されたデータが見つかりません");return;}var data=JSON.parse(raw);if(data.myProfile){S.myProfile=data.myProfile;S.pg="main";S.tab="explore";if(data.reg)S.reg=data.reg;if(data.liked)S.liked=data.liked;if(data.postLikes)S.postLikes=data.postLikes;if(data.matches)S.matches=data.matches;if(data.chatMsgs)S.chatMsgs=data.chatMsgs;cleanDemoData();render();}else{alert("データが見つかりません");}}catch(e2){alert("読み込みに失敗しました");}
   });cont.appendChild(lb2);
   var footer=document.createElement("div");footer.style.cssText="text-align:center;margin-top:20px;color:rgba(255,255,255,.5);font-size:11px;line-height:1.9";footer.textContent="登録無料 · 全員本人確認済 · いつでも退会可能";cont.appendChild(footer);
   wrap.appendChild(cont);
@@ -1102,6 +1071,7 @@ function renderExplore(){
   if(S.rankCat==="いいね")rankData2.sort(function(a,b){return b.likes-a.likes;});
   else if(S.rankCat==="投稿数")rankData2.sort(function(a,b){return b.posts-a.posts;});
   else rankData2.sort(function(a,b){return b.total-a.total;});
+  if(!rankData2.length){var rkEmpty=document.createElement("div");rkEmpty.style.cssText="text-align:center;color:#9CA3AF;font-size:13px;padding:16px 0";rkEmpty.textContent="まだランキングはありません";rankSec.appendChild(rkEmpty);}
   var podWrap=document.createElement("div");podWrap.style.cssText="display:flex;gap:8px;margin-bottom:10px";
   var podOrder=[1,0,2];var podMedals=["🥈","🥇","🥉"];var podColors=["#C0C0C0","#FFD700","#CD7F32"];
   var podBgs=["linear-gradient(135deg,#F5F5F5,#E8E8E8)","linear-gradient(135deg,#FFF9E6,#FFE680)","linear-gradient(135deg,#FFF0E0,#F0C080)"];
@@ -1182,6 +1152,7 @@ function renderExplore(){
       return sb2-sa;
     });
   }
+  if(!sortedUsers.length){var usEmpty=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"13px",padding:"24px 0"}});usEmpty.textContent="まだ登録ユーザーがいません。友達を招待してみよう！";wrap.appendChild(usEmpty);}
   for(var ui=0;ui<sortedUsers.length;ui++){
     (function(u){
       var pA=!S.selArea;
@@ -1347,7 +1318,7 @@ function renderMarket(){
       backBtn.addEventListener("click",function(){S.openRoom=null;render();});
       var rInfo=d({style:{flex:"1"}});
       var rTitle=d({style:{fontWeight:"800",fontSize:"15px",color:"#1A1A2E"}});rTitle.textContent=room.icon+" "+room.title;
-      var rMeta=d({style:{fontSize:"11px",color:"#9CA3AF"}});rMeta.textContent=room.members+"人参加中 · "+room.cat;
+      var rMeta=d({style:{fontSize:"11px",color:"#9CA3AF"}});rMeta.textContent=(room.members>0?room.members+"人参加中 · ":"")+room.cat;
       rInfo.appendChild(rTitle);rInfo.appendChild(rMeta);rHdr.appendChild(backBtn);rHdr.appendChild(rInfo);
       wrap.insertBefore(rHdr,wrap.firstChild);
       var ma=d({style:{flex:"1",overflowY:"auto",marginBottom:"12px"}});
@@ -1389,7 +1360,7 @@ function renderMarket(){
       var rt=d({style:{fontWeight:"800",fontSize:"14px",color:"#1A1A2E",marginBottom:"3px"}});rt.textContent=room.title;
       var rm=d({style:{display:"flex",alignItems:"center",gap:"8px"}});
       var catBdg=d({style:{background:"#EEF6FF",color:"#2196F3",borderRadius:"8px",padding:"2px 8px",fontSize:"10px",fontWeight:"700"}});catBdg.textContent=room.cat;
-      var memEl=d({style:{fontSize:"12px",color:"#9CA3AF"}});memEl.textContent="👥 "+room.members+"人";
+      var memEl=d({style:{fontSize:"12px",color:"#9CA3AF"}});memEl.textContent=room.members>0?"👥 "+room.members+"人":"";
       rm.appendChild(catBdg);rm.appendChild(memEl);info.appendChild(rt);info.appendChild(rm);
       var arr=d({style:{color:"#D1D5DB",fontSize:"20px",flexShrink:"0"}});arr.textContent="›";
       tr.appendChild(ico);tr.appendChild(info);tr.appendChild(arr);card.appendChild(tr);
@@ -1444,6 +1415,7 @@ function renderMarket(){
     var ciab=document.createElement("button");ciab.className="obtn";ciab.style.cssText="font-size:13px;padding:8px 16px";ciab.textContent="📍 チェックインする";
     ciab.addEventListener("click",function(){S.showCheckin=true;render();});ciAddBtn.appendChild(ciab);wrap.appendChild(ciAddBtn);
     var allCI=CHECKIN_SAMPLE.concat(S.checkins||[]);
+    if(!allCI.length){var ciEmpty=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"13px",padding:"24px 0"}});ciEmpty.textContent="まだチェックインはありません";wrap.appendChild(ciEmpty);}
     allCI.forEach(function(ci){
       var card=d({class:"card",style:{marginBottom:"12px"}});
       var tr=d({style:{display:"flex",gap:"12px",alignItems:"center",marginBottom:"8px"}});
@@ -1464,6 +1436,7 @@ function renderMarket(){
     var rpab=document.createElement("button");rpab.className="obtn";rpab.style.cssText="font-size:13px;padding:8px 16px";rpab.textContent="📊 レポートを書く";
     rpab.addEventListener("click",function(){S.showReport=true;render();});rpAddBtn.appendChild(rpab);wrap.appendChild(rpAddBtn);
     var allRP=REPORT_SAMPLE.concat(S.reports||[]);
+    if(!allRP.length){var rpEmpty=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"13px",padding:"24px 0"}});rpEmpty.textContent="まだレポートはありません";wrap.appendChild(rpEmpty);}
     allRP.forEach(function(rp){
       var card=d({class:"card",style:{marginBottom:"12px"}});
       var tr=d({style:{display:"flex",gap:"10px",alignItems:"center",marginBottom:"10px"}});
