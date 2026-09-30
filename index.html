@@ -150,6 +150,7 @@ function syncProfileToSupabase(){
       email:currentUser.email||p.email||"",
       act:p.act||"",acts:p.acts||[],lv:p.lv||"中級",
       resorts:p.resorts||[],bio:p.bio||"",icon:p.icon||"🏂",
+      price:p.price?parseInt(p.price):null,unit:p.unit||"",gear:p.gear||[],sns:p.sns||{},
       is_verified:true,kyc_status:p.kycStatus||"approved"
     };
     sb.from("profiles").upsert(row).then(function(r){
@@ -194,6 +195,7 @@ function b2(a,t){var e=mk("button",a);if(t)e.textContent=t;return e;}
 function i2(a){return mk("input",a);}
 function t2(a){return mk("textarea",a);}
 function av(sz,fs,icon){var e=d({class:"av",style:{width:sz+"px",height:sz+"px",fontSize:fs+"px"}});e.textContent=icon;return e;}
+function avU(sz,fs,u){if(u&&u.profileImg){var w=document.createElement("div");w.style.cssText="width:"+sz+"px;height:"+sz+"px;border-radius:"+Math.round(sz*0.3)+"px;overflow:hidden;flex-shrink:0";var im=document.createElement("img");im.src=u.profileImg;im.style.cssText="width:100%;height:100%;object-fit:cover;display:block";w.appendChild(im);return w;}return av(sz,fs,u?u.icon:"🏂");}
 function obtn(txt,fn,cls){var c="obtn"+(cls?" "+cls:"");return b2({class:c,onClick:fn},txt);}
 function chip2(txt,active,fn){return b2({class:"chip"+(active?" on":""),onClick:fn},txt);}
 
@@ -450,7 +452,7 @@ function CamModal(u){
     var cb=document.createElement("button");cb.style.cssText="position:absolute;top:16px;left:16px;background:rgba(255,255,255,.2);border-radius:20px;padding:6px 14px;color:#fff;font-size:13px;font-weight:700;border:none;cursor:pointer";cb.textContent="← 戻る";
     cb.addEventListener("click",function(){R({selUser:null});});hero.appendChild(cb);
     var hr=d({style:{display:"flex",gap:"14px",alignItems:"center"}});
-    hr.appendChild(av(72,36,u.icon));
+    hr.appendChild(avU(72,36,u));
     var info=d({style:{flex:"1"}});
     var nr=d({style:{display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap"}});
     nr.appendChild(sp({style:{fontWeight:"900",fontSize:"21px",color:"#fff"}},u.name));
@@ -544,7 +546,7 @@ function InsModal(u){
     var hero=d({style:{background:"linear-gradient(160deg,#FF6B2B,#FF8C55 60%,#FFD580)",padding:"52px 20px 24px",position:"relative"}});
     var cb=b2({style:{position:"absolute",top:"16px",left:"16px",background:"rgba(255,255,255,.25)",borderRadius:"20px",padding:"6px 14px",color:"#fff",fontSize:"13px",fontWeight:"700",border:"none",cursor:"pointer"}},"← 戻る");
     cb.addEventListener("click",function(){R({selUser:null});});hero.appendChild(cb);
-    var hr=d({style:{display:"flex",gap:"14px",alignItems:"center"}});hr.appendChild(av(72,36,u.icon));
+    var hr=d({style:{display:"flex",gap:"14px",alignItems:"center"}});hr.appendChild(avU(72,36,u));
     var info=d({});
     var nr=d({style:{display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap"}});
     nr.appendChild(sp({style:{fontWeight:"900",fontSize:"21px",color:"#fff"}},u.name));
@@ -1653,7 +1655,7 @@ function EditProfileModal(){
       try{localStorage.setItem("sm2",JSON.stringify({myProfile:S.myProfile,reg:S.reg,liked:S.liked,postLikes:S.postLikes,matches:S.matches,chatMsgs:S.chatMsgs}));}catch(e){}
       if(!sb||!currentUser){if(newImgBlob&&phImg.src)S.myProfile.profileImg=phImg.src;saveD();alert("この端末に保存しました（ログインしていないため、サーバーには保存されていません）");close();return;}
       btn.disabled=true;btn.textContent="保存中...";
-      var row={id:currentUser.id,nick:f.nick,real_name:S.myProfile.name||"",age:f.age?parseInt(f.age):null,email:currentUser.email||"",act:f.act,acts:S.myProfile.acts||[],lv:f.lv,resorts:S.myProfile.resorts||[],bio:f.bio,icon:S.myProfile.icon||"🏂",is_verified:true,kyc_status:S.myProfile.kycStatus||"approved"};
+      var row={id:currentUser.id,nick:f.nick,real_name:S.myProfile.name||"",age:f.age?parseInt(f.age):null,email:currentUser.email||"",act:f.act,acts:S.myProfile.acts||[],lv:f.lv,resorts:S.myProfile.resorts||[],bio:f.bio,icon:S.myProfile.icon||"🏂",price:S.myProfile.price?parseInt(S.myProfile.price):null,unit:S.myProfile.unit||"",gear:S.myProfile.gear||[],sns:S.myProfile.sns||{},is_verified:true,kyc_status:S.myProfile.kycStatus||"approved"};
       function fail(txt){msg.style.color="#EF4444";msg.textContent=txt;msg.style.display="block";btn.disabled=false;btn.textContent="保存する";}
       function saveRow(imgUrl){
         if(imgUrl)row.profile_img=imgUrl;
@@ -3007,14 +3009,49 @@ function render(){
     else{
       (function(u){
         app.appendChild(Modal(false,function(){R({selUser:null});},function(box){
-          var row=d({style:{display:"flex",justifyContent:"space-between",marginBottom:"16px"}});row.appendChild(av(72,38,u.icon));
+          var row=d({style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"14px"}});row.appendChild(avU(84,40,u));
           var cb=b2({style:{padding:"6px 14px",background:"#F5F7FA",border:"1.5px solid #E8E8E8",borderRadius:"20px",fontSize:"13px",fontWeight:"700",color:"#6B7280",cursor:"pointer"}},"← 戻る");cb.addEventListener("click",function(){R({selUser:null});});row.appendChild(cb);box.appendChild(row);
-          var nr=d({style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"4px"}});nr.appendChild(sp({style:{fontWeight:"900",fontSize:"22px",color:"#1A1A2E"}},u.name));if(u.ok)nr.appendChild(sp({style:{fontSize:"12px",color:"#2ECC71",fontWeight:"700"}},"🪪 確認済"));box.appendChild(nr);
-          var ag=d({style:{color:"#6B7280",fontSize:"13px",marginBottom:"10px"}});ag.textContent=u.age+"歳";box.appendChild(ag);
-          var bd=d({style:{marginBottom:"10px"}});bd.appendChild(sp({style:{background:"#FFF0E8",color:"#FF6B2B",display:"inline-block",padding:"3px 10px",borderRadius:"20px",fontSize:"11px",fontWeight:"700",marginRight:"6px"}},u.act));bd.appendChild(sp({style:{background:"#FFF0E8",color:"#FF6B2B",display:"inline-block",padding:"3px 10px",borderRadius:"20px",fontSize:"11px",fontWeight:"700",marginRight:"6px"}},u.lv));box.appendChild(bd);
-          var rr=d({style:{marginBottom:"12px"}});for(var rsi=0;rsi<u.resorts.length;rsi++)rr.appendChild(sp({class:"tag"},"⛰️ "+u.resorts[rsi]));box.appendChild(rr);
-          box.appendChild(p2({style:{color:"#6B7280",fontSize:"14px",lineHeight:"1.7",marginBottom:"20px"}},u.bio));
-          var br=d({style:{display:"flex",gap:"10px"}});var isLk=S.liked.indexOf(u.id)>=0;
+          var nr=d({style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"4px",flexWrap:"wrap"}});nr.appendChild(sp({style:{fontWeight:"900",fontSize:"22px",color:"#1A1A2E"}},u.name));if(u.ok)nr.appendChild(sp({style:{fontSize:"12px",color:"#2ECC71",fontWeight:"700"}},"🪪 確認済"));box.appendChild(nr);
+          if(u.age){var ag=d({style:{color:"#6B7280",fontSize:"13px",marginBottom:"10px"}});ag.textContent=u.age+"歳";box.appendChild(ag);}
+          var tagSt={background:"#FFF0E8",color:"#FF6B2B",display:"inline-block",padding:"3px 10px",borderRadius:"20px",fontSize:"11px",fontWeight:"700",marginRight:"6px"};
+          var bd=d({style:{marginBottom:"14px"}});if(u.act)bd.appendChild(sp({style:tagSt},u.act));if(u.lv)bd.appendChild(sp({style:tagSt},u.lv));box.appendChild(bd);
+          function sec(title){var st=d({style:{fontSize:"12px",fontWeight:"800",color:"#9CA3AF",margin:"0 0 6px"}});st.textContent=title;box.appendChild(st);}
+          // 料金
+          var pc=d({style:{background:"linear-gradient(135deg,#FFF4EC,#FFE7D6)",borderRadius:"14px",padding:"12px 14px",marginBottom:"14px",display:"flex",justifyContent:"space-between",alignItems:"center"}});
+          pc.appendChild(sp({style:{fontSize:"12px",fontWeight:"800",color:"#9A5B34"}},"💰 同行料金"));
+          var pv=parseInt(u.price)||0;
+          pc.appendChild(sp({style:{fontSize:pv?"18px":"13px",fontWeight:"900",color:pv?"#FF6B2B":"#9CA3AF"}},pv?("¥"+pv.toLocaleString()+(u.unit?" / "+u.unit:"")):"未設定"));
+          box.appendChild(pc);
+          // 活動スキー場
+          sec("⛰️ 活動スキー場");
+          var rr=d({style:{marginBottom:"14px"}});
+          if(u.resorts&&u.resorts.length){for(var rsi=0;rsi<u.resorts.length;rsi++)rr.appendChild(sp({class:"tag"},u.resorts[rsi]));}
+          else rr.appendChild(sp({style:{fontSize:"13px",color:"#9CA3AF"}},"未設定"));
+          box.appendChild(rr);
+          // 自己紹介
+          sec("📝 自己紹介");
+          box.appendChild(p2({style:{color:u.bio?"#374151":"#9CA3AF",fontSize:"14px",lineHeight:"1.7",margin:"0 0 14px",whiteSpace:"pre-wrap"}},u.bio||"まだ自己紹介はありません"));
+          // 板・ギア
+          if(u.gear&&u.gear.length){
+            sec("🏂 板・ギア");
+            var gr=d({style:{display:"flex",flexWrap:"wrap",gap:"6px",marginBottom:"14px"}});
+            for(var gi=0;gi<u.gear.length;gi++){var gt=d({style:{background:"#1a1a2e",color:"#fff",borderRadius:"8px",padding:"3px 10px",fontSize:"11px",fontWeight:"700"}});gt.textContent=u.gear[gi];gr.appendChild(gt);}
+            box.appendChild(gr);
+          }
+          // SNS
+          var snsKeys=[];if(u.sns){for(var sk in u.sns){if(u.sns[sk])snsKeys.push(sk);}}
+          if(snsKeys.length){
+            sec("🔗 SNS");
+            var sr=d({style:{display:"flex",flexWrap:"wrap",gap:"6px",marginBottom:"14px"}});
+            for(var si=0;si<snsKeys.length;si++){
+              var sv=String(u.sns[snsKeys[si]]);var sl=snsKeys[si].charAt(0).toUpperCase()+snsKeys[si].slice(1)+"："+sv;
+              var se;if(/^https?:\/\//.test(sv)){se=document.createElement("a");se.href=sv;se.target="_blank";se.rel="noopener";}else{se=document.createElement("span");}
+              se.textContent=sl;se.style.cssText="background:#F5F7FA;border:1px solid #E8E8E8;border-radius:10px;padding:4px 10px;font-size:12px;color:#374151;text-decoration:none;word-break:break-all";
+              sr.appendChild(se);
+            }
+            box.appendChild(sr);
+          }
+          var br=d({style:{display:"flex",gap:"10px",marginTop:"6px"}});var isLk=S.liked.indexOf(u.id)>=0;
           br.appendChild(obtn(isLk?"💛 いいね済み":"🤍 いいね",function(){toggleLike(u);},"obtn-s"));
           br.appendChild(obtn("💬 メッセージ",function(){R({selUser:null,chatUser:u,tab:"chat"});},""));box.appendChild(br);
         }));
