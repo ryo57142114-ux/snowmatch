@@ -165,7 +165,7 @@ var QA_DATA=[
 
 var TERMS=[{id:"a",icon:"🩹",title:"怪我・事故は自己責任",body:"スキー中の怪我や事故についてSnowMatchは責任を負いません。"},{id:"b",icon:"🛡️",title:"スポーツ保険への加入を推奨",body:"万が一に備えスポーツ傷害保険への加入を強くお勧めします。"},{id:"c",icon:"🚫",title:"勧誘・マルチ行為の禁止",body:"宗教・投資等の勧誘行為は厳禁。違反次第アカウント停止します。"},{id:"d",icon:"🤝",title:"ハラスメント行為の禁止",body:"性的ハラスメント・ストーキング・差別的言動を一切禁じます。"},{id:"e",icon:"✅",title:"虚偽情報の登録禁止",body:"資格・経歴の偽りなど虚偽記載は禁止。即アカウント停止します。"},{id:"f",icon:"🪪",title:"本人確認への協力義務",body:"全ユーザーに本人確認書類の提出を義務付けます。"},{id:"g",icon:"💳",title:"Stripe決済",body:"決済・資金管理はStripeが行います。SnowMatchはお金を預かりません。完了確認後にStripeが自動で振込します。"},{id:"h",icon:"🔒",title:"個人情報保護",body:"本名は本人確認のみ使用し他のユーザーには公開されません。"},{id:"i",icon:"🎿",title:"スキー場ルール・無許可レッスン禁止",body:"スキー場で許可なくレッスン行為を行うことは禁止されています。SnowMatchは『一緒に滑る仲間を見つける』コミュニティです。許可なき場所での指導・レッスン行為は行わないでください。SNSの動画撮影・滑りを一緒に見る・同行してもらう・仲間になるという目的の範囲でご利用ください。【重要】活動は必ずコース内で行ってください。バックカントリー・コース外への立入は遭難・雪崩・転落などの重大事故につながる危険があります。コース外での活動は当社では一切推奨せず、万が一の事故についても当社は責任を負いません。"}];
 
-var S={pg:"splash",blockedUsers:[],reportedUsers:[],showContact:false,showDeleteAccount:false,unreadChat:1,unreadBook:0,showWelcome:false,showNotif:false,following:[],followers:[2,5],showFollowList:false,followListType:"following",notifs:[{id:"n1",type:"like",icon:"❤️",msg:"こうすけがあなたにいいねしました",time:"5分前",read:false},{id:"n2",type:"msg",icon:"💬",msg:"ゆきなさんからメッセージが届きました",time:"12分前",read:false},{id:"n3",type:"match",icon:"🎿",msg:"けんじコーチとマッチングしました！",time:"1時間前",read:true},{id:"n4",type:"book",icon:"✅",msg:"予約が確定しました。一緒に楽しみましょう！",time:"2時間前",read:true},{id:"n5",type:"review",icon:"⭐",msg:"りなに口コミが投稿されました",time:"昨日",read:true}],rooms:{},checkins:[],reports:[],marketTab:"room",rankCat:"総合",openQA:null,openQAItem:null,showCheckin:false,showReport:false,openRoom:null,roomInput:"",splashIdx:0,onStep:0,kycStep:0,tab:"explore",selArea:null,selResort:null,openArea:null,openAreaReg:null,selAct:null,insOnly:false,camOnly:false,selCert:null,selUser:null,chatUser:null,chatMsgs:{"2":[{f:"t",t:"今週末、白馬一緒に滑りませんか？追い撮りもお願いしたいです！",time:"10:30"},{f:"m",t:"もちろん！どのコースが好みですか？リフトで一緒に上がりながら相談しましょう",time:"10:45"}]},chatIn:"",liked:[],matches:[],bookUser:null,confirmed:null,postLikes:{},addPost:false,postDetail:null,reviewTarget:null,reviewRating:5,reviewComment:"",selPayment:"card",npType:"video",npCap:"",npImgSrc:null,npVideoSrc:null,npUrlInput:"",termChecks:{},myProfile:null,reg:{role:"user",nick:"",real:"",age:"",email:"",pw:"",act:"スノーボード",lv:"中級",resorts:[],bio:"",isIns:false,isCam:false,price:5000,unit:"1時間",camPrice:3000,camUnit:"30分",camMenu:[],icon:"🏂"}};
+var S={pg:"splash",blockedUsers:[],reportedUsers:[],showContact:false,showDeleteAccount:false,unreadChat:0,unreadBook:0,showWelcome:false,showNotif:false,following:[],followers:[2,5],showFollowList:false,followListType:"following",notifs:[{id:"n1",type:"like",icon:"❤️",msg:"こうすけがあなたにいいねしました",time:"5分前",read:false},{id:"n2",type:"msg",icon:"💬",msg:"ゆきなさんからメッセージが届きました",time:"12分前",read:false},{id:"n3",type:"match",icon:"🎿",msg:"けんじコーチとマッチングしました！",time:"1時間前",read:true},{id:"n4",type:"book",icon:"✅",msg:"予約が確定しました。一緒に楽しみましょう！",time:"2時間前",read:true},{id:"n5",type:"review",icon:"⭐",msg:"りなに口コミが投稿されました",time:"昨日",read:true}],rooms:{},checkins:[],reports:[],marketTab:"room",rankCat:"総合",openQA:null,openQAItem:null,showCheckin:false,showReport:false,openRoom:null,roomInput:"",splashIdx:0,onStep:0,kycStep:0,tab:"explore",selArea:null,selResort:null,openArea:null,openAreaReg:null,selAct:null,insOnly:false,camOnly:false,selCert:null,selUser:null,chatUser:null,chatMsgs:{"2":[{f:"t",t:"今週末、白馬一緒に滑りませんか？追い撮りもお願いしたいです！",time:"10:30"},{f:"m",t:"もちろん！どのコースが好みですか？リフトで一緒に上がりながら相談しましょう",time:"10:45"}]},chatIn:"",liked:[],matches:[],bookUser:null,confirmed:null,postLikes:{},addPost:false,postDetail:null,reviewTarget:null,reviewRating:5,reviewComment:"",selPayment:"card",npType:"video",npCap:"",npImgSrc:null,npVideoSrc:null,npUrlInput:"",termChecks:{},myProfile:null,reg:{role:"user",nick:"",real:"",age:"",email:"",pw:"",act:"スノーボード",lv:"中級",resorts:[],bio:"",isIns:false,isCam:false,price:5000,unit:"1時間",camPrice:3000,camUnit:"30分",camMenu:[],icon:"🏂"}};
 
 function saveD(){try{localStorage.setItem("sm2",JSON.stringify({myProfile:S.myProfile,reg:S.reg,liked:S.liked,postLikes:S.postLikes,matches:S.matches,chatMsgs:S.chatMsgs}));}catch(e){}syncProfileToSupabase();}
 // プロフィール変更をSupabaseへ同期（1秒まとめて送信）
@@ -1246,8 +1246,13 @@ function renderChat(){
           var c=d({class:"card",style:{cursor:"pointer"},onClick:function(){R({chatUser:u});}});
           var row=d({style:{display:"flex",alignItems:"center",gap:"12px"}});row.appendChild(av(48,24,u.icon));
           var inf=d({style:{flex:"1"}});var nm=d({style:{fontWeight:"800",color:"#1A1A2E"}});nm.textContent=u.name;inf.appendChild(nm);
-          if(last){var le=d({style:{color:"#6B7280",fontSize:"13px",marginTop:"2px"}});le.textContent=last.t;inf.appendChild(le);}
-          row.appendChild(inf);if(last){var te=d({style:{color:"#6B7280",fontSize:"11px"}});te.textContent=last.time;row.appendChild(te);}
+          var unr=u.isReal?unreadCountFor(String(u.id)):0;
+          if(last){var le=d({style:{color:unr>0?"#1A1A2E":"#6B7280",fontWeight:unr>0?"700":"400",fontSize:"13px",marginTop:"2px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"190px"}});le.textContent=(last.f==="m"?"あなた: ":"")+last.t;inf.appendChild(le);}
+          row.appendChild(inf);
+          var rt=d({style:{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:"4px",flexShrink:"0"}});
+          if(last){var te=d({style:{color:"#6B7280",fontSize:"11px"}});te.textContent=last.time;rt.appendChild(te);}
+          if(unr>0)rt.appendChild(unreadBadge(unr));
+          row.appendChild(rt);
           c.appendChild(row);wrap.appendChild(c);
         })(USERS[ui]);
       }
@@ -1796,6 +1801,21 @@ function addDmRow(row,live){
     S.notifs.unshift({id:"dm"+row.id,type:"msg",icon:"💬",msg:nm+"さんからメッセージが届きました",time:"今",read:false});
     if(!(S.tab==="chat"&&S.chatUser&&S.chatUser.id===cid))S.unreadChat=(S.unreadChat||0)+1;
   }
+}
+function unreadCountFor(cid){
+  if(String(cid).indexOf("sb_")!==0)return 0;
+  var list=S.chatMsgs[cid]||[],n=0;
+  for(var i=0;i<list.length;i++){if(list[i].f==="t"&&!list[i].readAt)n++;}
+  return n;
+}
+function totalUnreadChat(){
+  var n=0;for(var k in S.chatMsgs){if(S.chatMsgs.hasOwnProperty(k))n+=unreadCountFor(k);}
+  return n;
+}
+function unreadBadge(n,extra){
+  var b=document.createElement("div");
+  b.style.cssText="background:#FF3B30;color:#fff;border-radius:10px;min-width:18px;height:18px;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center;padding:0 5px;"+(extra||"");
+  b.textContent=n>99?"99+":String(n);return b;
 }
 function markChatRead(u,msgs){
   if(!sb||!currentUser||!u||!u.isReal||!u.uid)return;
@@ -2916,7 +2936,7 @@ function render(){
   if(!cf){
     var nav=d({class:"nav"});var navItems=[{id:"explore",ic:"🔍",lbl:"探す"},{id:"chat",ic:"💬",lbl:"チャット"},{id:"market",ic:"🛖",lbl:"ラウンジ"},{id:"bookings",ic:"🎿",lbl:"予約"},{id:"profile",ic:"👤",lbl:"マイページ"}];
     for(var ni=0;ni<navItems.length;ni++){
-      (function(item){var ne=b2({class:"ni"+(S.tab===item.id?" on":"")});var nic=d({style:{fontSize:"22px",marginBottom:"2px"}});nic.textContent=item.ic;ne.appendChild(nic);ne.appendChild(document.createTextNode(item.lbl));ne.addEventListener("click",function(){if(item.id!=="chat")S.chatUser=null;R({tab:item.id});});nav.appendChild(ne);})(navItems[ni]);
+      (function(item){var ne=b2({class:"ni"+(S.tab===item.id?" on":"")});var nic=d({style:{fontSize:"22px",marginBottom:"2px",position:"relative",display:"inline-block"}});nic.textContent=item.ic;if(item.id==="chat"){var tu=totalUnreadChat();if(tu>0)nic.appendChild(unreadBadge(tu,"position:absolute;top:-4px;right:-12px;"));}ne.appendChild(nic);ne.appendChild(document.createTextNode(item.lbl));ne.addEventListener("click",function(){if(item.id!=="chat")S.chatUser=null;R({tab:item.id});});nav.appendChild(ne);})(navItems[ni]);
     }
     app.appendChild(nav);
   }
