@@ -1084,7 +1084,7 @@ function renderExplore(){
     var pod=document.createElement("div");pod.style.cssText="flex:1;background:"+podBgs[pi]+";border-radius:16px;padding:12px 8px;text-align:center;cursor:pointer;border:2px solid "+(pi===1?"#FFD700":"transparent");
     pod.addEventListener("click",function(r){return function(){R({selUser:r.user});};}(rd3));
     var pMedal=document.createElement("div");pMedal.style.fontSize="18px";pMedal.textContent=podMedals[pi];
-    var pIcon=document.createElement("div");pIcon.style.cssText="font-size:"+(pi===1?"28":"22")+"px;margin:4px 0";pIcon.textContent=rd3.user.icon;
+    var pIcon=document.createElement("div");pIcon.style.cssText="font-size:"+(pi===1?"28":"22")+"px;margin:4px 0";pIcon.textContent=rd3.user.icon;if(rd3.user.profileImg){var pSz=(pi===1?44:36);pIcon.textContent="";pIcon.style.cssText="width:"+pSz+"px;height:"+pSz+"px;border-radius:50%;overflow:hidden;margin:4px auto";var pImg=document.createElement("img");pImg.src=rd3.user.profileImg;pImg.style.cssText="width:100%;height:100%;object-fit:cover;display:block";pIcon.appendChild(pImg);}
     var pName=document.createElement("div");pName.style.cssText="font-weight:800;font-size:11px;color:#1A1A2E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis";pName.textContent=rd3.user.name;
     var sv3=S.rankCat==="いいね"?rd3.likes:S.rankCat==="投稿数"?rd3.posts:rd3.total;
     var pScore=document.createElement("div");pScore.style.cssText="font-weight:900;font-size:13px;margin-top:3px;color:"+podColors[pi];pScore.textContent=String(sv3)+(S.rankCat==="総合"?"pt":"");
@@ -1097,7 +1097,7 @@ function renderExplore(){
       var rCard=document.createElement("div");rCard.style.cssText="flex-shrink:0;background:#fff;border-radius:14px;padding:10px 12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.06);cursor:pointer;min-width:80px";
       rCard.addEventListener("click",function(){R({selUser:rd4.user});});
       var rnNum=document.createElement("div");rnNum.style.cssText="font-size:11px;font-weight:700;color:#9CA3AF;margin-bottom:2px";rnNum.textContent=String(ri3+1)+"位";
-      var rnIco=document.createElement("div");rnIco.style.cssText="font-size:22px;margin:2px 0";rnIco.textContent=rd4.user.icon;
+      var rnIco=document.createElement("div");rnIco.style.cssText="font-size:22px;margin:2px 0";rnIco.textContent=rd4.user.icon;if(rd4.user.profileImg){rnIco.textContent="";rnIco.style.cssText="width:32px;height:32px;border-radius:50%;overflow:hidden;margin:2px auto";var rnImg=document.createElement("img");rnImg.src=rd4.user.profileImg;rnImg.style.cssText="width:100%;height:100%;object-fit:cover;display:block";rnIco.appendChild(rnImg);}
       var rnName=document.createElement("div");rnName.style.cssText="font-weight:700;font-size:10px;color:#1A1A2E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70px";rnName.textContent=rd4.user.name;
       var sv4=S.rankCat==="いいね"?rd4.likes:S.rankCat==="投稿数"?rd4.posts:rd4.total;
       var rnScore=document.createElement("div");rnScore.style.cssText="font-weight:900;font-size:12px;color:#FF6B2B;margin-top:2px";rnScore.textContent=String(sv4)+(S.rankCat==="総合"?"pt":"");
