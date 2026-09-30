@@ -1708,6 +1708,8 @@ function loadLikesFromSupabase(){
     for(var k in mine)S.liked.push("sb_"+k);
     S.mutual=[];
     if(!S.notifs)S.notifs=[];
+    // 前のアカウントの「いいね/マッチ」通知を消してから作り直す
+    S.notifs=S.notifs.filter(function(n){return String(n.id).indexOf("lk_")!==0&&n.uid!==currentUser.id;});
     for(var k2 in toMe){
       var u=findRealUser(k2);var nm=u?u.name:"だれか";
       if(u)u.likes=Math.max(u.likes||0,0);
