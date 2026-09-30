@@ -555,7 +555,7 @@ function CamModal(u){
     var isF2=S.following.indexOf(u.id)>=0;
     var br2=d({style:{display:"flex",gap:"10px",marginTop:"8px",marginBottom:"80px",flexWrap:"wrap"}});
     br2.appendChild(obtn(isLk?"💛 いいね済み":"🤍 いいね",function(){toggleLike(u);},"obtn-s"));
-    br2.appendChild(obtn(isF2?"✅ フォロー中":"＋ フォロー",function(){var idx=S.following.indexOf(u.id);if(idx>=0)S.following.splice(idx,1);else S.following.push(u.id);render();},isF2?"obtn-s":""));
+    br2.appendChild(obtn(isF2?"✅ フォロー中":"＋ フォロー",function(){toggleFollow(u);},isF2?"obtn-s":""));
     br2.appendChild(obtn("💬 メッセージ",function(){R({selUser:null,chatUser:u,tab:"chat"});},""));
     body.appendChild(br2);box.appendChild(body);
 
@@ -635,7 +635,7 @@ function InsModal(u){
     var isF2=S.following.indexOf(u.id)>=0;
     var br2=d({style:{display:"flex",gap:"10px",marginTop:"8px",marginBottom:"80px",flexWrap:"wrap"}});
     br2.appendChild(obtn(isLk?"💛 いいね済み":"🤍 いいね",function(){toggleLike(u);},"obtn-s"));
-    br2.appendChild(obtn(isF2?"✅ フォロー中":"＋ フォロー",function(){var idx=S.following.indexOf(u.id);if(idx>=0)S.following.splice(idx,1);else S.following.push(u.id);render();},isF2?"obtn-s":""));
+    br2.appendChild(obtn(isF2?"✅ フォロー中":"＋ フォロー",function(){toggleFollow(u);},isF2?"obtn-s":""));
     br2.appendChild(obtn("💬 メッセージ",function(){R({selUser:null,chatUser:u,tab:"chat"});},""));
     body.appendChild(br2);box.appendChild(body);
 
@@ -1737,6 +1737,7 @@ function loadUsersFromSupabase(){
     }
     for(var k=real.length-1;k>=0;k--)USERS.unshift(real[k]);
     loadLikesFromSupabase();
+    loadFollowsFromSupabase();
     loadMessagesFromSupabase();
     startRealtime();
     if(S.pg==="main")render();
@@ -1780,6 +1781,42 @@ function toggleLike(u){
 }
 function findRealUser(uid){for(var i=0;i<USERS.length;i++){if(USERS[i].isReal&&USERS[i].uid===uid)return USERS[i];}return null;}
 // 自分のいいね・自分へのいいねを読み込む
+function loadFollowsFromSupabase(){
+  if(!sb||!currentUser)return;
+  sb.from("user_follows").select("follower,followee").or("follower.eq."+currentUser.id+",followee.eq."+currentUser.id).then(function(r){
+    if(r.error){console.error("follows load error",r.error);return;}
+    var rows=r.data||[];
+    S.following=(S.following||[]).filter(function(id){return String(id).indexOf("sb_")!==0;});
+    S.followers=(S.followers||[]).filter(function(id){return String(id).indexOf("sb_")!==0;});
+    if(!S.notifs)S.notifs=[];
+    S.notifs=S.notifs.filter(function(n){return String(n.id).indexOf("fw_")!==0;});
+    for(var i=0;i<rows.length;i++){
+      if(rows[i].follower===currentUser.id)S.following.push("sb_"+rows[i].followee);
+      if(rows[i].followee===currentUser.id){
+        S.followers.push("sb_"+rows[i].follower);
+        var fu=findRealUser(rows[i].follower);
+        S.notifs.push({id:"fw_"+rows[i].follower,uid:rows[i].follower,type:"follow",icon:"👤",msg:(fu?fu.name:"だれか")+"さんがあなたをフォローしました",time:"",read:true});
+      }
+    }
+    render();
+  });
+}
+function toggleFollow(u){
+  if(!S.following)S.following=[];
+  var idx=S.following.indexOf(u.id);var wasF=idx>=0;
+  if(wasF)S.following.splice(idx,1);else S.following.push(u.id);
+  render();
+  if(!sb||!currentUser||!u.uid)return;
+  var q=wasF?sb.from("user_follows").delete().eq("follower",currentUser.id).eq("followee",u.uid)
+            :sb.from("user_follows").insert({follower:currentUser.id,followee:u.uid});
+  q.then(function(r){
+    if(r.error){
+      var j=S.following.indexOf(u.id);
+      if(wasF){if(j<0)S.following.push(u.id);}else{if(j>=0)S.following.splice(j,1);}
+      render();alert("フォローに失敗しました: "+r.error.message);
+    }
+  });
+}
 function loadLikesFromSupabase(){
   if(!sb||!currentUser)return;
   sb.from("user_likes").select("from_user,to_user,created_at").or("from_user.eq."+currentUser.id+",to_user.eq."+currentUser.id).then(function(r){
@@ -1909,6 +1946,7 @@ function startRealtime(){
     .on("postgres_changes",{event:"INSERT",schema:"public",table:"dm_messages",filter:"from_user=eq."+currentUser.id},function(p){addDmRow(p.new,true);render();})
     .on("postgres_changes",{event:"UPDATE",schema:"public",table:"dm_messages",filter:"from_user=eq."+currentUser.id},function(p){addDmRow(p.new,false);render();})
     .on("postgres_changes",{event:"INSERT",schema:"public",table:"user_likes",filter:"to_user=eq."+currentUser.id},function(){loadLikesFromSupabase();})
+    .on("postgres_changes",{event:"INSERT",schema:"public",table:"user_follows",filter:"followee=eq."+currentUser.id},function(){loadFollowsFromSupabase();})
     .on("postgres_changes",{event:"*",schema:"public",table:"profiles"},function(){loadUsersFromSupabase();})
     .subscribe();
 }
@@ -2802,7 +2840,7 @@ function FollowListModal(){
         var row=document.createElement("div");
         row.style.cssText="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #F0F0F0;cursor:pointer";
         row.addEventListener("click",function(){S.showFollowList=false;R({selUser:u});});
-        var ico=document.createElement("div");ico.style.cssText="font-size:28px;flex-shrink:0";ico.textContent=u.icon;
+        var ico=avU(40,24,u);
         var info=document.createElement("div");info.style.cssText="flex:1";
         var nm=document.createElement("div");nm.style.cssText="font-weight:800;font-size:14px;color:#1A1A2E";nm.textContent=u.name;
         var meta=document.createElement("div");meta.style.cssText="font-size:12px;color:#9CA3AF;margin-top:2px";meta.textContent=u.act+"・"+u.lv;
@@ -2814,9 +2852,7 @@ function FollowListModal(){
         fBtn.textContent=isF?"フォロー中":"フォローする";
         fBtn.addEventListener("click",function(e){
           e.stopPropagation();
-          var idx2=S.following.indexOf(u.id);
-          if(idx2>=0){S.following.splice(idx2,1);}else{S.following.push(u.id);}
-          render();
+          toggleFollow(u);
         });
         row.appendChild(ico);row.appendChild(info);row.appendChild(fBtn);
         box.appendChild(row);
@@ -3079,6 +3115,9 @@ function render(){
             }
             box.appendChild(sr);
           }
+          var isFw=(S.following||[]).indexOf(u.id)>=0;
+          var fwb=b2({style:{width:"100%",padding:"10px",marginTop:"6px",borderRadius:"14px",border:"1.5px solid "+(isFw?"#E8E8E8":"#FF6B2B"),background:isFw?"#F5F7FA":"#fff",color:isFw?"#6B7280":"#FF6B2B",fontSize:"14px",fontWeight:"800",cursor:"pointer",fontFamily:"inherit"}},isFw?"✅ フォロー中":"＋ フォローする");
+          fwb.addEventListener("click",function(){toggleFollow(u);});box.appendChild(fwb);
           var br=d({style:{display:"flex",gap:"10px",marginTop:"6px"}});var isLk=S.liked.indexOf(u.id)>=0;
           br.appendChild(obtn(isLk?"💛 いいね済み":"🤍 いいね",function(){toggleLike(u);},"obtn-s"));
           br.appendChild(obtn("💬 メッセージ",function(){R({selUser:null,chatUser:u,tab:"chat"});},""));box.appendChild(br);
