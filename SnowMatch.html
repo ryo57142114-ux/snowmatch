@@ -2936,7 +2936,7 @@ function render(){
   if(!cf){
     var nav=d({class:"nav"});var navItems=[{id:"explore",ic:"🔍",lbl:"探す"},{id:"chat",ic:"💬",lbl:"チャット"},{id:"market",ic:"🛖",lbl:"ラウンジ"},{id:"bookings",ic:"🎿",lbl:"予約"},{id:"profile",ic:"👤",lbl:"マイページ"}];
     for(var ni=0;ni<navItems.length;ni++){
-      (function(item){var ne=b2({class:"ni"+(S.tab===item.id?" on":"")});var nic=d({style:{fontSize:"22px",marginBottom:"2px",position:"relative",display:"inline-block"}});nic.textContent=item.ic;if(item.id==="chat"){var tu=totalUnreadChat();if(tu>0)nic.appendChild(unreadBadge(tu,"position:absolute;top:-4px;right:-12px;"));}ne.appendChild(nic);ne.appendChild(document.createTextNode(item.lbl));ne.addEventListener("click",function(){if(item.id!=="chat")S.chatUser=null;R({tab:item.id});});nav.appendChild(ne);})(navItems[ni]);
+      (function(item){var ne=b2({class:"ni"+(S.tab===item.id?" on":"")});var nic=d({style:{fontSize:"22px",marginBottom:"2px",position:"relative"}});nic.textContent=item.ic;if(item.id==="chat"){var tu=totalUnreadChat();if(tu>0)nic.appendChild(unreadBadge(tu,"position:absolute;top:-4px;left:50%;margin-left:6px;"));}ne.appendChild(nic);ne.appendChild(document.createTextNode(item.lbl));ne.addEventListener("click",function(){if(item.id!=="chat")S.chatUser=null;R({tab:item.id});});nav.appendChild(ne);})(navItems[ni]);
     }
     app.appendChild(nav);
   }
