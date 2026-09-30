@@ -138,22 +138,54 @@ var S={pg:"splash",blockedUsers:[],reportedUsers:[],showContact:false,showDelete
 function saveD(){try{localStorage.setItem("sm2",JSON.stringify({myProfile:S.myProfile,reg:S.reg,liked:S.liked,postLikes:S.postLikes,matches:S.matches,chatMsgs:S.chatMsgs}));}catch(e){}syncProfileToSupabase();}
 // プロフィール変更をSupabaseへ同期（1秒まとめて送信）
 var _syncTimer=null;
+var EXTRA_KEYS=["board","styles","stanceW2","frontAngle","backAngle","bindingName","camGear","costBreakdown","certText"];
+function buildProfileRow(){
+  var p=S.myProfile||{};var ex={};
+  for(var i=0;i<EXTRA_KEYS.length;i++){if(p[EXTRA_KEYS[i]]!==undefined)ex[EXTRA_KEYS[i]]=p[EXTRA_KEYS[i]];}
+  var row={
+    id:currentUser.id,
+    nick:p.nick||"",real_name:p.name||"",
+    age:p.age?parseInt(p.age):null,
+    email:currentUser.email||p.email||"",
+    act:p.act||"",acts:p.acts||[],lv:p.lv||"中級",
+    resorts:p.resorts||[],bio:p.bio||"",icon:p.icon||"🏂",
+    price:p.price?parseInt(p.price):null,unit:p.unit||"",gear:p.gear||[],sns:p.sns||{},
+    extra:ex,
+    is_verified:true,kyc_status:p.kycStatus||"approved"
+  };
+  if(p.profileImg&&/^https?:/.test(p.profileImg))row.profile_img=p.profileImg;
+  return row;
+}
+// すぐにサーバーへ保存（保存ボタン用）。cb(errMsg or null)
+function saveProfileNow(cb){
+  try{localStorage.setItem("sm2",JSON.stringify({myProfile:S.myProfile,reg:S.reg,liked:S.liked,postLikes:S.postLikes,matches:S.matches,chatMsgs:S.chatMsgs}));}catch(e){}
+  if(typeof sb==="undefined"||!sb||!currentUser||!S.myProfile){if(cb)cb("ログインしていないため、この端末にだけ保存しました");return;}
+  if(_syncTimer){clearTimeout(_syncTimer);_syncTimer=null;}
+  sb.from("profiles").upsert(buildProfileRow()).select().then(function(r){
+    if(r.error){if(cb)cb(r.error.message);return;}
+    if(!r.data||!r.data.length){if(cb)cb("保存できませんでした（権限設定）");return;}
+    if(cb)cb(null);
+  }).catch(function(e){if(cb)cb("通信エラー: "+(e&&e.message?e.message:e));});
+}
+// 保存ボタンの見た目をまとめて処理
+function wireSaveBtn(btn,label,before){
+  btn.addEventListener("click",function(){
+    if(before)before();
+    btn.disabled=true;btn.textContent="保存中...";
+    saveProfileNow(function(err){
+      btn.disabled=false;
+      if(err){btn.textContent=label;alert("保存エラー: "+err);return;}
+      btn.textContent="✅ 保存しました！";btn.style.background="#22C55E";
+      setTimeout(function(){btn.textContent=label;btn.style.background="";},2000);
+    });
+  });
+}
 function syncProfileToSupabase(){
   if(typeof sb==="undefined"||!sb||!currentUser||!S.myProfile)return;
   if(_syncTimer)clearTimeout(_syncTimer);
   _syncTimer=setTimeout(function(){
-    var p=S.myProfile;
-    var row={
-      id:currentUser.id,
-      nick:p.nick||"",real_name:p.name||"",
-      age:p.age?parseInt(p.age):null,
-      email:currentUser.email||p.email||"",
-      act:p.act||"",acts:p.acts||[],lv:p.lv||"中級",
-      resorts:p.resorts||[],bio:p.bio||"",icon:p.icon||"🏂",
-      price:p.price?parseInt(p.price):null,unit:p.unit||"",gear:p.gear||[],sns:p.sns||{},
-      is_verified:true,kyc_status:p.kycStatus||"approved"
-    };
-    sb.from("profiles").upsert(row).then(function(r){
+    _syncTimer=null;
+    sb.from("profiles").upsert(buildProfileRow()).then(function(r){
       if(r.error)console.error("Profile sync error:",r.error);
     });
   },1000);
@@ -1559,6 +1591,7 @@ function loadProfileFromSupabase(){
       price:p.price,unit:p.unit,gear:p.gear||[],sns:p.sns||{},
       ok:p.is_verified,kycStatus:p.kyc_status
     };
+    if(p.extra){for(var ek in p.extra){if(p.extra.hasOwnProperty(ek))S.myProfile[ek]=p.extra[ek];}}
     saveD();
     S.showLoginModal=false;
     loadUsersFromSupabase();
@@ -1698,6 +1731,7 @@ function loadUsersFromSupabase(){
         resorts:p.resorts||[],icon:p.icon||"🏂",profileImg:p.profile_img||null,
         isIns:!!p.is_ins,isCam:!!p.is_cam,price:p.price||null,unit:p.unit||"",
         bio:p.bio||"",gear:p.gear||[],sns:p.sns||{},
+        board:(p.extra&&p.extra.board)||"",styles:(p.extra&&p.extra.styles)||[],camGear:(p.extra&&p.extra.camGear)||[],costBreakdown:(p.extra&&p.extra.costBreakdown)||[],
         posts:[],likes:0,ok:!!p.is_verified
       });
     }
@@ -2133,13 +2167,7 @@ function renderProfile(){
   bioSaveBtn.className = "obtn obtn-full";
   bioSaveBtn.style.cssText = "font-size:13px;padding:10px";
   bioSaveBtn.textContent = "💾 保存する";
-  bioSaveBtn.addEventListener("click", function(){
-    S.myProfile.bio = bioTA.value;
-    saveD();
-    bioSaveBtn.textContent = "✅ 保存しました！";
-    bioSaveBtn.style.background = "#22C55E";
-    setTimeout(function(){ bioSaveBtn.textContent = "💾 保存する"; bioSaveBtn.style.background = ""; }, 2000);
-  });
+  wireSaveBtn(bioSaveBtn,"💾 保存する",function(){ S.myProfile.bio = bioTA.value; });
   bioCard.appendChild(bioSaveBtn);
   body.appendChild(bioCard);
 
@@ -2347,13 +2375,7 @@ function renderProfile(){
   gearSaveBtn.className = "obtn obtn-full";
   gearSaveBtn.style.cssText = "font-size:13px;padding:10px";
   gearSaveBtn.textContent = "💾 保存する";
-  gearSaveBtn.addEventListener("click", function(){
-    S.myProfile.board = boardInp.value;
-    saveD();
-    gearSaveBtn.textContent = "✅ 保存しました！";
-    gearSaveBtn.style.background = "#22C55E";
-    setTimeout(function(){ gearSaveBtn.textContent = "💾 保存する"; gearSaveBtn.style.background = ""; }, 2000);
-  });
+  wireSaveBtn(gearSaveBtn,"💾 保存する",function(){ S.myProfile.board = boardInp.value; });
   gearCard.appendChild(gearSaveBtn);
   body.appendChild(gearCard);
 
@@ -2482,6 +2504,12 @@ function renderProfile(){
   priceCard.appendChild(noPriceRow);
 
   // 自動保存メッセージ
+  var priceSaveBtn = document.createElement("button");
+  priceSaveBtn.className = "obtn obtn-full";
+  priceSaveBtn.style.cssText = "font-size:13px;padding:10px;margin-top:12px";
+  priceSaveBtn.textContent = "💾 保存する";
+  wireSaveBtn(priceSaveBtn,"💾 保存する",function(){ S.myProfile.price = parseInt(priceInp.value) || 0; });
+  priceCard.appendChild(priceSaveBtn);
   var savedMsg = document.createElement("div");
   savedMsg.id = "price-saved-msg";
   savedMsg.style.cssText = "text-align:center;font-size:12px;color:#22C55E;font-weight:700;margin-top:8px;opacity:0;transition:opacity 0.3s";
@@ -2531,10 +2559,7 @@ function renderProfile(){
       snsDiv2.appendChild(snsRow2);
     });
     var snsSaveBtn2=document.createElement("button");snsSaveBtn2.className="obtn obtn-full";snsSaveBtn2.style.cssText="font-size:13px;padding:10px;margin-top:4px";snsSaveBtn2.textContent="💾 SNSリンクを保存";
-    snsSaveBtn2.addEventListener("click",function(){
-      saveD();snsSaveBtn2.textContent="✅ 保存しました！";snsSaveBtn2.style.background="#22C55E";
-      setTimeout(function(){snsSaveBtn2.textContent="💾 SNSリンクを保存";snsSaveBtn2.style.background="";},2000);
-    });
+    wireSaveBtn(snsSaveBtn2,"💾 SNSリンクを保存",null);
     snsDiv2.appendChild(snsSaveBtn2);
     ep.appendChild(snsDiv2);
     body.appendChild(ep);
@@ -3022,6 +3047,7 @@ function render(){
           var pv=parseInt(u.price)||0;
           pc.appendChild(sp({style:{fontSize:pv?"18px":"13px",fontWeight:"900",color:pv?"#FF6B2B":"#9CA3AF"}},pv?("¥"+pv.toLocaleString()+(u.unit?" / "+u.unit:"")):"未設定"));
           box.appendChild(pc);
+          if(u.costBreakdown&&u.costBreakdown.length){var cbr=d({style:{display:"flex",flexWrap:"wrap",gap:"6px",margin:"-6px 0 14px"}});for(var cbi=0;cbi<u.costBreakdown.length;cbi++){var cbt=d({style:{background:"#F5F7FA",borderRadius:"10px",padding:"3px 10px",fontSize:"11px",fontWeight:"700",color:"#6B7280"}});cbt.textContent=u.costBreakdown[cbi];cbr.appendChild(cbt);}box.appendChild(cbr);}
           // 活動スキー場
           sec("⛰️ 活動スキー場");
           var rr=d({style:{marginBottom:"14px"}});
@@ -3031,11 +3057,13 @@ function render(){
           // 自己紹介
           sec("📝 自己紹介");
           box.appendChild(p2({style:{color:u.bio?"#374151":"#9CA3AF",fontSize:"14px",lineHeight:"1.7",margin:"0 0 14px",whiteSpace:"pre-wrap"}},u.bio||"まだ自己紹介はありません"));
-          // 板・ギア
-          if(u.gear&&u.gear.length){
-            sec("🏂 板・ギア");
+          // スタイル・板・撮影機材
+          var gearAll=[].concat(u.styles||[],u.gear||[],u.camGear||[]);
+          if(u.board||gearAll.length){
+            sec("🏂 スタイル・機材");
+            if(u.board){box.appendChild(p2({style:{fontSize:"13px",color:"#374151",fontWeight:"700",margin:"0 0 6px"}},u.board));}
             var gr=d({style:{display:"flex",flexWrap:"wrap",gap:"6px",marginBottom:"14px"}});
-            for(var gi=0;gi<u.gear.length;gi++){var gt=d({style:{background:"#1a1a2e",color:"#fff",borderRadius:"8px",padding:"3px 10px",fontSize:"11px",fontWeight:"700"}});gt.textContent=u.gear[gi];gr.appendChild(gt);}
+            for(var gi=0;gi<gearAll.length;gi++){var gt=d({style:{background:"#1a1a2e",color:"#fff",borderRadius:"8px",padding:"3px 10px",fontSize:"11px",fontWeight:"700"}});gt.textContent=gearAll[gi];gr.appendChild(gt);}
             box.appendChild(gr);
           }
           // SNS
