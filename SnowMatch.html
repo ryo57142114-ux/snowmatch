@@ -1271,6 +1271,7 @@ function renderChat(){
   cw.appendChild(hdr);
   var ma=d({style:{flex:"1",overflowY:"auto",padding:"16px",background:"#F5F7FA"}});
   var msgs=S.chatMsgs[String(S.chatUser.id)]||[];
+  markChatRead(S.chatUser,msgs);
   for(var mi=0;mi<msgs.length;mi++){
     var m=msgs[mi];var isMe=m.f==="m";
     var mRow=d({style:{display:"flex",justifyContent:isMe?"flex-end":"flex-start",marginBottom:"10px",gap:"8px",alignItems:"flex-end"}});
@@ -1281,7 +1282,7 @@ function renderChat(){
     mBub.textContent=m.t;
     var mTime=d({style:{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:"4px",marginTop:"3px"}});
     var mt=d({style:{fontSize:"10px",opacity:".6"}});mt.textContent=m.time;
-    if(isMe){var rd=d({style:{fontSize:"10px",color:"rgba(255,255,255,0.7)"}});rd.textContent="既読";mTime.appendChild(rd);}
+    if(isMe&&(S.chatUser.isReal?!!m.readAt:true)){var rd=d({style:{fontSize:"10px",color:"rgba(255,255,255,0.7)"}});rd.textContent="既読";mTime.appendChild(rd);}
     mTime.appendChild(mt);mBub.appendChild(mTime);mBox.appendChild(mBub);mRow.appendChild(mBox);ma.appendChild(mRow);
   }
   cw.appendChild(ma);
@@ -1773,7 +1774,7 @@ function sendMsg(text){
 }
 function loadMessagesFromSupabase(){
   if(!sb||!currentUser)return;
-  sb.from("dm_messages").select("id,from_user,to_user,body,created_at").or("from_user.eq."+currentUser.id+",to_user.eq."+currentUser.id).order("created_at",{ascending:true}).limit(1000).then(function(r){
+  sb.from("dm_messages").select("id,from_user,to_user,body,created_at,read_at").or("from_user.eq."+currentUser.id+",to_user.eq."+currentUser.id).order("created_at",{ascending:true}).limit(1000).then(function(r){
     if(r.error){console.error("messages load error",r.error);return;}
     for(var k in S.chatMsgs){if(k.indexOf("sb_")===0)delete S.chatMsgs[k];}
     var rows=r.data||[];
@@ -1786,9 +1787,9 @@ function addDmRow(row,live){
   var other=mine?row.to_user:row.from_user;
   var cid="sb_"+other;if(!S.chatMsgs[cid])S.chatMsgs[cid]=[];
   var list=S.chatMsgs[cid];
-  for(var j=0;j<list.length;j++){if(list[j].id===row.id)return;}
+  for(var j=0;j<list.length;j++){if(list[j].id===row.id){if(row.read_at)list[j].readAt=row.read_at;return;}}
   if(live&&mine){for(var j2=list.length-1;j2>=0;j2--){if(list[j2].pending&&list[j2].t===row.body){list[j2].pending=false;list[j2].id=row.id;return;}}}
-  list.push({id:row.id,f:mine?"m":"t",t:row.body,time:hmOf(row.created_at)});
+  list.push({id:row.id,f:mine?"m":"t",t:row.body,time:hmOf(row.created_at),readAt:row.read_at||null});
   if(live&&!mine){
     var u=findRealUser(other);var nm=u?u.name:"だれか";
     if(!S.notifs)S.notifs=[];
@@ -1796,12 +1797,20 @@ function addDmRow(row,live){
     if(!(S.tab==="chat"&&S.chatUser&&S.chatUser.id===cid))S.unreadChat=(S.unreadChat||0)+1;
   }
 }
+function markChatRead(u,msgs){
+  if(!sb||!currentUser||!u||!u.isReal||!u.uid)return;
+  var need=false,now=new Date().toISOString();
+  for(var i=0;i<msgs.length;i++){if(msgs[i].f==="t"&&!msgs[i].readAt){msgs[i].readAt=now;need=true;}}
+  if(!need)return;
+  sb.from("dm_messages").update({read_at:now}).eq("from_user",u.uid).eq("to_user",currentUser.id).is("read_at",null).then(function(r){if(r.error)console.error("mark read error",r.error);});
+}
 var _rtChannel=null;
 function startRealtime(){
   if(!sb||!currentUser||_rtChannel)return;
   _rtChannel=sb.channel("sm-"+currentUser.id)
     .on("postgres_changes",{event:"INSERT",schema:"public",table:"dm_messages",filter:"to_user=eq."+currentUser.id},function(p){addDmRow(p.new,true);render();})
     .on("postgres_changes",{event:"INSERT",schema:"public",table:"dm_messages",filter:"from_user=eq."+currentUser.id},function(p){addDmRow(p.new,true);render();})
+    .on("postgres_changes",{event:"UPDATE",schema:"public",table:"dm_messages",filter:"from_user=eq."+currentUser.id},function(p){addDmRow(p.new,false);render();})
     .on("postgres_changes",{event:"INSERT",schema:"public",table:"user_likes",filter:"to_user=eq."+currentUser.id},function(){loadLikesFromSupabase();})
     .on("postgres_changes",{event:"*",schema:"public",table:"profiles"},function(){loadUsersFromSupabase();})
     .subscribe();
