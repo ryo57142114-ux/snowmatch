@@ -1240,7 +1240,7 @@ function renderChat(){
     var wrap=d({class:"pg"});var t=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"16px"}});t.textContent="💬 メッセージ";wrap.appendChild(t);
     var has=false;
     for(var ui=0;ui<USERS.length;ui++){
-      if(S.chatMsgs[String(USERS[ui].id)]){has=true;
+      if(S.chatMsgs[String(USERS[ui].id)]||(USERS[ui].isReal&&S.mutual&&S.mutual.indexOf(USERS[ui].id)>=0)){has=true;
         (function(u){
           var msgs=S.chatMsgs[String(u.id)]||[];var last=msgs[msgs.length-1];
           var c=d({class:"card",style:{cursor:"pointer"},onClick:function(){R({chatUser:u});}});
@@ -1291,9 +1291,7 @@ function renderChat(){
     var qbtn=document.createElement("button");qbtn.style.cssText="flex-shrink:0;padding:5px 12px;background:#F5F7FA;border:1px solid #E8E8E8;border-radius:16px;font-size:11px;font-weight:700;color:#6B7280;font-family:inherit;cursor:pointer;white-space:nowrap";
     qbtn.textContent=qb.lbl;
     qbtn.addEventListener("click",function(){
-      var cid=String(S.chatUser.id);if(!S.chatMsgs[cid])S.chatMsgs[cid]=[];
-      var now=new Date();var hm=now.getHours()+":"+String(now.getMinutes()).padStart(2,"0");
-      S.chatMsgs[cid].push({f:"m",t:qb.msg,time:hm});S.chatIn="";render();
+      sendMsg(qb.msg);
     });
     quickBar.appendChild(qbtn);
   });
@@ -1302,9 +1300,10 @@ function renderChat(){
   var ci2=document.createElement("input");ci2.type="text";ci2.className="inp";ci2.style.cssText="flex:1;border-radius:20px";
   ci2.placeholder="メッセージを入力...";ci2.value=S.chatIn||"";
   ci2.addEventListener("input",function(ev){S.chatIn=ev.target.value;});
-  ci2.addEventListener("keydown",function(ev){if(ev.key==="Enter")sendMsg();});
-  var sb=obtn("送信",sendMsg,"");sb.style.padding="10px 18px";
+  ci2.addEventListener("keydown",function(ev){if(ev.key==="Enter"&&!ev.isComposing)sendMsg();});
+  var sb=obtn("送信",function(){sendMsg();},"");sb.style.padding="10px 18px";
   ir.appendChild(ci2);ir.appendChild(sb);cw.appendChild(ir);
+  setTimeout(function(){ma.scrollTop=ma.scrollHeight;},0);
   return cw;
 }
 
@@ -1672,6 +1671,8 @@ function loadUsersFromSupabase(){
     }
     for(var k=real.length-1;k>=0;k--)USERS.unshift(real[k]);
     loadLikesFromSupabase();
+    loadMessagesFromSupabase();
+    startRealtime();
     if(S.pg==="main")render();
   }).catch(function(e){console.error("Users load error:",e);});
 }
@@ -1748,6 +1749,62 @@ function pwToggleWrap(inp){
   b.style.cssText="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:#F3F4F6;border:none;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;color:#6B7280;cursor:pointer";
   b.addEventListener("click",function(e){e.preventDefault();if(inp.type==="password"){inp.type="text";b.textContent="隠す";}else{inp.type="password";b.textContent="表示";}});
   w.appendChild(inp);w.appendChild(b);return w;
+}
+
+// ===== チャット（Supabase: dm_messages） =====
+function hmOf(d){d=d?new Date(d):new Date();return d.getHours()+":"+String(d.getMinutes()).padStart(2,"0");}
+function sendMsg(text){
+  var u=S.chatUser;if(!u)return;
+  var body=(text!==undefined?text:(S.chatIn||"")).trim();
+  if(!body)return;
+  var cid=String(u.id);if(!S.chatMsgs[cid])S.chatMsgs[cid]=[];
+  if(u.isReal){
+    if(!sb||!currentUser){alert("メッセージを送るにはログインが必要です");return;}
+    if(!S.mutual||S.mutual.indexOf(u.id)<0){alert("お互いにいいね（マッチ）した相手とだけメッセージできます");return;}
+    var tmp={f:"m",t:body,time:hmOf(),pending:true};
+    S.chatMsgs[cid].push(tmp);S.chatIn="";render();
+    sb.from("dm_messages").insert({from_user:currentUser.id,to_user:u.uid,body:body}).select().single().then(function(r){
+      if(r.error){tmp.t=body+"（送信失敗）";render();alert("送信に失敗しました: "+r.error.message);return;}
+      tmp.pending=false;tmp.id=r.data.id;
+    });
+    return;
+  }
+  S.chatMsgs[cid].push({f:"m",t:body,time:hmOf()});S.chatIn="";saveD();render();
+}
+function loadMessagesFromSupabase(){
+  if(!sb||!currentUser)return;
+  sb.from("dm_messages").select("id,from_user,to_user,body,created_at").or("from_user.eq."+currentUser.id+",to_user.eq."+currentUser.id).order("created_at",{ascending:true}).limit(1000).then(function(r){
+    if(r.error){console.error("messages load error",r.error);return;}
+    for(var k in S.chatMsgs){if(k.indexOf("sb_")===0)delete S.chatMsgs[k];}
+    var rows=r.data||[];
+    for(var i=0;i<rows.length;i++)addDmRow(rows[i],false);
+    render();
+  });
+}
+function addDmRow(row,live){
+  var mine=row.from_user===currentUser.id;
+  var other=mine?row.to_user:row.from_user;
+  var cid="sb_"+other;if(!S.chatMsgs[cid])S.chatMsgs[cid]=[];
+  var list=S.chatMsgs[cid];
+  for(var j=0;j<list.length;j++){if(list[j].id===row.id)return;}
+  if(live&&mine){for(var j2=list.length-1;j2>=0;j2--){if(list[j2].pending&&list[j2].t===row.body){list[j2].pending=false;list[j2].id=row.id;return;}}}
+  list.push({id:row.id,f:mine?"m":"t",t:row.body,time:hmOf(row.created_at)});
+  if(live&&!mine){
+    var u=findRealUser(other);var nm=u?u.name:"だれか";
+    if(!S.notifs)S.notifs=[];
+    S.notifs.unshift({id:"dm"+row.id,type:"msg",icon:"💬",msg:nm+"さんからメッセージが届きました",time:"今",read:false});
+    if(!(S.tab==="chat"&&S.chatUser&&S.chatUser.id===cid))S.unreadChat=(S.unreadChat||0)+1;
+  }
+}
+var _rtChannel=null;
+function startRealtime(){
+  if(!sb||!currentUser||_rtChannel)return;
+  _rtChannel=sb.channel("sm-"+currentUser.id)
+    .on("postgres_changes",{event:"INSERT",schema:"public",table:"dm_messages",filter:"to_user=eq."+currentUser.id},function(p){addDmRow(p.new,true);render();})
+    .on("postgres_changes",{event:"INSERT",schema:"public",table:"dm_messages",filter:"from_user=eq."+currentUser.id},function(p){addDmRow(p.new,true);render();})
+    .on("postgres_changes",{event:"INSERT",schema:"public",table:"user_likes",filter:"to_user=eq."+currentUser.id},function(){loadLikesFromSupabase();})
+    .on("postgres_changes",{event:"*",schema:"public",table:"profiles"},function(){loadUsersFromSupabase();})
+    .subscribe();
 }
 
 function signUpToSupabase(){
