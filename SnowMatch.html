@@ -2501,7 +2501,7 @@ function renderProfile(){
   deleteBtn3.innerHTML="<span>🚪</span><span>退会する</span>";
   deleteBtn3.addEventListener("click",function(){S.showDeleteAccount=true;render();});
   supportDiv.appendChild(deleteBtn3);
-  wrap.appendChild(supportDiv);
+  body.appendChild(supportDiv);
 
   var rd=d({style:{padding:"8px 0 20px",textAlign:"center"}});
   var rb=b2({style:{background:"none",border:"none",color:"#9CA3AF",fontSize:"12px",fontFamily:"inherit",cursor:"pointer",textDecoration:"underline"}},"登録情報をリセット・やり直す");
