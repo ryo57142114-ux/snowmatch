@@ -151,7 +151,6 @@ function buildProfileRow(){
     resorts:p.resorts||[],bio:p.bio||"",icon:p.icon||"🏂",
     price:p.price?parseInt(p.price):null,unit:p.unit||"",gear:p.gear||[],sns:p.sns||{},
     extra:ex,
-    is_verified:true,kyc_status:p.kycStatus||"approved"
   };
   if(p.profileImg&&/^https?:/.test(p.profileImg))row.profile_img=p.profileImg;
   return row;
@@ -872,12 +871,12 @@ function renderSplash(){
 
   var sub=document.createElement("div");sub.style.cssText="color:rgba(255,255,255,.85);font-size:13px;margin-top:2px;text-shadow:0 1px 8px rgba(0,0,0,.5)";sub.textContent="📹 あなたの滑りを動画に残そう　スキー・スノボ好きのためのコミュニティ";cont.appendChild(sub);
   var badges=document.createElement("div");badges.style.cssText="display:flex;gap:6px;margin-top:16px;margin-bottom:28px;flex-wrap:wrap";
-  var bts=["🪪 本人確認済み","🤝 仲間マッチング","🔒 プライバシー保護"];
+  var bts=["🪪 本人確認バッジ","🤝 仲間マッチング","🔒 プライバシー保護"];
   for(var bi=0;bi<bts.length;bi++){var bdg=document.createElement("span");bdg.style.cssText="background:rgba(255,255,255,.18);border-radius:20px;padding:5px 12px;font-size:11.5px;color:#fff;font-weight:700;border:1px solid rgba(255,255,255,.25)";bdg.textContent=bts[bi];badges.appendChild(bdg);}
   cont.appendChild(badges);
   var sb=document.createElement("button");sb.textContent="はじめる（無料登録）";sb.style.cssText="width:100%;padding:17px 0;border-radius:18px;background:linear-gradient(135deg,#FF6B2B,#FF8C55);color:#fff;font-weight:900;font-size:17px;box-shadow:0 8px 32px rgba(255,107,43,.55);margin-bottom:12px;font-family:inherit;border:none;cursor:pointer;display:block";sb.addEventListener("click",function(){R({pg:"onboard"});});cont.appendChild(sb);
   var gb=document.createElement("button");gb.textContent="ゲストとして見る";gb.style.cssText="width:100%;padding:15px 0;border-radius:18px;background:rgba(255,255,255,.15);color:#fff;font-weight:800;font-size:15px;border:1.5px solid rgba(255,255,255,.4);font-family:inherit;cursor:pointer;display:block;margin-bottom:10px";
-  gb.addEventListener("click",function(){R({pg:"main",myProfile:{name:"ゲスト",nick:"ゲスト",age:25,act:"スノーボード",lv:"中級",resorts:[],bio:"ゲストです",isIns:false,price:5000,unit:"1時間",icon:"🏂",posts:[],ok:true,kycStatus:"approved"}});});cont.appendChild(gb);
+  gb.addEventListener("click",function(){R({pg:"main",myProfile:{name:"ゲスト",nick:"ゲスト",age:25,act:"スノーボード",lv:"中級",resorts:[],bio:"ゲストです",isIns:false,price:5000,unit:"1時間",icon:"🏂",posts:[],ok:false,kycStatus:"approved"}});});cont.appendChild(gb);
 
   // メールログインボタン（Supabase）
   var emailLoginBtn=document.createElement("button");
@@ -891,7 +890,7 @@ function renderSplash(){
   lb2.addEventListener("click",function(){
     try{var raw=localStorage.getItem("sm2");if(!raw){alert("保存されたデータが見つかりません");return;}var data=JSON.parse(raw);if(data.myProfile){S.myProfile=data.myProfile;S.pg="main";S.tab="explore";if(data.reg)S.reg=data.reg;if(data.liked)S.liked=data.liked;if(data.postLikes)S.postLikes=data.postLikes;if(data.matches)S.matches=data.matches;if(data.chatMsgs)S.chatMsgs=data.chatMsgs;cleanDemoData();render();}else{alert("データが見つかりません");}}catch(e2){alert("読み込みに失敗しました");}
   });cont.appendChild(lb2);
-  var footer=document.createElement("div");footer.style.cssText="text-align:center;margin-top:20px;color:rgba(255,255,255,.5);font-size:11px;line-height:1.9";footer.textContent="登録無料 · 全員本人確認済 · いつでも退会可能";cont.appendChild(footer);
+  var footer=document.createElement("div");footer.style.cssText="text-align:center;margin-top:20px;color:rgba(255,255,255,.5);font-size:11px;line-height:1.9";footer.textContent="登録無料 · いつでも退会可能";cont.appendChild(footer);
   wrap.appendChild(cont);
 
   // スワイプ対応
@@ -1057,7 +1056,7 @@ function renderOnboard(){
     wrap.appendChild(agreeRow);
     var br2=d({style:{display:"flex",gap:"10px"}});
     br2.appendChild(obtn("← 戻る",function(){R({onStep:1});},"obtn-s"));
-    br2.appendChild(obtn("本人確認へ →",function(){if(!S.reg.agreedTerms){alert("利用規約への同意が必要です");return;}R({pg:"kyc"});},""));
+    var regBtn=obtn("登録する →",function(){if(!S.reg.agreedTerms){alert("利用規約への同意が必要です");return;}regBtn.disabled=true;regBtn.textContent="登録処理中...";signUpToSupabase();},"");br2.appendChild(regBtn);
     wrap.appendChild(br2);
   }
 
@@ -1227,7 +1226,7 @@ function renderExplore(){
       inf.appendChild(bd);
       var lkRow=d({style:{display:"flex",alignItems:"center",gap:"6px",marginTop:"4px"}});
       var lkCnt2=d({style:{color:"#9CA3AF",fontSize:"11px"}});lkCnt2.textContent="❤️ "+String(u.likes||0)+" いいね";lkRow.appendChild(lkCnt2);
-      if(u.price){
+      if(u.price&&u.ok){
         var pr=d({style:{display:"flex",alignItems:"center",gap:"8px",marginTop:"4px"}});
         pr.appendChild(sp({style:{color:"#FF6B2B",fontWeight:"800",fontSize:"13px"}},"同行費用 ¥"+u.price.toLocaleString()+" / "+u.unit));inf.appendChild(pr);
       }
@@ -1619,9 +1618,7 @@ function createProfileFromLocal(){
     lv: src.lv||"中級",
     resorts: src.resorts||[],
     bio: src.bio||"",
-    icon: src.icon||"🏂",
-    is_verified: true,
-    kyc_status: "approved"
+    icon: src.icon||"🏂"
   };
   sb.from("profiles").upsert(row).then(function(r){
     if(r.error){alert("プロフィール保存エラー: "+r.error.message);S.showLoginModal=false;render();return;}
@@ -1688,7 +1685,7 @@ function EditProfileModal(){
       try{localStorage.setItem("sm2",JSON.stringify({myProfile:S.myProfile,reg:S.reg,liked:S.liked,postLikes:S.postLikes,matches:S.matches,chatMsgs:S.chatMsgs}));}catch(e){}
       if(!sb||!currentUser){if(newImgBlob&&phImg.src)S.myProfile.profileImg=phImg.src;saveD();alert("この端末に保存しました（ログインしていないため、サーバーには保存されていません）");close();return;}
       btn.disabled=true;btn.textContent="保存中...";
-      var row={id:currentUser.id,nick:f.nick,real_name:S.myProfile.name||"",age:f.age?parseInt(f.age):null,email:currentUser.email||"",act:f.act,acts:S.myProfile.acts||[],lv:f.lv,resorts:S.myProfile.resorts||[],bio:f.bio,icon:S.myProfile.icon||"🏂",price:S.myProfile.price?parseInt(S.myProfile.price):null,unit:S.myProfile.unit||"",gear:S.myProfile.gear||[],sns:S.myProfile.sns||{},is_verified:true,kyc_status:S.myProfile.kycStatus||"approved"};
+      var row={id:currentUser.id,nick:f.nick,real_name:S.myProfile.name||"",age:f.age?parseInt(f.age):null,email:currentUser.email||"",act:f.act,acts:S.myProfile.acts||[],lv:f.lv,resorts:S.myProfile.resorts||[],bio:f.bio,icon:S.myProfile.icon||"🏂",price:S.myProfile.price?parseInt(S.myProfile.price):null,unit:S.myProfile.unit||"",gear:S.myProfile.gear||[],sns:S.myProfile.sns||{},kyc_status:S.myProfile.kycStatus||"approved"};
       function fail(txt){msg.style.color="#EF4444";msg.textContent=txt;msg.style.display="block";btn.disabled=false;btn.textContent="保存する";}
       function saveRow(imgUrl){
         if(imgUrl)row.profile_img=imgUrl;
@@ -1738,6 +1735,7 @@ function loadUsersFromSupabase(){
     for(var k=real.length-1;k>=0;k--)USERS.unshift(real[k]);
     loadLikesFromSupabase();
     loadFollowsFromSupabase();
+    refreshMyVerification();
     loadMessagesFromSupabase();
     startRealtime();
     if(S.pg==="main")render();
@@ -1781,6 +1779,14 @@ function toggleLike(u){
 }
 function findRealUser(uid){for(var i=0;i<USERS.length;i++){if(USERS[i].isReal&&USERS[i].uid===uid)return USERS[i];}return null;}
 // 自分のいいね・自分へのいいねを読み込む
+function refreshMyVerification(){
+  if(!sb||!currentUser||!S.myProfile)return;
+  sb.from("profiles").select("is_verified,kyc_status").eq("id",currentUser.id).maybeSingle().then(function(r){
+    if(r.error||!r.data)return;
+    var ok=!!r.data.is_verified,ks=r.data.kyc_status||null;
+    if(S.myProfile.ok!==ok||S.myProfile.kycStatus!==ks){S.myProfile.ok=ok;S.myProfile.kycStatus=ks;saveD();render();}
+  });
+}
 function loadFollowsFromSupabase(){
   if(!sb||!currentUser)return;
   sb.from("user_follows").select("follower,followee").or("follower.eq."+currentUser.id+",followee.eq."+currentUser.id).then(function(r){
@@ -2000,9 +2006,7 @@ function saveProfileToSupabase(){
     lv: S.reg.lv||"中級",
     resorts: S.reg.resorts||[],
     bio: S.reg.bio||"",
-    icon: "🏂",
-    is_verified: true,
-    kyc_status: "approved"
+    icon: "🏂"
   };
   sb.from("profiles").upsert(profileRow).then(function(res){
     if(res.error){console.error("Profile save error:",res.error);}
@@ -2019,7 +2023,7 @@ function finishLocalRegistration(){
   S.myProfile.email=S.reg.email;S.myProfile.act=S.reg.act||"";S.myProfile.lv=S.reg.lv||"中級";
   S.myProfile.acts=S.reg.acts||[];S.myProfile.resorts=S.reg.resorts||[];
   S.myProfile.bio=S.reg.bio||"";S.myProfile.icon="🏂";
-  S.myProfile.kycStatus="approved";S.myProfile.ok=true;
+  S.myProfile.kycStatus=null;S.myProfile.ok=false;
   if(currentUser)S.myProfile.uid=currentUser.id;
   saveD();
   R({pg:"main",showWelcome:true});
@@ -2105,7 +2109,7 @@ function renderKyc(){
 
 function renderProfile(){
   var wrap=d({style:{paddingBottom:"80px"}});
-  var kycOk=(S.myProfile&&(S.myProfile.kycStatus==="approved"||S.myProfile.ok));
+  var kycOk=!!(S.myProfile&&S.myProfile.ok===true);var postOk=true;
   var hero=d({style:{background:"linear-gradient(160deg,#FF6B2B,#FF8C55 60%,#FFD580)",padding:"28px 20px 24px",position:"relative"}});
   var eb=b2({style:{position:"absolute",top:"16px",right:"16px",background:"rgba(255,255,255,.22)",borderRadius:"20px",padding:"6px 14px",color:"#fff",fontSize:"12px",fontWeight:"700",border:"none",cursor:"pointer"}},"✏️ 編集");
   eb.addEventListener("click",function(){S.showEditProfile=true;render();});hero.appendChild(eb);
@@ -2542,6 +2546,48 @@ function renderProfile(){
   priceCard.appendChild(noPriceRow);
 
   // 自動保存メッセージ
+  // --- 本人確認（料金を受け取る人向け）---
+  var kycBox=document.createElement("div");
+  var kst=S.myProfile.kycStatus;
+  if(S.myProfile.ok===true){
+    kycBox.style.cssText="background:#F0FDF4;border:1.5px solid #86EFAC;border-radius:14px;padding:12px;margin-top:12px;font-size:13px;font-weight:700;color:#15803D";
+    kycBox.textContent="🪪 本人確認済み：料金が他のユーザーに表示されています";
+  }else if(kst==="pending"){
+    kycBox.style.cssText="background:#FFFBEB;border:1.5px solid #FCD34D;border-radius:14px;padding:12px;margin-top:12px;font-size:13px;font-weight:700;color:#B45309";
+    kycBox.textContent="⏳ 本人確認の審査中です。承認されると料金が表示されます";
+  }else{
+    kycBox.style.cssText="background:#F9FAFB;border:1.5px solid #E5E7EB;border-radius:14px;padding:14px;margin-top:12px";
+    var kt1=document.createElement("div");kt1.style.cssText="font-size:13px;font-weight:800;color:#1A1A2E;margin-bottom:4px";kt1.textContent="🪪 料金を受け取るには本人確認が必要です";
+    var kt2=document.createElement("div");kt2.style.cssText="font-size:12px;color:#6B7280;line-height:1.6;margin-bottom:10px";kt2.textContent="確認が済むまで、料金は他のユーザーに表示されません。運転免許証・マイナンバーカード（表面のみ）・パスポートのいずれかの写真を提出してください。提出した写真は運営だけが確認します。";
+    kycBox.appendChild(kt1);kycBox.appendChild(kt2);
+    var kfWrap=document.createElement("div");kfWrap.style.cssText="position:relative;border:2px dashed #D1D5DB;border-radius:12px;padding:14px;text-align:center;font-size:13px;color:#6B7280;margin-bottom:10px;overflow:hidden";
+    kfWrap.textContent="📄 タップして身分証の写真を選択";
+    var kf=document.createElement("input");kf.type="file";kf.accept="image/*";kf.style.cssText="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer";
+    var kycBlob=null;
+    kf.addEventListener("change",function(e){
+      var file=e.target.files[0];if(!file)return;
+      var fr=new FileReader();
+      fr.onload=function(ev){var im=new Image();im.onload=function(){var mx=1600,sc=Math.min(1,mx/Math.max(im.width,im.height));var cv=document.createElement("canvas");cv.width=Math.round(im.width*sc);cv.height=Math.round(im.height*sc);cv.getContext("2d").drawImage(im,0,0,cv.width,cv.height);cv.toBlob(function(bl){kycBlob=bl;kfWrap.firstChild.textContent="✅ 写真を選びました";kfWrap.style.borderColor="#22C55E";},"image/jpeg",0.9);};im.src=ev.target.result;};
+      fr.readAsDataURL(file);
+    });
+    kfWrap.appendChild(kf);kycBox.appendChild(kfWrap);
+    var kyBtn=document.createElement("button");kyBtn.className="obtn obtn-full";kyBtn.style.cssText="font-size:13px;padding:10px";kyBtn.textContent="本人確認を申請する";
+    kyBtn.addEventListener("click",function(){
+      if(!kycBlob){alert("身分証の写真を選んでください");return;}
+      if(typeof sb==="undefined"||!sb||!currentUser){alert("ログインが必要です");return;}
+      kyBtn.disabled=true;kyBtn.textContent="送信中...";
+      var kpath=currentUser.id+"/id_"+Date.now()+".jpg";
+      sb.storage.from("kyc").upload(kpath,kycBlob,{contentType:"image/jpeg"}).then(function(ur){
+        if(ur.error){throw new Error(ur.error.message);}
+        return sb.from("profiles").update({kyc_status:"pending"}).eq("id",currentUser.id);
+      }).then(function(r){
+        if(r&&r.error)throw new Error(r.error.message);
+        S.myProfile.kycStatus="pending";saveD();alert("申請しました。審査が終わるまでお待ちください");render();
+      }).catch(function(e){kyBtn.disabled=false;kyBtn.textContent="本人確認を申請する";alert("申請エラー: "+(e&&e.message?e.message:e));});
+    });
+    kycBox.appendChild(kyBtn);
+  }
+  priceCard.appendChild(kycBox);
   var priceSaveBtn = document.createElement("button");
   priceSaveBtn.className = "obtn obtn-full";
   priceSaveBtn.style.cssText = "font-size:13px;padding:10px;margin-top:12px";
@@ -2557,8 +2603,8 @@ function renderProfile(){
 
   var ph=d({style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"12px"}});
   var ptit=d({style:{fontWeight:"900",fontSize:"16px",color:"#1A1A2E"}});ptit.textContent="🎥 投稿・実績";ph.appendChild(ptit);
-  var ab=obtn(kycOk?"＋ 追加":"🔒 認証後",function(){if(kycOk)R({addPost:true});},"");ab.style.padding="8px 16px";ab.style.fontSize="13px";if(!kycOk)ab.disabled=true;ph.appendChild(ab);body.appendChild(ph);
-  if(!kycOk){var lk=d({style:{background:"#fff",borderRadius:"18px",padding:"20px",textAlign:"center",boxShadow:"0 2px 12px rgba(0,0,0,.06)",marginBottom:"14px"}});var lkic=d({style:{fontSize:"32px",marginBottom:"6px"}});lkic.textContent="🔒";var lkt=d({style:{fontWeight:"800",color:"#1A1A2E",marginBottom:"4px"}});lkt.textContent="本人確認後に投稿できます";lk.appendChild(lkic);lk.appendChild(lkt);body.appendChild(lk);}
+  var ab=obtn(postOk?"＋ 追加":"🔒 認証後",function(){if(postOk)R({addPost:true});},"");ab.style.padding="8px 16px";ab.style.fontSize="13px";if(!postOk)ab.disabled=true;ph.appendChild(ab);body.appendChild(ph);
+  if(!postOk){var lk=d({style:{background:"#fff",borderRadius:"18px",padding:"20px",textAlign:"center",boxShadow:"0 2px 12px rgba(0,0,0,.06)",marginBottom:"14px"}});var lkic=d({style:{fontSize:"32px",marginBottom:"6px"}});lkic.textContent="🔒";var lkt=d({style:{fontWeight:"800",color:"#1A1A2E",marginBottom:"4px"}});lkt.textContent="本人確認後に投稿できます";lk.appendChild(lkic);lk.appendChild(lkt);body.appendChild(lk);}
   else if(!S.myProfile||!S.myProfile.posts||!S.myProfile.posts.length){
     var ep=d({style:{background:"#fff",borderRadius:"18px",overflow:"hidden",boxShadow:"0 2px 12px rgba(0,0,0,.06)",marginBottom:"14px"}});
 
@@ -2614,7 +2660,7 @@ function renderProfile(){
   deleteBtn3.innerHTML="<span>🚪</span><span>退会する</span>";
   deleteBtn3.addEventListener("click",function(){S.showDeleteAccount=true;render();});
   supportDiv.appendChild(deleteBtn3);
-  body.appendChild(supportDiv);
+  wrap.appendChild(supportDiv);
 
   var rd=d({style:{padding:"8px 0 20px",textAlign:"center"}});
   var rb=b2({style:{background:"none",border:"none",color:"#9CA3AF",fontSize:"12px",fontFamily:"inherit",cursor:"pointer",textDecoration:"underline"}},"登録情報をリセット・やり直す");
@@ -3081,7 +3127,7 @@ function render(){
           var pc=d({style:{background:"linear-gradient(135deg,#FFF4EC,#FFE7D6)",borderRadius:"14px",padding:"12px 14px",marginBottom:"14px",display:"flex",justifyContent:"space-between",alignItems:"center"}});
           pc.appendChild(sp({style:{fontSize:"12px",fontWeight:"800",color:"#9A5B34"}},"💰 同行料金"));
           var pv=parseInt(u.price)||0;
-          pc.appendChild(sp({style:{fontSize:pv?"18px":"13px",fontWeight:"900",color:pv?"#FF6B2B":"#9CA3AF"}},pv?("¥"+pv.toLocaleString()+(u.unit?" / "+u.unit:"")):"未設定"));
+          if(pv&&!u.ok)pc.appendChild(sp({style:{fontSize:"12px",fontWeight:"800",color:"#9CA3AF"}},"本人確認後に表示"));else pc.appendChild(sp({style:{fontSize:pv?"18px":"13px",fontWeight:"900",color:pv?"#FF6B2B":"#9CA3AF"}},pv?("¥"+pv.toLocaleString()+(u.unit?" / "+u.unit:"")):"未設定"));
           box.appendChild(pc);
           if(u.costBreakdown&&u.costBreakdown.length){var cbr=d({style:{display:"flex",flexWrap:"wrap",gap:"6px",margin:"-6px 0 14px"}});for(var cbi=0;cbi<u.costBreakdown.length;cbi++){var cbt=d({style:{background:"#F5F7FA",borderRadius:"10px",padding:"3px 10px",fontSize:"11px",fontWeight:"700",color:"#6B7280"}});cbt.textContent=u.costBreakdown[cbi];cbr.appendChild(cbt);}box.appendChild(cbr);}
           // 活動スキー場
