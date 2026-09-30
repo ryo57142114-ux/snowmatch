@@ -1679,7 +1679,7 @@ function toggleLike(u){
         if(r2.data&&r2.data.length){
           if(!S.mutual)S.mutual=[];
           if(S.mutual.indexOf(u.id)<0)S.mutual.push(u.id);
-          S.notifs.unshift({id:"m"+Date.now(),type:"match",icon:"💞",msg:u.name+"さんとマッチしました！",time:"今",read:false});
+          S.notifs.unshift({id:"lk_"+u.uid,uid:u.uid,type:"match",icon:"💞",msg:u.name+"さんとマッチしました！メッセージを送ってみよう",time:"今",read:false});
           render();
           alert("💞 "+u.name+"さんとマッチしました！");
         }
@@ -1714,7 +1714,7 @@ function loadLikesFromSupabase(){
       if(mine[k2]){S.mutual.push("sb_"+k2);}
       var nid="lk_"+k2;
       var exists=false;for(var n=0;n<S.notifs.length;n++){if(S.notifs[n].id===nid){exists=true;break;}}
-      if(!exists)S.notifs.unshift({id:nid,type:mine[k2]?"match":"like",icon:mine[k2]?"💞":"❤️",msg:mine[k2]?(nm+"さんとマッチしています"):(nm+"さんがあなたにいいねしました"),time:"",read:false});
+      if(!exists)S.notifs.unshift({id:nid,uid:k2,type:mine[k2]?"match":"like",icon:mine[k2]?"💞":"❤️",msg:mine[k2]?(nm+"さんとマッチしました！メッセージを送ってみよう"):(nm+"さんがあなたにいいねしました"),time:"",read:false});
     }
     render();
   });
@@ -1771,9 +1771,24 @@ function addDmRow(row,live){
   if(live&&!mine){
     var u=findRealUser(other);var nm=u?u.name:"だれか";
     if(!S.notifs)S.notifs=[];
-    S.notifs.unshift({id:"dm"+row.id,type:"msg",icon:"💬",msg:nm+"さんからメッセージが届きました",time:"今",read:false});
     if(!(S.tab==="chat"&&S.chatUser&&S.chatUser.id===cid))S.unreadChat=(S.unreadChat||0)+1;
   }
+}
+function hasChatWith(uid){var l=S.chatMsgs["sb_"+uid];return !!(l&&l.length);}
+function visibleNotifs(){
+  return (S.notifs||[]).filter(function(n){return !(n.type==="match"&&n.uid&&hasChatWith(n.uid));});
+}
+function unreadChatItems(){
+  var out=[];
+  for(var k in S.chatMsgs){
+    if(!S.chatMsgs.hasOwnProperty(k)||k.indexOf("sb_")!==0)continue;
+    var n=unreadCountFor(k);if(!n)continue;
+    var list=S.chatMsgs[k],last=null;
+    for(var i=list.length-1;i>=0;i--){if(list[i].f==="t"){last=list[i];break;}}
+    var u=findRealUser(k.slice(3));
+    out.push({user:u,cid:k,count:n,last:last});
+  }
+  return out;
 }
 function unreadCountFor(cid){
   if(String(cid).indexOf("sb_")!==0)return 0;
@@ -2589,7 +2604,29 @@ function NotifPanel(){
     sub.textContent="最近のアクティビティ";
     box.appendChild(sub);
 
-    if(!S.notifs||!S.notifs.length){
+    var chatItems=unreadChatItems();
+    for(var ci=0;ci<chatItems.length;ci++){
+      (function(it){
+        var nm=it.user?it.user.name:"だれか";
+        var row=document.createElement("div");
+        row.style.cssText="display:flex;align-items:center;gap:12px;padding:12px;border-radius:16px;margin-bottom:8px;background:#E4F0FF;border:1.5px solid #90CAF9;cursor:pointer";
+        var ico=document.createElement("div");
+        ico.style.cssText="width:42px;height:42px;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,0.08)";
+        ico.textContent=it.user&&it.user.icon?it.user.icon:"💬";
+        var info=document.createElement("div");info.style.cssText="flex:1;min-width:0";
+        var t1=document.createElement("div");t1.style.cssText="font-size:13px;color:#1A1A2E;font-weight:700;line-height:1.5";
+        t1.textContent=nm+"さんから新着メッセージ"+(it.count>1?"（"+it.count+"件）":"");
+        var t2=document.createElement("div");t2.style.cssText="font-size:12px;color:#6B7280;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap";
+        t2.textContent=it.last?it.last.t:"";
+        var t3=document.createElement("div");t3.style.cssText="font-size:11px;color:#9CA3AF;margin-top:2px";t3.textContent=it.last?it.last.time:"";
+        info.appendChild(t1);info.appendChild(t2);info.appendChild(t3);
+        row.appendChild(ico);row.appendChild(info);row.appendChild(unreadBadge(it.count));
+        row.addEventListener("click",function(){S.showNotif=false;R({tab:"chat",chatUser:it.user||null});});
+        box.appendChild(row);
+      })(chatItems[ci]);
+    }
+    var vNotifs=visibleNotifs();
+    if(!vNotifs.length&&!chatItems.length){
       var em=document.createElement("div");
       em.style.cssText="text-align:center;color:#9CA3AF;padding:30px 0;font-size:14px";
       em.textContent="まだ通知はありません";
@@ -2606,7 +2643,7 @@ function NotifPanel(){
       book:"#FFCC80", review:"#CE93D8"
     };
 
-    for(var ni=0;ni<S.notifs.length;ni++){
+    for(var ni=0;ni<vNotifs.length;ni++){
       (function(notif){
         var row=document.createElement("div");
         row.style.cssText="display:flex;align-items:center;gap:12px;padding:12px;border-radius:16px;margin-bottom:8px;background:"+(notif.read?"#F9FAFB":typeColors[notif.type]||"#FFF0E8")+";border:1.5px solid "+(notif.read?"#F0F0F0":typeBorders[notif.type]||"#FFD580")+";cursor:pointer;transition:opacity 0.2s";
@@ -2636,12 +2673,13 @@ function NotifPanel(){
         row.addEventListener("click",function(){
           notif.read=true;
           S.showNotif=false;
-          if(notif.type==="msg"||notif.type==="match") R({tab:"chat"});
+          if(notif.type==="match"&&notif.uid&&findRealUser(notif.uid)) R({tab:"chat",chatUser:findRealUser(notif.uid)});
+          else if(notif.type==="msg"||notif.type==="match") R({tab:"chat"});
           else if(notif.type==="book") R({tab:"bookings"});
           else R({tab:"explore"});
         });
         box.appendChild(row);
-      })(S.notifs[ni]);
+      })(vNotifs[ni]);
     }
 
     // 全部消去ボタン
@@ -2889,7 +2927,7 @@ function render(){
     hdr.appendChild(sp({style:{fontSize:"11px",color:"rgba(255,255,255,.85)",marginLeft:"4px",flex:"1"}},"スキー・スノボ仲間を見つけよう"));
     // 通知ベルボタン
     var unreadNotifs = 0;
-    for(var ni=0;ni<S.notifs.length;ni++){if(!S.notifs[ni].read)unreadNotifs++;}
+    var vn2=visibleNotifs();for(var ni=0;ni<vn2.length;ni++){if(!vn2[ni].read)unreadNotifs++;}unreadNotifs+=unreadChatItems().length;
     var bellWrap=document.createElement("div");bellWrap.style.cssText="position:relative;flex-shrink:0;margin-left:auto";
     var bellBtn=document.createElement("button");bellBtn.style.cssText="font-size:22px;background:rgba(255,255,255,0.2);border:none;border-radius:12px;width:38px;height:38px;cursor:pointer;display:flex;align-items:center;justify-content:center";
     bellBtn.textContent="🔔";
