@@ -387,18 +387,59 @@ function AddPostModal(){
   });
 }
 
+function bookPlans(u){
+  var pl=planList(u);
+  if(!pl.length&&u.price>0)pl=[{k:"hour",lbl:u.unit||"1時間",p:parseInt(u.price)}];
+  return pl;
+}
 function BookModal(u){
-  var fp=calcF(u.price);
+  var plans=bookPlans(u);
+  if(S.bkFor!==u.id){S.bkFor=u.id;S.bkPlan=null;S.bkHours=1;S.bkDate="";S.bkTime="9:00";S.bkNote="";}
+  var plan=null;for(var pi0=0;pi0<plans.length;pi0++)if(plans[pi0].k===S.bkPlan)plan=plans[pi0];
+  if(!plan){plan=plans[0];S.bkPlan=plan.k;}
+  var hrs=plan.k==="hour"?(S.bkHours||1):1;
+  var total=plan.p*hrs;
+  var fp=calcF(total);
   var nd=new Date();nd.setDate(nd.getDate()+(7-nd.getDay()+1)%7||7);
   var nm=nd.toLocaleDateString("ja-JP");
   return Modal(false,function(){R({bookUser:null});},function(box){
     var title=d({style:{fontWeight:"900",fontSize:"18px",color:"#1A1A2E",marginBottom:"14px"}});title.textContent="同行・サービス予約";box.appendChild(title);
+    function lbl(t){var x=d({style:{fontWeight:"800",color:"#1A1A2E",fontSize:"14px",margin:"0 0 8px"}});x.textContent=t;box.appendChild(x);}
+    function chip(txt,on,fn){var c=document.createElement("button");c.style.cssText="padding:10px 14px;border-radius:14px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;border:2px solid "+(on?"#FF6B2B":"#E5E7EB")+";background:"+(on?"#FFF0E8":"#fff")+";color:"+(on?"#FF6B2B":"#4B5563");c.textContent=txt;c.addEventListener("click",fn);return c;}
+    // プラン選択
+    lbl("① プランを選ぶ");
+    var plRow=d({style:{display:"flex",flexWrap:"wrap",gap:"8px",marginBottom:"14px"}});
+    plans.forEach(function(p){plRow.appendChild(chip(p.lbl+"  ¥"+p.p.toLocaleString(),p.k===plan.k,function(){S.bkPlan=p.k;render();}));});
+    box.appendChild(plRow);
+    if(plan.k==="hour"){
+      lbl("何時間お願いしますか？");
+      var hrRow=d({style:{display:"flex",gap:"8px",marginBottom:"14px"}});
+      [1,2,3].forEach(function(h){hrRow.appendChild(chip(h+"時間",h===hrs,function(){S.bkHours=h;render();}));});
+      box.appendChild(hrRow);
+    }
+    // 日付・開始時間
+    lbl("② 日付と開始時間（目安）");
+    var dtRow=d({style:{display:"flex",gap:"8px",marginBottom:"6px"}});
+    var dIn=document.createElement("input");dIn.type="date";dIn.className="inp";dIn.style.flex="1";
+    var td=new Date();dIn.min=td.getFullYear()+"-"+String(td.getMonth()+1).padStart(2,"0")+"-"+String(td.getDate()).padStart(2,"0");
+    dIn.value=S.bkDate||"";dIn.addEventListener("change",function(e){S.bkDate=e.target.value;render();});
+    var tSel=document.createElement("select");tSel.className="inp";tSel.style.cssText="flex:0 0 110px;background:#fff";
+    for(var th=8;th<=15;th++){var to=document.createElement("option");to.value=th+":00";to.textContent=th+":00〜";if(S.bkTime===th+":00")to.selected=true;tSel.appendChild(to);}
+    tSel.addEventListener("change",function(e){S.bkTime=e.target.value;});
+    dtRow.appendChild(dIn);dtRow.appendChild(tSel);box.appendChild(dtRow);
+    var dtNote=d({style:{fontSize:"11px",color:"#9CA3AF",marginBottom:"14px"}});dtNote.textContent="細かい集合時間・場所は、予約後にメッセージで決めましょう";box.appendChild(dtNote);
+    // ひとこと
+    lbl("③ ひとこと（任意）");
+    var nIn=document.createElement("textarea");nIn.className="inp";nIn.rows=2;nIn.placeholder="例：初心者2人です／カービングを撮ってほしいです";nIn.style.cssText="width:100%;margin-bottom:14px;resize:none";
+    nIn.value=S.bkNote||"";nIn.addEventListener("input",function(e){S.bkNote=e.target.value;});box.appendChild(nIn);
     var sm=d({style:{background:"#F5F7FA",borderRadius:"16px",padding:"16px",marginBottom:"12px"}});
-    var rows=[["同行者",u.name],["同行費用","¥"+u.price.toLocaleString()+" / "+u.unit],["合計","¥"+u.price.toLocaleString()]];
+    var dLbl=S.bkDate?(S.bkDate.replace(/-/g,"/")+" "+(S.bkTime||"")+"〜"):"未選択";
+    var rows=[["同行者",u.name],["プラン",plan.k==="hour"?("1時間 ¥"+plan.p.toLocaleString()+" × "+hrs+"時間"):(plan.lbl+" ¥"+plan.p.toLocaleString())],["日時",dLbl],["合計","¥"+total.toLocaleString()]];
     for(var ri=0;ri<rows.length;ri++){
-      var r=d({style:{display:"flex",justifyContent:"space-between",marginBottom:ri<2?"8px":"0",paddingTop:ri===2?"10px":"0",borderTop:ri===2?"1px dashed #E0E0E0":"none"}});
-      r.appendChild(sp({style:{color:"#6B7280",fontSize:"13px"}},rows[ri][0]));
-      r.appendChild(sp({style:{fontWeight:ri===2?"900":"700",fontSize:ri===2?"18px":"14px",color:"#1A1A2E"}},rows[ri][1]));
+      var isT=(ri===rows.length-1);
+      var r=d({style:{display:"flex",justifyContent:"space-between",gap:"10px",marginBottom:isT?"0":"8px",paddingTop:isT?"10px":"0",borderTop:isT?"1px dashed #E0E0E0":"none"}});
+      r.appendChild(sp({style:{color:"#6B7280",fontSize:"13px",flexShrink:"0"}},rows[ri][0]));
+      r.appendChild(sp({style:{fontWeight:isT?"900":"700",fontSize:isT?"18px":"14px",color:"#1A1A2E",textAlign:"right"}},rows[ri][1]));
       sm.appendChild(r);
     }
     box.appendChild(sm);
@@ -479,9 +520,10 @@ function BookModal(u){
     var payLabels={card:"💳 カードで支払う",paypay:"🔴 PayPayで支払う",applepay:"🍎 Apple Payで支払う",googlepay:"🔵 Google Payで支払う"};
     var payLbl=payLabels[S.selPayment]||"💳 決済・予約する";
     br.appendChild(obtn(payLbl,function(){
+      if(!S.bkDate){alert("日付を選んでください");return;}
       var nd2=new Date();nd2.setDate(nd2.getDate()+(7-nd2.getDay()+1)%7||7);
-      var bk={user:u,fee:fp.fee,payout:fp.payout,total:u.price,date:new Date().toLocaleDateString("ja-JP"),payoutDate:nd2.toLocaleDateString("ja-JP"),status:"wait",payMethod:S.selPayment};
-      S.matches.push(bk);saveD();R({confirmed:bk,bookUser:null,selUser:null});
+      var bk={user:u,fee:fp.fee,payout:fp.payout,total:total,plan:plan.k,planLabel:plan.lbl,hours:hrs,time:S.bkTime,note:S.bkNote||"",date:S.bkDate.replace(/-/g,"/"),payoutDate:nd2.toLocaleDateString("ja-JP"),status:"wait",payMethod:S.selPayment};
+      S.matches.push(bk);S.bkFor=null;saveD();R({confirmed:bk,bookUser:null,selUser:null});
     },""));
     box.appendChild(br);
   });
@@ -3149,7 +3191,7 @@ function _renderInner(){
           var pc=d({style:{background:"linear-gradient(135deg,#FFF4EC,#FFE7D6)",borderRadius:"14px",padding:"12px 14px",marginBottom:"14px",display:"flex",justifyContent:"space-between",alignItems:"center"}});
           pc.appendChild(sp({style:{fontSize:"12px",fontWeight:"800",color:"#9A5B34"}},"💰 同行料金"));
           var pv=parseInt(u.price)||0;
-          if(pv&&!u.ok)pc.appendChild(sp({style:{fontSize:"12px",fontWeight:"800",color:"#9CA3AF"}},"本人確認後に表示"));else if(planList(u).length){var pls=planList(u);pc.style.flexDirection="column";pc.style.alignItems="stretch";pc.style.gap="6px";for(var pli=0;pli<pls.length;pli++){var plr=d({style:{display:"flex",justifyContent:"space-between",alignItems:"center"}});plr.appendChild(sp({style:{fontSize:"13px",fontWeight:"700",color:"#6B7280"}},pls[pli].lbl));plr.appendChild(sp({style:{fontSize:"18px",fontWeight:"900",color:"#FF6B2B"}},"¥"+pls[pli].p.toLocaleString()));pc.appendChild(plr);}}else pc.appendChild(sp({style:{fontSize:pv?"18px":"13px",fontWeight:"900",color:pv?"#FF6B2B":"#9CA3AF"}},pv?("¥"+pv.toLocaleString()+(u.unit?" / "+u.unit:"")):"未設定"));
+          if(pv&&!u.ok)pc.appendChild(sp({style:{fontSize:"12px",fontWeight:"800",color:"#9CA3AF"}},"本人確認後に表示"));else if(planList(u).length){var pls=planList(u);pc.style.flexDirection="column";pc.style.alignItems="stretch";pc.style.gap="6px";for(var pli=0;pli<pls.length;pli++){(function(pk){var plr=d({style:{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",padding:"4px 0"}});plr.addEventListener("click",function(){R({selUser:null,bookUser:u,bkFor:u.id,bkPlan:pk,bkHours:1,bkDate:"",bkTime:"9:00",bkNote:""});});plr.appendChild(sp({style:{fontSize:"13px",fontWeight:"700",color:"#6B7280"}},pls[pli].lbl));plr.appendChild(sp({style:{fontSize:"18px",fontWeight:"900",color:"#FF6B2B"}},"¥"+pls[pli].p.toLocaleString()+" ›"));pc.appendChild(plr);})(pls[pli].k);}}else pc.appendChild(sp({style:{fontSize:pv?"18px":"13px",fontWeight:"900",color:pv?"#FF6B2B":"#9CA3AF"}},pv?("¥"+pv.toLocaleString()+(u.unit?" / "+u.unit:"")):"未設定"));
           box.appendChild(pc);
           if(u.costBreakdown&&u.costBreakdown.length){var cbr=d({style:{display:"flex",flexWrap:"wrap",gap:"6px",margin:"-6px 0 14px"}});for(var cbi=0;cbi<u.costBreakdown.length;cbi++){var cbt=d({style:{background:"#F5F7FA",borderRadius:"10px",padding:"3px 10px",fontSize:"11px",fontWeight:"700",color:"#6B7280"}});cbt.textContent=u.costBreakdown[cbi];cbr.appendChild(cbt);}box.appendChild(cbr);}
           // 活動スキー場
