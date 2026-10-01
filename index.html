@@ -150,6 +150,7 @@ function buildProfileRow(){
     act:p.act||"",acts:p.acts||[],lv:p.lv||"中級",
     resorts:p.resorts||[],bio:p.bio||"",icon:p.icon||"🏂",
     price:p.price?parseInt(p.price):null,unit:p.unit||"",gear:p.gear||[],sns:p.sns||{},
+    priceHour:pfr(p,"hour"),priceHalf:pfr(p,"half"),priceDay:pfr(p,"day"),
     extra:ex,
   };
   if(p.profileImg&&/^https?:/.test(p.profileImg))row.profile_img=p.profileImg;
@@ -167,6 +168,27 @@ function saveProfileNow(cb){
   }).catch(function(e){if(cb)cb("通信エラー: "+(e&&e.message?e.message:e));});
 }
 // 保存ボタンの見た目をまとめて処理
+function pfr(p,k){
+  var col={hour:"price_hour",half:"price_half",day:"price_day"}[k];
+  if(p[col]!=null)return parseInt(p[col])||0;
+  if(p.price_hour!=null||p.price_half!=null||p.price_day!=null)return 0;
+  var pr=parseInt(p.price)||0;if(!pr)return 0;
+  var u=p.unit||"";var lk=u==="半日"?"half":(u==="1日"?"day":"hour");
+  return lk===k?pr:0;
+}
+function planList(o){
+  var a=[];if(!o)return a;
+  if(o.priceHour>0)a.push({k:"hour",lbl:"1時間",p:o.priceHour});
+  if(o.priceHalf>0)a.push({k:"half",lbl:"半日",p:o.priceHalf});
+  if(o.priceDay>0)a.push({k:"day",lbl:"1日",p:o.priceDay});
+  return a;
+}
+function syncMinPrice(o){
+  if(!o)return;var a=planList(o);
+  if(!a.length){o.price=0;o.unit="";return;}
+  var m=a[0];for(var i=1;i<a.length;i++)if(a[i].p<m.p)m=a[i];
+  o.price=m.p;o.unit=m.lbl;
+}
 function wireSaveBtn(btn,label,before){
   btn.addEventListener("click",function(){
     if(before)before();
@@ -1225,7 +1247,7 @@ function renderExplore(){
       var lkCnt2=d({style:{color:"#9CA3AF",fontSize:"11px"}});lkCnt2.textContent="👥 フォロワー "+String(u.fcnt||0);lkRow.appendChild(lkCnt2);
       if(u.price&&u.ok){
         var pr=d({style:{display:"flex",alignItems:"center",gap:"8px",marginTop:"4px"}});
-        pr.appendChild(sp({style:{color:"#FF6B2B",fontWeight:"800",fontSize:"13px"}},"同行費用 ¥"+u.price.toLocaleString()+" / "+u.unit));inf.appendChild(pr);
+        pr.appendChild(sp({style:{color:"#FF6B2B",fontWeight:"800",fontSize:"13px"}},"同行費用 ¥"+u.price.toLocaleString()+" / "+u.unit+(planList(u).length>1?"〜":"")));inf.appendChild(pr);
       }
       inf.appendChild(lkRow);
       row.appendChild(inf);
@@ -1586,6 +1608,7 @@ function loadProfileFromSupabase(){
       act:p.act,acts:p.acts||[],lv:p.lv,resorts:p.resorts||[],bio:p.bio,
       icon:p.icon||"🏂",profileImg:p.profile_img,isIns:p.is_ins,isCam:p.is_cam,
       price:p.price,unit:p.unit,gear:p.gear||[],sns:p.sns||{},
+      priceHour:pfr(p,"hour"),priceHalf:pfr(p,"half"),priceDay:pfr(p,"day"),
       ok:p.is_verified,kycStatus:p.kyc_status
     };
     if(p.extra){for(var ek in p.extra){if(p.extra.hasOwnProperty(ek))S.myProfile[ek]=p.extra[ek];}}
@@ -1683,7 +1706,8 @@ function EditProfileModal(){
       try{localStorage.setItem("sm2",JSON.stringify({myProfile:S.myProfile,reg:S.reg,liked:S.liked,postLikes:S.postLikes,matches:S.matches,chatMsgs:S.chatMsgs}));}catch(e){}
       if(!sb||!currentUser){if(newImgBlob&&phImg.src)S.myProfile.profileImg=phImg.src;saveD();alert("この端末に保存しました（ログインしていないため、サーバーには保存されていません）");close();return;}
       btn.disabled=true;btn.textContent="保存中...";
-      var row={id:currentUser.id,nick:f.nick,real_name:S.myProfile.name||"",age:f.age?parseInt(f.age):null,email:currentUser.email||"",act:f.act,acts:S.myProfile.acts||[],lv:f.lv,resorts:S.myProfile.resorts||[],bio:f.bio,icon:S.myProfile.icon||"🏂",price:S.myProfile.price?parseInt(S.myProfile.price):null,unit:S.myProfile.unit||"",gear:S.myProfile.gear||[],sns:S.myProfile.sns||{},kyc_status:S.myProfile.kycStatus||"approved"};
+      syncMinPrice(S.myProfile);
+      var row={id:currentUser.id,nick:f.nick,real_name:S.myProfile.name||"",age:f.age?parseInt(f.age):null,email:currentUser.email||"",act:f.act,acts:S.myProfile.acts||[],lv:f.lv,resorts:S.myProfile.resorts||[],bio:f.bio,icon:S.myProfile.icon||"🏂",price:S.myProfile.price?parseInt(S.myProfile.price):null,unit:S.myProfile.unit||"",price_hour:S.myProfile.priceHour||null,price_half:S.myProfile.priceHalf||null,price_day:S.myProfile.priceDay||null,gear:S.myProfile.gear||[],sns:S.myProfile.sns||{},kyc_status:S.myProfile.kycStatus||"approved"};
       function fail(txt){msg.style.color="#EF4444";msg.textContent=txt;msg.style.display="block";btn.disabled=false;btn.textContent="保存する";}
       function saveRow(imgUrl){
         if(imgUrl)row.profile_img=imgUrl;
@@ -1725,6 +1749,7 @@ function loadUsersFromSupabase(){
         name:p.nick,age:p.age||"",act:p.act||"",lv:p.lv||"",
         resorts:p.resorts||[],icon:p.icon||"🏂",profileImg:p.profile_img||null,
         isIns:!!p.is_ins,isCam:!!p.is_cam,price:p.price||null,unit:p.unit||"",
+        priceHour:pfr(p,"hour"),priceHalf:pfr(p,"half"),priceDay:pfr(p,"day"),
         bio:p.bio||"",gear:p.gear||[],sns:p.sns||{},
         board:(p.extra&&p.extra.board)||"",styles:(p.extra&&p.extra.styles)||[],camGear:(p.extra&&p.extra.camGear)||[],costBreakdown:(p.extra&&p.extra.costBreakdown)||[],
         posts:[],likes:0,ok:!!p.is_verified
@@ -2443,60 +2468,37 @@ function renderProfile(){
   priceHeader.appendChild(priceTitle); priceHeader.appendChild(priceNote);
   priceCard.appendChild(priceHeader);
 
-  // 価格入力
-  var priceRow = document.createElement("div");
-  priceRow.style.cssText = "display:flex;align-items:center;gap:8px;margin-bottom:12px";
-  var yenLabel = document.createElement("div");
-  yenLabel.style.cssText = "font-size:20px;font-weight:900;color:#1A1A2E;flex-shrink:0";
-  yenLabel.textContent = "¥";
-  var priceInp = document.createElement("input");
-  priceInp.type = "number"; priceInp.className = "inp";
-  priceInp.style.flex = "1";
-  priceInp.placeholder = "例：5000";
-  priceInp.value = (S.myProfile && S.myProfile.price) ? String(S.myProfile.price) : "";
-  priceInp.addEventListener("input", function(e){
-    S.myProfile.price = parseInt(e.target.value) || 0;
-    saveD();
-    // 保存済みフィードバック
-    var sv = document.getElementById("price-saved-msg");
-    if(sv){ sv.style.opacity="1"; setTimeout(function(){ if(sv)sv.style.opacity="0"; }, 1500); }
+  // 価格入力（1時間・半日・1日。入力したプランだけ表示される）
+  var planHint = document.createElement("div");
+  planHint.style.cssText = "font-size:12px;color:#6B7280;margin-bottom:10px;line-height:1.6";
+  planHint.textContent = "受け付けたいプランだけ入力してください（1つだけでもOK）。空欄のプランはお客さんに表示されません。";
+  priceCard.appendChild(planHint);
+  var planDefs = [["priceHour","1時間",""],["priceHalf","半日","約3〜4時間"],["priceDay","1日","約6〜7時間"]];
+  var planInps = [];
+  planDefs.forEach(function(pd){
+    var r = document.createElement("div");
+    r.style.cssText = "display:flex;align-items:center;gap:8px;margin-bottom:10px";
+    var lb = document.createElement("div");
+    lb.style.cssText = "flex:0 0 86px;font-size:14px;font-weight:800;color:#1A1A2E;line-height:1.2";
+    lb.textContent = pd[1];
+    if(pd[2]){var sm=document.createElement("div");sm.style.cssText="font-size:10px;font-weight:600;color:#9CA3AF";sm.textContent=pd[2];lb.appendChild(sm);}
+    var yen = document.createElement("div");
+    yen.style.cssText = "font-size:18px;font-weight:900;color:#1A1A2E;flex-shrink:0";
+    yen.textContent = "¥";
+    var inp = document.createElement("input");
+    inp.type = "number"; inp.inputMode = "numeric"; inp.className = "inp"; inp.style.flex = "1";
+    inp.placeholder = "未設定";
+    inp.value = (S.myProfile && S.myProfile[pd[0]] > 0) ? String(S.myProfile[pd[0]]) : "";
+    inp.addEventListener("input", function(e){
+      S.myProfile[pd[0]] = parseInt(e.target.value) || 0;
+      syncMinPrice(S.myProfile); saveD();
+      var sv = document.getElementById("price-saved-msg");
+      if(sv){ sv.style.opacity="1"; setTimeout(function(){ if(sv)sv.style.opacity="0"; }, 1500); }
+    });
+    planInps.push([pd[0],inp]);
+    r.appendChild(lb); r.appendChild(yen); r.appendChild(inp);
+    priceCard.appendChild(r);
   });
-  var perLabel = document.createElement("div");
-  perLabel.style.cssText = "font-size:14px;font-weight:700;color:#6B7280;flex-shrink:0";
-  perLabel.textContent = "/";
-  priceRow.appendChild(yenLabel); priceRow.appendChild(priceInp); priceRow.appendChild(perLabel);
-
-  // 時間単位選択
-  var unitSel = document.createElement("select");
-  unitSel.className = "inp"; unitSel.style.cssText = "flex:0 0 100px;background:#fff";
-  var units = ["1時間","2時間","3時間","4時間","半日","1日","30分","要相談"];
-  for(var ui=0; ui<units.length; ui++){
-    var op = document.createElement("option");
-    op.value = units[ui]; op.textContent = units[ui];
-    if(S.myProfile && S.myProfile.unit === units[ui]) op.selected = true;
-    unitSel.appendChild(op);
-  }
-  unitSel.addEventListener("change", function(e){
-    S.myProfile.unit = e.target.value; saveD();
-    var sv = document.getElementById("price-saved-msg");
-    if(sv){ sv.style.opacity="1"; setTimeout(function(){ if(sv)sv.style.opacity="0"; }, 1500); }
-  });
-  priceRow.appendChild(unitSel);
-  priceCard.appendChild(priceRow);
-
-  // プレビュー
-  var pricePreview = document.createElement("div");
-  pricePreview.style.cssText = "background:#FFF0E8;border-radius:12px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between";
-  var previewLabel = document.createElement("div");
-  previewLabel.style.cssText = "font-size:12px;color:#FF6B2B;font-weight:700";
-  previewLabel.textContent = "同行費用の目安";
-  var previewVal = document.createElement("div");
-  previewVal.style.cssText = "font-size:16px;font-weight:900;color:#1A1A2E";
-  var pPrice = (S.myProfile && S.myProfile.price) ? S.myProfile.price : 0;
-  var pUnit = (S.myProfile && S.myProfile.unit) ? S.myProfile.unit : "1時間";
-  previewVal.textContent = pPrice > 0 ? ("¥" + pPrice.toLocaleString() + " / " + pUnit) : "未設定";
-  pricePreview.appendChild(previewLabel); pricePreview.appendChild(previewVal);
-  priceCard.appendChild(pricePreview);
 
   // 費用内訳の説明
   var costNote = document.createElement("div");
@@ -2548,7 +2550,7 @@ function renderProfile(){
   noPriceLbl.textContent = "価格は相談・無料で使いたい";
   noPriceRow.appendChild(noPriceChk); noPriceRow.appendChild(noPriceLbl);
   noPriceRow.addEventListener("click", function(){
-    S.myProfile.price = 0; saveD(); render();
+    S.myProfile.priceHour = 0; S.myProfile.priceHalf = 0; S.myProfile.priceDay = 0; syncMinPrice(S.myProfile); saveD(); render();
   });
   priceCard.appendChild(noPriceRow);
 
@@ -2599,7 +2601,7 @@ function renderProfile(){
   priceSaveBtn.className = "obtn obtn-full";
   priceSaveBtn.style.cssText = "font-size:13px;padding:10px;margin-top:12px";
   priceSaveBtn.textContent = "💾 保存する";
-  wireSaveBtn(priceSaveBtn,"💾 保存する",function(){ S.myProfile.price = parseInt(priceInp.value) || 0; });
+  wireSaveBtn(priceSaveBtn,"💾 保存する",function(){ planInps.forEach(function(pi){ S.myProfile[pi[0]] = parseInt(pi[1].value) || 0; }); syncMinPrice(S.myProfile); });
   priceCard.appendChild(priceSaveBtn);
   var savedMsg = document.createElement("div");
   savedMsg.id = "price-saved-msg";
@@ -3134,7 +3136,7 @@ function render(){
           var pc=d({style:{background:"linear-gradient(135deg,#FFF4EC,#FFE7D6)",borderRadius:"14px",padding:"12px 14px",marginBottom:"14px",display:"flex",justifyContent:"space-between",alignItems:"center"}});
           pc.appendChild(sp({style:{fontSize:"12px",fontWeight:"800",color:"#9A5B34"}},"💰 同行料金"));
           var pv=parseInt(u.price)||0;
-          if(pv&&!u.ok)pc.appendChild(sp({style:{fontSize:"12px",fontWeight:"800",color:"#9CA3AF"}},"本人確認後に表示"));else pc.appendChild(sp({style:{fontSize:pv?"18px":"13px",fontWeight:"900",color:pv?"#FF6B2B":"#9CA3AF"}},pv?("¥"+pv.toLocaleString()+(u.unit?" / "+u.unit:"")):"未設定"));
+          if(pv&&!u.ok)pc.appendChild(sp({style:{fontSize:"12px",fontWeight:"800",color:"#9CA3AF"}},"本人確認後に表示"));else if(planList(u).length){var pls=planList(u);pc.style.flexDirection="column";pc.style.alignItems="stretch";pc.style.gap="6px";for(var pli=0;pli<pls.length;pli++){var plr=d({style:{display:"flex",justifyContent:"space-between",alignItems:"center"}});plr.appendChild(sp({style:{fontSize:"13px",fontWeight:"700",color:"#6B7280"}},pls[pli].lbl));plr.appendChild(sp({style:{fontSize:"18px",fontWeight:"900",color:"#FF6B2B"}},"¥"+pls[pli].p.toLocaleString()));pc.appendChild(plr);}}else pc.appendChild(sp({style:{fontSize:pv?"18px":"13px",fontWeight:"900",color:pv?"#FF6B2B":"#9CA3AF"}},pv?("¥"+pv.toLocaleString()+(u.unit?" / "+u.unit:"")):"未設定"));
           box.appendChild(pc);
           if(u.costBreakdown&&u.costBreakdown.length){var cbr=d({style:{display:"flex",flexWrap:"wrap",gap:"6px",margin:"-6px 0 14px"}});for(var cbi=0;cbi<u.costBreakdown.length;cbi++){var cbt=d({style:{background:"#F5F7FA",borderRadius:"10px",padding:"3px 10px",fontSize:"11px",fontWeight:"700",color:"#6B7280"}});cbt.textContent=u.costBreakdown[cbi];cbr.appendChild(cbt);}box.appendChild(cbr);}
           // 活動スキー場
