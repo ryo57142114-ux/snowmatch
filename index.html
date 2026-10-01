@@ -553,7 +553,6 @@ function CamModal(u){
     var isLk=S.liked.indexOf(u.id)>=0;
     var isF2=S.following.indexOf(u.id)>=0;
     var br2=d({style:{display:"flex",gap:"10px",marginTop:"8px",marginBottom:"80px",flexWrap:"wrap"}});
-    br2.appendChild(obtn(isLk?"💛 いいね済み":"🤍 いいね",function(){toggleLike(u);},"obtn-s"));
     br2.appendChild(obtn(isF2?"✅ フォロー中":"＋ フォロー",function(){toggleFollow(u);},isF2?"obtn-s":""));
     br2.appendChild(obtn("💬 メッセージ",function(){R({selUser:null,chatUser:u,tab:"chat"});},""));
     body.appendChild(br2);box.appendChild(body);
@@ -564,11 +563,11 @@ function CamModal(u){
     var lkBtn3=document.createElement("button");lkBtn3.style.cssText="width:48px;height:48px;border-radius:14px;background:#F0FDF4;border:none;font-size:22px;cursor:pointer;flex-shrink:0";lkBtn3.textContent=isLk2?"💛":"🤍";
     lkBtn3.addEventListener("click",function(){toggleLike(u);});
     var bookBtn3=document.createElement("button");bookBtn3.style.cssText="flex:1;padding:14px;border-radius:14px;background:linear-gradient(135deg,#22C55E,#16A34A);color:#fff;font-weight:900;font-size:15px;border:none;cursor:pointer;box-shadow:0 4px 14px rgba(34,197,94,0.4)";
-    bookBtn3.textContent="🎥 撮影を依頼する　¥"+u.price.toLocaleString()+" / "+u.unit;
+    bookBtn3.textContent="予約する　¥"+u.price.toLocaleString()+" / "+u.unit;
     bookBtn3.addEventListener("click",function(){R({selUser:null,bookUser:u});});
     var msgBtn3=document.createElement("button");msgBtn3.style.cssText="width:48px;height:48px;border-radius:14px;background:#F5F7FA;border:none;font-size:22px;cursor:pointer;flex-shrink:0";msgBtn3.textContent="💬";
     msgBtn3.addEventListener("click",function(){R({selUser:null,chatUser:u,tab:"chat"});});
-    ff.appendChild(lkBtn3);ff.appendChild(bookBtn3);ff.appendChild(msgBtn3);box.appendChild(ff);
+    ff.appendChild(bookBtn3);ff.appendChild(msgBtn3);box.appendChild(ff);
   });
 }
 
@@ -633,7 +632,6 @@ function InsModal(u){
     var isLk=S.liked.indexOf(u.id)>=0;
     var isF2=S.following.indexOf(u.id)>=0;
     var br2=d({style:{display:"flex",gap:"10px",marginTop:"8px",marginBottom:"80px",flexWrap:"wrap"}});
-    br2.appendChild(obtn(isLk?"💛 いいね済み":"🤍 いいね",function(){toggleLike(u);},"obtn-s"));
     br2.appendChild(obtn(isF2?"✅ フォロー中":"＋ フォロー",function(){toggleFollow(u);},isF2?"obtn-s":""));
     br2.appendChild(obtn("💬 メッセージ",function(){R({selUser:null,chatUser:u,tab:"chat"});},""));
     body.appendChild(br2);box.appendChild(body);
@@ -653,7 +651,7 @@ function InsModal(u){
     msgBtn2.style.cssText="width:48px;height:48px;border-radius:14px;background:#F5F7FA;border:none;font-size:22px;cursor:pointer;flex-shrink:0";
     msgBtn2.textContent="💬";
     msgBtn2.addEventListener("click",function(){R({selUser:null,chatUser:u,tab:"chat"});});
-    fixedFooter.appendChild(lkBtn2);fixedFooter.appendChild(bookBtn2);fixedFooter.appendChild(msgBtn2);
+    fixedFooter.appendChild(bookBtn2);fixedFooter.appendChild(msgBtn2);
     // 通報・ブロックボタン
     var moreBtn=document.createElement("button");moreBtn.style.cssText="width:48px;height:48px;border-radius:14px;background:#F5F7FA;border:none;font-size:20px;cursor:pointer;flex-shrink:0;color:#9CA3AF";moreBtn.textContent="⋯";
     moreBtn.addEventListener("click",function(){
@@ -3165,8 +3163,8 @@ function render(){
           var fwb=b2({style:{width:"100%",padding:"10px",marginTop:"6px",borderRadius:"14px",border:"1.5px solid "+(isFw?"#E8E8E8":"#FF6B2B"),background:isFw?"#F5F7FA":"#fff",color:isFw?"#6B7280":"#FF6B2B",fontSize:"14px",fontWeight:"800",cursor:"pointer",fontFamily:"inherit"}},isFw?"✅ フォロー中":"＋ フォローする");
           fwb.addEventListener("click",function(){toggleFollow(u);});box.appendChild(fwb);
           var br=d({style:{display:"flex",gap:"10px",marginTop:"6px"}});var isLk=S.liked.indexOf(u.id)>=0;
-          br.appendChild(obtn(isLk?"💛 いいね済み":"🤍 いいね",function(){toggleLike(u);},"obtn-s"));
-          br.appendChild(obtn("💬 メッセージ",function(){R({selUser:null,chatUser:u,tab:"chat"});},""));box.appendChild(br);
+          br.appendChild(obtn("💬 メッセージ",function(){R({selUser:null,chatUser:u,tab:"chat"});},"obtn-s"));
+          br.appendChild(obtn("🎿 予約する",function(){if(!u.price){alert("この方はまだ料金を設定していません。メッセージで相談してください");return;}R({selUser:null,bookUser:u});},""));box.appendChild(br);
         }));
       })(S.selUser);
     }
