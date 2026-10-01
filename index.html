@@ -1603,7 +1603,16 @@ function setResvStatus(id,st,okMsg){
   });
 }
 var RESV_ST={pending:["⏳ 申請中","#FFFBEB","#B45309"],approved:["✅ 確定","#F0FDF4","#16A34A"],declined:["🙏 お断り","#F3F4F6","#6B7280"],cancelled:["↩️ キャンセル","#F3F4F6","#6B7280"]};
+function bookBadgeCount(){
+  if(typeof currentUser==="undefined"||!currentUser||!S.resv)return 0;
+  var n=0;
+  for(var i=0;i<S.resv.length;i++){if(S.resv[i].provider===currentUser.id&&S.resv[i].status==="pending")n++;}
+  var nf=S.notifs||[];
+  for(var k=0;k<nf.length;k++){var x=nf[k];if(String(x.id).indexOf("rv_")===0&&!x.read&&!/_pending$/.test(x.id))n++;}
+  return n;
+}
 function renderResvList(){
+  (S.notifs||[]).forEach(function(x){if(String(x.id).indexOf("rv_")===0&&!/_pending$/.test(x.id))x.read=true;});
   var wrap=d({class:"pg"});
   var t=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"16px"}});t.textContent="🎿 予約";wrap.appendChild(t);
   var recv=S.resv.filter(function(x){return x.provider===currentUser.id;});
@@ -3267,7 +3276,7 @@ function _renderInner(){
   if(!cf){
     var nav=d({class:"nav"});var navItems=[{id:"explore",ic:"🔍",lbl:"探す"},{id:"chat",ic:"💬",lbl:"チャット"},{id:"market",ic:"🛖",lbl:"ラウンジ"},{id:"bookings",ic:"🎿",lbl:"予約"},{id:"profile",ic:"👤",lbl:"マイページ"}];
     for(var ni=0;ni<navItems.length;ni++){
-      (function(item){var ne=b2({class:"ni"+(S.tab===item.id?" on":"")});var nic=d({style:{fontSize:"22px",marginBottom:"2px",position:"relative"}});nic.textContent=item.ic;if(item.id==="chat"){var tu=totalUnreadChat();if(tu>0)nic.appendChild(unreadBadge(tu,"position:absolute;top:-4px;left:50%;margin-left:6px;"));}ne.appendChild(nic);ne.appendChild(document.createTextNode(item.lbl));ne.addEventListener("click",function(){if(item.id!=="chat")S.chatUser=null;R({tab:item.id});});nav.appendChild(ne);})(navItems[ni]);
+      (function(item){var ne=b2({class:"ni"+(S.tab===item.id?" on":"")});var nic=d({style:{fontSize:"22px",marginBottom:"2px",position:"relative"}});nic.textContent=item.ic;if(item.id==="chat"){var tu=totalUnreadChat();if(tu>0)nic.appendChild(unreadBadge(tu,"position:absolute;top:-4px;left:50%;margin-left:6px;"));}if(item.id==="bookings"){var tb=bookBadgeCount();if(tb>0)nic.appendChild(unreadBadge(tb,"position:absolute;top:-4px;left:50%;margin-left:6px;"));}ne.appendChild(nic);ne.appendChild(document.createTextNode(item.lbl));ne.addEventListener("click",function(){if(item.id!=="chat")S.chatUser=null;R({tab:item.id});});nav.appendChild(ne);})(navItems[ni]);
     }
     app.appendChild(nav);
   }
