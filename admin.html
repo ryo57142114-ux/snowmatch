@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>スノマ管理｜本人確認の審査</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+  :root {
+    --ink: #1C2433;
+    --sub: #5B6577;
+    --line: #DCE2EC;
+    --snow: #F5F7FB;
+    --paper: #FFFFFF;
+    --brand: #FF6B35;
+    --ok: #1E8E5A;
+    --ng: #C2412D;
+    --wait: #B7791F;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", system-ui, sans-serif;
+    color: var(--ink);
+    background: var(--snow);
+    line-height: 1.6;
+  }
+  header {
+    background: var(--ink);
+    color: #fff;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  header h1 { font-size: 17px; margin: 0; font-weight: 700; }
+  header h1 span { color: var(--brand); }
+  header .who { font-size: 13px; opacity: .8; }
+  main { max-width: 960px; margin: 0 auto; padding: 20px; }
+
+  .tabs { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+  .tab {
+    border: 1px solid var(--line);
+    background: var(--paper);
+    color: var(--ink);
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .tab[aria-selected="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .tab .n { font-weight: 700; margin-left: 6px; }
+
+  .person {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 14px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+  @media (max-width: 720px) { .person { grid-template-columns: 1fr; } }
+  .person h2 { margin: 0 0 6px; font-size: 18px; }
+  .facts { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: 14px; }
+  .facts dt { color: var(--sub); }
+  .facts dd { margin: 0; word-break: break-all; }
+  .warn { color: var(--ng); font-weight: 700; }
+
+  .photos { display: flex; gap: 10px; flex-wrap: wrap; }
+  .photos a { display: block; }
+  .photos img {
+    width: 200px; max-width: 100%; height: 140px; object-fit: cover;
+    border-radius: 8px; border: 1px solid var(--line); background: var(--snow);
+  }
+  .nophoto { font-size: 14px; color: var(--ng); }
+
+  .actions { display: flex; gap: 10px; margin-top: 14px; }
+  .btn {
+    border: none; border-radius: 10px; padding: 10px 18px;
+    font-size: 15px; font-weight: 700; cursor: pointer; color: #fff;
+  }
+  .btn.ok { background: var(--ok); }
+  .btn.ng { background: var(--ng); }
+  .btn.plain { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.4); font-weight: 400; padding: 6px 12px; font-size: 13px; }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .btn:focus-visible, .tab:focus-visible, input:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+
+  .status { font-size: 13px; font-weight: 700; }
+  .status.pending { color: var(--wait); }
+  .status.approved { color: var(--ok); }
+  .status.rejected { color: var(--ng); }
+
+  .empty, .msg { text-align: center; color: var(--sub); padding: 48px 12px; }
+
+  .login {
+    max-width: 360px; margin: 60px auto; background: var(--paper);
+    border: 1px solid var(--line); border-radius: 14px; padding: 24px;
+  }
+  .login h2 { margin: 0 0 14px; font-size: 18px; }
+  .login label { display: block; font-size: 13px; color: var(--sub); margin-top: 10px; }
+  .login input {
+    width: 100%; padding: 10px; font-size: 16px;
+    border: 1px solid var(--line); border-radius: 8px; margin-top: 4px;
+  }
+  .login .btn { width: 100%; margin-top: 18px; background: var(--brand); }
+  .err { color: var(--ng); font-size: 14px; margin-top: 10px; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+    background: var(--ink); color: #fff; padding: 10px 18px; border-radius: 999px;
+    font-size: 14px; display: none;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span>スノマ</span> 本人確認の審査</h1>
+  <div id="headerRight"></div>
+</header>
+
+<main id="app"><p class="msg">読み込み中…</p></main>
+<div class="toast" id="toast"></div>
+
+<script>
+// ▼▼▼ アプリのindex.htmlと同じ値を入れてください ▼▼▼
+var SUPABASE_URL = 'https://qehaqosvytflojakyssx.supabase.co';
+var SUPABASE_ANON_KEY = 'sb_publishable_yS2k2GRPTRzcfUGd9hdslQ_zbfloUFB';
+// ▲▲▲ ここまで ▲▲▲
+
+var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+var app = document.getElementById('app');
+var headerRight = document.getElementById('headerRight');
+var currentTab = 'pending';
+
+var TABS = [
+  { key: 'pending',  label: '審査待ち' },
+  { key: 'approved', label: '承認済み' },
+  { key: 'rejected', label: '却下' }
+];
+var STATUS_LABEL = { pending: '審査待ち', approved: '承認済み', rejected: '却下' };
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+function toast(text) {
+  var t = document.getElementById('toast');
+  t.textContent = text;
+  t.style.display = 'block';
+  clearTimeout(toast._t);
+  toast._t = setTimeout(function () { t.style.display = 'none'; }, 2500);
+}
+
+// ---------- ログイン ----------
+function showLogin(errText) {
+  headerRight.innerHTML = '';
+  app.innerHTML =
+    '<div class="login">' +
+      '<h2>管理者ログイン</h2>' +
+      '<label for="email">メールアドレス</label>' +
+      '<input id="email" type="email" autocomplete="username">' +
+      '<label for="pw">パスワード</label>' +
+      '<input id="pw" type="password" autocomplete="current-password">' +
+      '<button class="btn" id="loginBtn">ログイン</button>' +
+      (errText ? '<p class="err">' + esc(errText) + '</p>' : '') +
+    '</div>';
+  document.getElementById('loginBtn').onclick = async function () {
+    var email = document.getElementById('email').value.trim();
+    var pw = document.getElementById('pw').value;
+    var res = await sb.auth.signInWithPassword({ email: email, password: pw });
+    if (res.error) { showLogin('ログインできませんでした。メールアドレスとパスワードを確認してください。'); return; }
+    start();
+  };
+}
+
+async function logout() {
+  await sb.auth.signOut();
+  showLogin();
+}
+
+// ---------- 起動 ----------
+async function start() {
+  var s = await sb.auth.getSession();
+  var session = s.data.session;
+  if (!session) { showLogin(); return; }
+
+  var me = await sb.from('profiles').select('nick, is_admin').eq('id', session.user.id).maybeSingle();
+  if (me.error || !me.data || !me.data.is_admin) {
+    app.innerHTML = '<p class="msg">このアカウントには管理者の権限がありません。</p>';
+    headerRight.innerHTML = '<button class="btn plain" id="logoutBtn">ログアウト</button>';
+    document.getElementById('logoutBtn').onclick = logout;
+    return;
+  }
+
+  headerRight.innerHTML =
+    '<span class="who">' + esc(me.data.nick) + '</span> ' +
+    '<button class="btn plain" id="logoutBtn">ログアウト</button>';
+  document.getElementById('logoutBtn').onclick = logout;
+  render();
+}
+
+// ---------- 一覧 ----------
+async function countOf(status) {
+  var r = await sb.from('profiles').select('id', { count: 'exact', head: true }).eq('kyc_status', status);
+  return r.count || 0;
+}
+
+async function render() {
+  app.innerHTML = '<p class="msg">読み込み中…</p>';
+
+  var counts = await Promise.all(TABS.map(function (t) { return countOf(t.key); }));
+  var tabsHtml = '<div class="tabs" role="tablist">' + TABS.map(function (t, i) {
+    return '<button class="tab" role="tab" data-tab="' + t.key + '" aria-selected="' + (t.key === currentTab) + '">' +
+      t.label + '<span class="n">' + counts[i] + '</span></button>';
+  }).join('') + '</div>';
+
+  var res = await sb.from('profiles')
+    .select('id, nick, real_name, age, email, kyc_status, is_verified')
+    .eq('kyc_status', currentTab)
+    .order('nick');
+
+  if (res.error) {
+    app.innerHTML = tabsHtml + '<p class="msg">データを読み込めませんでした：' + esc(res.error.message) + '</p>';
+    bindTabs();
+    return;
+  }
+
+  var people = res.data || [];
+  if (people.length === 0) {
+    app.innerHTML = tabsHtml + '<p class="empty">' + STATUS_LABEL[currentTab] + 'の人はいません。</p>';
+    bindTabs();
+    return;
+  }
+
+  app.innerHTML = tabsHtml + people.map(personHtml).join('');
+  bindTabs();
+  people.forEach(function (p) { loadPhotos(p.id); bindActions(p); });
+}
+
+function personHtml(p) {
+  var ageWarn = (p.age != null && p.age < 18) ? ' <span class="warn">18歳未満</span>' : '';
+  var actions = '';
+  if (p.kyc_status !== 'approved') actions += '<button class="btn ok" data-approve="' + p.id + '">承認する</button>';
+  if (p.kyc_status !== 'rejected') actions += '<button class="btn ng" data-reject="' + p.id + '">却下する</button>';
+
+  return '<section class="person">' +
+    '<div>' +
+      '<h2>' + esc(p.nick || '（ニックネーム未設定）') + '</h2>' +
+      '<p class="status ' + esc(p.kyc_status) + '">' + (STATUS_LABEL[p.kyc_status] || esc(p.kyc_status)) + '</p>' +
+      '<dl class="facts">' +
+        '<dt>本名</dt><dd>' + esc(p.real_name || '未入力') + '</dd>' +
+        '<dt>年齢</dt><dd>' + esc(p.age == null ? '未入力' : p.age + '歳') + ageWarn + '</dd>' +
+        '<dt>メール</dt><dd>' + esc(p.email || '未入力') + '</dd>' +
+        '<dt>ID</dt><dd>' + esc(p.id) + '</dd>' +
+      '</dl>' +
+      '<div class="actions">' + actions + '</div>' +
+    '</div>' +
+    '<div class="photos" id="photos-' + p.id + '"><span class="msg" style="padding:0">画像を読み込み中…</span></div>' +
+  '</section>';
+}
+
+async function loadPhotos(userId) {
+  var box = document.getElementById('photos-' + userId);
+  var list = await sb.storage.from('kyc').list(userId, { sortBy: { column: 'created_at', order: 'desc' } });
+  if (list.error) { box.innerHTML = '<p class="nophoto">画像を読み込めませんでした：' + esc(list.error.message) + '</p>'; return; }
+
+  var files = (list.data || []).filter(function (f) { return f.name && f.name.charAt(0) !== '.'; });
+  if (files.length === 0) { box.innerHTML = '<p class="nophoto">身分証の画像がありません</p>'; return; }
+
+  var paths = files.map(function (f) { return userId + '/' + f.name; });
+  var signed = await sb.storage.from('kyc').createSignedUrls(paths, 600);
+  if (signed.error) { box.innerHTML = '<p class="nophoto">画像を表示できませんでした：' + esc(signed.error.message) + '</p>'; return; }
+
+  box.innerHTML = signed.data.map(function (s) {
+    return '<a href="' + esc(s.signedUrl) + '" target="_blank" rel="noopener" title="クリックで拡大">' +
+      '<img src="' + esc(s.signedUrl) + '" alt="身分証の画像"></a>';
+  }).join('');
+}
+
+function bindTabs() {
+  Array.prototype.forEach.call(document.querySelectorAll('[data-tab]'), function (b) {
+    b.onclick = function () { currentTab = b.getAttribute('data-tab'); render(); };
+  });
+}
+
+function bindActions(p) {
+  var ok = document.querySelector('[data-approve="' + p.id + '"]');
+  var ng = document.querySelector('[data-reject="' + p.id + '"]');
+  if (ok) ok.onclick = function () { decide(p, 'approved', ok); };
+  if (ng) ng.onclick = function () { decide(p, 'rejected', ng); };
+}
+
+async function decide(p, status, btn) {
+  var name = p.nick || 'この人';
+  var question = status === 'approved'
+    ? name + ' さんを承認します。よろしいですか？'
+    : name + ' さんを却下します。よろしいですか？';
+  if (!confirm(question)) return;
+
+  btn.disabled = true;
+  var res = await sb.from('profiles')
+    .update({ kyc_status: status, is_verified: status === 'approved' })
+    .eq('id', p.id)
+    .select('id');
+
+  if (res.error || !res.data || res.data.length === 0) {
+    btn.disabled = false;
+    alert('更新できませんでした。' + (res.error ? res.error.message : '権限の設定を確認してください。'));
+    return;
+  }
+  toast(name + ' さんを' + STATUS_LABEL[status] + 'にしました');
+  render();
+}
+
+start();
+</script>
+</body>
+</html>
