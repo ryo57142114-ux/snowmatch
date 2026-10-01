@@ -37,10 +37,10 @@ img{display:block;width:100%}
 .av{border-radius:18px;background:linear-gradient(135deg,#FFF0E8,#FFE4D6);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .inp{width:100%;padding:12px 14px;border-radius:12px;border:2px solid #F0F0F0;font-size:16px;background:#fff;font-family:inherit}
 .inp:focus{border-color:#FF6B2B;outline:none}
-.ov{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,.55);z-index:200;display:flex;align-items:flex-end;justify-content:center}
+.ov{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,.55);z-index:200;display:flex;align-items:flex-end;justify-content:center;padding-top:calc(env(safe-area-inset-top,0px) + 16px);overscroll-behavior:contain}
 .ov.top{align-items:flex-start}
-.mbox{background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:430px;max-height:92vh;overflow-y:auto;padding:24px}
-.mbox.full{border-radius:0;max-height:100vh}
+.mbox{background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:430px;max-height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:24px;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
+.mbox.full{border-radius:0;max-height:100%}
 .pcard{background:#fff;border-radius:18px;overflow:hidden;margin-bottom:14px;box-shadow:0 2px 14px rgba(0,0,0,.07)}
 .upzone{border:2px dashed #FF6B2B;border-radius:18px;padding:28px 16px;text-align:center;background:#FFF0E8;position:relative;overflow:hidden}
 .upzone input{position:absolute;top:0;right:0;bottom:0;left:0;opacity:0;cursor:pointer;font-size:16px}
@@ -3082,7 +3082,20 @@ function WelcomeModal(){
 }
 
 
+function viewKey(){return [S.pg,S.tab,S.selUser?S.selUser.id:"",S.chatUser?S.chatUser.id:"",S.bookUser?1:0,S.showEditProfile?1:0].join("|");}
+var _lastViewKey="";
 function render(){
+  var app=document.getElementById("app");
+  var key=viewKey();var same=(key===_lastViewKey);_lastViewKey=key;
+  var appTop=app?app.scrollTop:0;
+  var mbs=app?app.querySelectorAll(".mbox"):[];var mbTop=mbs.length?mbs[mbs.length-1].scrollTop:0;
+  _renderInner();
+  if(same&&app){
+    app.scrollTop=appTop;
+    var mbs2=app.querySelectorAll(".mbox");if(mbs2.length)mbs2[mbs2.length-1].scrollTop=mbTop;
+  }
+}
+function _renderInner(){
   var app=document.getElementById("app");app.innerHTML="";
   if(S.pg==="splash"){app.appendChild(renderSplash());if(S.showLoginModal)app.appendChild(LoginModal());return;}
   if(S.pg==="onboard"){app.appendChild(renderOnboard());return;}
@@ -3126,7 +3139,7 @@ function render(){
       (function(u){
         app.appendChild(Modal(false,function(){R({selUser:null});},function(box){
           var row=d({style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"14px"}});row.appendChild(avU(84,40,u));
-          var cb=b2({style:{padding:"6px 14px",background:"#F5F7FA",border:"1.5px solid #E8E8E8",borderRadius:"20px",fontSize:"13px",fontWeight:"700",color:"#6B7280",cursor:"pointer"}},"← 戻る");cb.addEventListener("click",function(){R({selUser:null});});row.appendChild(cb);box.appendChild(row);
+          var cb=b2({style:{padding:"10px 20px",minHeight:"44px",background:"#F5F7FA",border:"1.5px solid #E8E8E8",borderRadius:"22px",fontSize:"15px",fontWeight:"800",color:"#4B5563",cursor:"pointer",fontFamily:"inherit"}},"← 戻る");cb.addEventListener("click",function(){R({selUser:null});});var stb=d({style:{position:"sticky",top:"-24px",margin:"-24px -24px 10px",padding:"12px 16px",background:"rgba(255,255,255,.97)",zIndex:"5",display:"flex",justifyContent:"flex-start",borderBottom:"1px solid #F0F0F0",borderRadius:"24px 24px 0 0"}});stb.appendChild(cb);box.appendChild(stb);box.appendChild(row);
           var nr=d({style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"4px",flexWrap:"wrap"}});nr.appendChild(sp({style:{fontWeight:"900",fontSize:"22px",color:"#1A1A2E"}},u.name));if(u.ok)nr.appendChild(sp({style:{fontSize:"12px",color:"#2ECC71",fontWeight:"700"}},"🪪 確認済"));box.appendChild(nr);
           if(u.age){var ag=d({style:{color:"#6B7280",fontSize:"13px",marginBottom:"10px"}});ag.textContent=u.age+"歳";box.appendChild(ag);}
           var tagSt={background:"#FFF0E8",color:"#FF6B2B",display:"inline-block",padding:"3px 10px",borderRadius:"20px",fontSize:"11px",fontWeight:"700",marginRight:"6px"};
