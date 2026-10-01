@@ -1330,7 +1330,7 @@ function renderChat(){
         (function(u){
           var msgs=S.chatMsgs[String(u.id)]||[];var last=msgs[msgs.length-1];
           var c=d({class:"card",style:{cursor:"pointer"},onClick:function(){R({chatUser:u});}});
-          var row=d({style:{display:"flex",alignItems:"center",gap:"12px"}});row.appendChild(av(48,24,u.icon));
+          var row=d({style:{display:"flex",alignItems:"center",gap:"12px"}});row.appendChild(avU(48,24,u));
           var inf=d({style:{flex:"1"}});var nm=d({style:{fontWeight:"800",color:"#1A1A2E"}});nm.textContent=u.name;inf.appendChild(nm);
           var unr=u.isReal?unreadCountFor(String(u.id)):0;
           if(last){var le=d({style:{color:unr>0?"#1A1A2E":"#6B7280",fontWeight:unr>0?"700":"400",fontSize:"13px",marginTop:"2px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"190px"}});le.textContent=(last.f==="m"?"あなた: ":"")+last.t;inf.appendChild(le);}
@@ -1350,7 +1350,7 @@ function renderChat(){
   var hdr=d({class:"hdr"});
   var bb=document.createElement("button");bb.style.cssText="color:#fff;font-size:22px;padding:0;background:none;border:none;cursor:pointer";bb.textContent="←";
   bb.addEventListener("click",function(){R({chatUser:null});});
-  hdr.appendChild(bb);hdr.appendChild(av(38,20,S.chatUser.icon));
+  hdr.appendChild(bb);hdr.appendChild(avU(38,20,S.chatUser));
   var ci=d({style:{flex:"1"}});
   var cnm=d({style:{fontWeight:"800",color:"#fff",fontSize:"15px"}});cnm.textContent=S.chatUser.name;
   var cdet=d({style:{color:"rgba(255,255,255,.8)",fontSize:"11px"}});cdet.textContent=(S.chatUser.lv||"")+((S.chatUser.lv&&S.chatUser.act)?"・":"")+(S.chatUser.act||"");
