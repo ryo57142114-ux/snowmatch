@@ -140,7 +140,7 @@ function saveD(){try{localStorage.setItem("sm2",JSON.stringify({myProfile:S.myPr
 var _syncTimer=null;
 var EXTRA_KEYS=["board","styles","stanceW2","frontAngle","backAngle","bindingName","camGear","costBreakdown","certText"];
 function buildProfileRow(){
-  var p=S.myProfile||{};var ex={};
+  var p=S.myProfile||{};syncMinPrice(p);var ex={};
   for(var i=0;i<EXTRA_KEYS.length;i++){if(p[EXTRA_KEYS[i]]!==undefined)ex[EXTRA_KEYS[i]]=p[EXTRA_KEYS[i]];}
   var row={
     id:currentUser.id,
@@ -150,7 +150,7 @@ function buildProfileRow(){
     act:p.act||"",acts:p.acts||[],lv:p.lv||"中級",
     resorts:p.resorts||[],bio:p.bio||"",icon:p.icon||"🏂",
     price:p.price?parseInt(p.price):null,unit:p.unit||"",gear:p.gear||[],sns:p.sns||{},
-    priceHour:pfr(p,"hour"),priceHalf:pfr(p,"half"),priceDay:pfr(p,"day"),
+    price_hour:p.priceHour>0?parseInt(p.priceHour):null,price_half:p.priceHalf>0?parseInt(p.priceHalf):null,price_day:p.priceDay>0?parseInt(p.priceDay):null,
     extra:ex,
   };
   if(p.profileImg&&/^https?:/.test(p.profileImg))row.profile_img=p.profileImg;
