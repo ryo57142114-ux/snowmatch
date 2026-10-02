@@ -380,6 +380,140 @@ function sendPhoto(file){
     }).catch(function(e){tmp.t="📷 写真（送信失敗）";tmp.failed=true;render();alert("写真を送れませんでした: "+(e&&e.message?e.message:e));});
   });
 }
+// ===== 募集掲示板（ride_posts） =====
+function todayStr(){var t=new Date();return t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0");}
+function hm5(t){return String(t||"").slice(0,5).replace(/^0/,"");}
+function dateLbl(ds){var p=String(ds).split("-");var dt=new Date(+p[0],+p[1]-1,+p[2]);return (+p[1])+"/"+(+p[2])+"（"+"日月火水木金土".charAt(dt.getDay())+"）";}
+function areaOfResort(r){for(var i=0;i<AREAS.length;i++){if(AREAS[i].resorts.indexOf(r)>=0)return AREAS[i].area;}return "";}
+function loadPosts(){
+  if(typeof sb==="undefined"||!sb)return;
+  sb.from("ride_posts").select("*").eq("status","open").gte("ride_date",todayStr())
+    .order("ride_date",{ascending:true}).order("start_time",{ascending:true}).limit(300)
+    .then(function(r){if(r.error){console.error("posts load error",r.error);return;}S.posts=r.data||[];render();});
+}
+function livePosts(){
+  var now=new Date(),td=todayStr(),nowHM=String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0");
+  return (S.posts||[]).filter(function(p){return p.status==="open"&&(p.ride_date>td||(p.ride_date===td&&String(p.end_time).slice(0,5)>nowHM));});
+}
+// 予約できる空き枠（有料の「同行します」投稿）
+function openSlotsOf(u){if(!u||!u.uid)return [];return livePosts().filter(function(p){return p.user_id===u.uid&&p.kind==="offer"&&p.pay==="paid";});}
+function talkTo(u){
+  if(S.isGuest){guestPrompt();return;}
+  if(!sb||!currentUser){alert("話しかけるにはログインが必要です");return;}
+  if(u.uid===currentUser.id)return;
+  if(!S.following||S.following.indexOf(u.id)<0)toggleFollow(u);
+  R({tab:"chat",chatUser:u,selUser:null});
+}
+function renderBoard(wrap){
+  var top=d({style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"6px"}});
+  var ht=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E"}});ht.textContent="📅 募集掲示板";top.appendChild(ht);
+  var nb=document.createElement("button");nb.textContent="＋ 投稿する";
+  nb.style.cssText="background:linear-gradient(135deg,#FF6B2B,#FF8C55);color:#fff;border:none;border-radius:14px;padding:9px 14px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit";
+  nb.addEventListener("click",function(){
+    if(S.isGuest){guestPrompt();return;}
+    if(!sb||!currentUser){alert("投稿するにはログインが必要です");return;}
+    R({postModal:{kind:"offer",date:"",start:"9:00",end:"15:00",resort:(S.myProfile&&S.myProfile.resorts&&S.myProfile.resorts[0])||"",pay:"free",note:""}});
+  });
+  top.appendChild(nb);wrap.appendChild(top);
+  var sub=d({style:{color:"#6B7280",fontSize:"12px",marginBottom:"12px",lineHeight:"1.6"}});sub.textContent="「この日空いてます」「この日一緒に滑る人を探してます」を日付つきで投稿できます。";wrap.appendChild(sub);
+  function chipRow(opts,cur,key){
+    var row=d({style:{display:"flex",gap:"6px",overflowX:"auto",marginBottom:"8px",paddingBottom:"2px"}});
+    opts.forEach(function(o){var on=(cur||null)===o[0];var c=document.createElement("button");c.className="chip"+(on?" on":"");c.style.cssText="flex-shrink:0;font-size:12px;padding:7px 12px";c.textContent=o[1];c.addEventListener("click",function(){var u={};u[key]=o[0];R(u);});row.appendChild(c);});
+    wrap.appendChild(row);
+  }
+  chipRow([[null,"すべて"],["offer","🙋 同行します"],["request","🔍 同行してくれる人募集"]],S.bdKind,"bdKind");
+  chipRow([[null,"無料・有料"],["free","🤝 無料"],["paid","💴 有料"]],S.bdPay,"bdPay");
+  chipRow([[null,"全エリア"]].concat(AREAS.map(function(a){return [a.area,a.area];})),S.bdArea,"bdArea");
+  if(S.posts===undefined){S.posts=[];loadPosts();}
+  var list=livePosts().filter(function(p){
+    if(S.bdKind&&p.kind!==S.bdKind)return false;
+    if(S.bdPay&&p.pay!==S.bdPay)return false;
+    if(S.bdArea&&areaOfResort(p.resort)!==S.bdArea)return false;
+    return true;
+  });
+  if(!list.length){var em=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"13px",padding:"30px 0"}});em.textContent="まだ投稿がありません。最初の投稿をしてみよう！";wrap.appendChild(em);return wrap;}
+  var lastDate="";
+  list.forEach(function(p){
+    if(p.ride_date!==lastDate){lastDate=p.ride_date;var dh=d({style:{fontWeight:"900",fontSize:"14px",color:"#1A1A2E",margin:"14px 2px 8px"}});dh.textContent="📆 "+dateLbl(p.ride_date);wrap.appendChild(dh);}
+    var mine=currentUser&&p.user_id===currentUser.id;
+    var u=mine?{uid:currentUser.id,name:(S.myProfile&&S.myProfile.nick)||"あなた",icon:(S.myProfile&&S.myProfile.icon)||"🏂",profileImg:S.myProfile&&S.myProfile.profileImg}:findRealUser(p.user_id);
+    if(!u)return;
+    var card=d({class:"card",style:{marginBottom:"10px",padding:"14px"}});
+    var hr=d({style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"8px"}});
+    hr.appendChild(avU(40,20,u));
+    var hi=d({style:{flex:"1",minWidth:"0"}});
+    var nm=d({style:{fontWeight:"800",fontSize:"14px",color:"#1A1A2E"}});nm.textContent=(u.name||"")+(mine?"（あなた）":"");hi.appendChild(nm);
+    var tm=d({style:{fontSize:"13px",color:"#374151",fontWeight:"700"}});tm.textContent="🕘 "+hm5(p.start_time)+"〜"+hm5(p.end_time)+(p.resort?"　⛰️ "+p.resort:"");hi.appendChild(tm);
+    hr.appendChild(hi);card.appendChild(hr);
+    var bg=d({style:{display:"flex",flexWrap:"wrap",gap:"6px",marginBottom:p.note?"8px":"10px"}});
+    var isOffer=p.kind==="offer";
+    bg.appendChild(sp({style:{background:isOffer?"#EEF2FF":"#FEF3C7",color:isOffer?"#4338CA":"#92400E",padding:"3px 10px",borderRadius:"20px",fontSize:"11px",fontWeight:"800"}},isOffer?"🙋 同行します":"🔍 同行してくれる人募集"));
+    var paid=p.pay==="paid";var mp=(!mine&&paid&&isOffer&&u.ok)?minPlanPrice(u):0;
+    bg.appendChild(sp({style:{background:paid?"#FFF0E8":"#F0FDF4",color:paid?"#FF6B2B":"#15803D",padding:"3px 10px",borderRadius:"20px",fontSize:"11px",fontWeight:"800"}},paid?("💴 有料"+(mp?" ¥"+mp.toLocaleString()+"〜":"")):"🤝 無料"));
+    card.appendChild(bg);
+    if(p.note){var nt=d({style:{fontSize:"13px",color:"#4B5563",lineHeight:"1.6",whiteSpace:"pre-wrap",marginBottom:"10px"}});nt.textContent=p.note;card.appendChild(nt);}
+    var br=d({style:{display:"flex",gap:"8px"}});
+    function b(lbl,primary,fn){var x=document.createElement("button");x.textContent=lbl;x.style.cssText="flex:1;padding:9px 6px;border-radius:12px;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit;"+(primary?"background:#FF6B2B;color:#fff;border:none":"background:#fff;color:#FF6B2B;border:1.5px solid #FF6B2B");x.addEventListener("click",fn);br.appendChild(x);}
+    if(mine){
+      b("締め切る",false,function(){if(!confirm("この投稿を締め切りますか？"))return;sb.from("ride_posts").update({status:"closed"}).eq("id",p.id).then(function(r){if(r.error){alert("できませんでした: "+r.error.message);return;}loadPosts();});});
+      b("削除する",false,function(){if(!confirm("この投稿を削除しますか？"))return;sb.from("ride_posts").delete().eq("id",p.id).then(function(r){if(r.error){alert("できませんでした: "+r.error.message);return;}loadPosts();});});
+    }else{
+      b("👤 プロフィール",false,function(){R({selUser:u});});
+      b("💬 話しかける",!(isOffer&&paid&&u.ok),function(){talkTo(u);});
+      if(isOffer&&paid&&u.ok&&isPaidUser(u))b("📅 この枠で予約",true,function(){if(S.isGuest){guestPrompt();return;}S.bkSlotId=p.id;R({bookUser:u});});
+    }
+    card.appendChild(br);wrap.appendChild(card);
+  });
+  return wrap;
+}
+function PostModal(){
+  var f=S.postModal;
+  return Modal(false,function(){R({postModal:null});},function(box){
+    var t=d({style:{fontWeight:"900",fontSize:"18px",color:"#1A1A2E",marginBottom:"14px"}});t.textContent="📅 募集を投稿する";box.appendChild(t);
+    function lbl(x){var l=d({style:{fontSize:"12px",fontWeight:"800",color:"#6B7280",margin:"0 0 6px"}});l.textContent=x;box.appendChild(l);}
+    function seg(opts,key){var r=d({style:{display:"flex",gap:"8px",marginBottom:"14px"}});opts.forEach(function(o){var on=f[key]===o[0];var c=document.createElement("button");c.textContent=o[1];c.style.cssText="flex:1;padding:11px 6px;border-radius:14px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;border:2px solid "+(on?"#FF6B2B":"#E5E7EB")+";background:"+(on?"#FFF0E8":"#fff")+";color:"+(on?"#FF6B2B":"#4B5563");c.addEventListener("click",function(){f[key]=o[0];render();});r.appendChild(c);});box.appendChild(r);}
+    lbl("投稿の種類");seg([["offer","🙋 同行します"],["request","🔍 同行してくれる人募集"]],"kind");
+    var hint=d({style:{fontSize:"11px",color:"#9CA3AF",margin:"-8px 0 14px",lineHeight:"1.6"}});hint.textContent=f.kind==="offer"?"この日・この時間なら一緒に滑れる／撮影できる、という空き日程の投稿です。有料にすると、この枠から予約を受けられます。":"この日に一緒に滑る人・撮影してくれる人を探す投稿です。";box.appendChild(hint);
+    lbl("日付");
+    var di=document.createElement("input");di.type="date";di.className="inp";di.style.marginBottom="14px";di.min=todayStr();di.value=f.date||"";di.addEventListener("change",function(e){f.date=e.target.value;});box.appendChild(di);
+    lbl("時間");
+    var tr=d({style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"14px"}});
+    function tsel(key){var s2=document.createElement("select");s2.className="inp";s2.style.cssText="flex:1;background:#fff";for(var h=6;h<=22;h++){["00","30"].forEach(function(mm){var v=h+":"+mm;var o=document.createElement("option");o.value=v;o.textContent=v;if(f[key]===v)o.selected=true;s2.appendChild(o);});}s2.addEventListener("change",function(e){f[key]=e.target.value;});return s2;}
+    tr.appendChild(tsel("start"));tr.appendChild(sp({style:{fontWeight:"800",color:"#6B7280"}},"〜"));tr.appendChild(tsel("end"));box.appendChild(tr);
+    lbl("スキー場");
+    var rs=document.createElement("select");rs.className="inp";rs.style.cssText="margin-bottom:14px;background:#fff";
+    var o0=document.createElement("option");o0.value="";o0.textContent="選んでください";rs.appendChild(o0);
+    var mine=(S.myProfile&&S.myProfile.resorts)||[];
+    if(mine.length){var og0=document.createElement("optgroup");og0.label="よく滑るスキー場";mine.forEach(function(r){var o=document.createElement("option");o.value=r;o.textContent=r;og0.appendChild(o);});rs.appendChild(og0);}
+    AREAS.forEach(function(a){var og=document.createElement("optgroup");og.label=a.area;a.resorts.forEach(function(r){var o=document.createElement("option");o.value=r;o.textContent=r;og.appendChild(o);});rs.appendChild(og);});
+    rs.value=f.resort||"";rs.addEventListener("change",function(e){f.resort=e.target.value;});box.appendChild(rs);
+    lbl("料金");seg([["free","🤝 無料"],["paid","💴 有料"]],"pay");
+    if(f.pay==="paid"&&f.kind==="offer"){
+      var me=S.myProfile||{};var ok=me.ok&&isPaidUser({price:me.price,priceHour:me.priceHour,priceHalf:me.priceHalf,priceDay:me.priceDay,plans:me.plans});
+      var pn=d({style:{fontSize:"11px",lineHeight:"1.6",margin:"-8px 0 14px",color:ok?"#9CA3AF":"#B45309"}});
+      pn.textContent=ok?"料金は、マイページで設定している料金プランが使われます。":"有料で受けるには、本人確認の承認とマイページでの料金設定が必要です。";box.appendChild(pn);
+    }
+    lbl("ひとこと（任意）");
+    var ta=document.createElement("textarea");ta.className="inp";ta.rows=3;ta.maxLength=200;ta.placeholder=f.kind==="offer"?"例：ニセコ全山どこでもOK。グラトリ撮影得意です":"例：初心者2人です。ゆっくり滑ってくれる人お願いします";ta.style.cssText="width:100%;resize:none;margin-bottom:14px";ta.value=f.note||"";ta.addEventListener("input",function(e){f.note=e.target.value;});box.appendChild(ta);
+    var br=d({style:{display:"flex",gap:"10px"}});
+    br.appendChild(obtn("閉じる",function(){R({postModal:null});},"obtn-s"));
+    br.appendChild(obtn("投稿する",function(){
+      if(!f.date){alert("日付を選んでください");return;}
+      if(f.date<todayStr()){alert("過去の日付は選べません");return;}
+      function mins(x){var a=String(x).split(":");return (+a[0])*60+(+a[1]);}
+      if(mins(f.end)<=mins(f.start)){alert("終わりの時間は、始まりより後にしてください");return;}
+      if(!f.resort){alert("スキー場を選んでください");return;}
+      if(f.pay==="paid"&&f.kind==="offer"){var me=S.myProfile||{};if(!me.ok){alert("有料で受けるには、本人確認の承認が必要です。無料で投稿するか、先に本人確認を申請してください。");return;}}
+      if(S.postSending)return;S.postSending=true;
+      sb.from("ride_posts").insert({user_id:currentUser.id,kind:f.kind,ride_date:f.date,start_time:f.start,end_time:f.end,resort:f.resort,pay:f.pay,note:(f.note||"").trim()}).then(function(r){
+        S.postSending=false;
+        if(r.error){alert("投稿できませんでした: "+r.error.message);return;}
+        S.exTab="board";R({postModal:null});loadPosts();
+      }).catch(function(e){S.postSending=false;alert("通信エラー: "+(e&&e.message?e.message:e));});
+    },""));
+    box.appendChild(br);
+  });
+}
 function guestPrompt(){
   if(confirm("無料登録すると、メッセージ・予約・フォローができます。\n登録画面に進みますか？")){
     S.isGuest=false;S.myProfile=null;S.selUser=null;S.chatUser=null;S.bookUser=null;
@@ -584,17 +718,25 @@ function BookModal(u){
       [1,2,3].forEach(function(h){hrRow.appendChild(chip(h+"時間",h===hrs,function(){S.bkHours=h;render();}));});
       box.appendChild(hrRow);
     }
-    // 日付・開始時間
-    lbl("② 日付と開始時間（目安）");
-    var dtRow=d({style:{display:"flex",gap:"8px",marginBottom:"6px"}});
-    var dIn=document.createElement("input");dIn.type="date";dIn.className="inp";dIn.style.flex="1";
-    var td=new Date();dIn.min=td.getFullYear()+"-"+String(td.getMonth()+1).padStart(2,"0")+"-"+String(td.getDate()).padStart(2,"0");
-    dIn.value=S.bkDate||"";dIn.addEventListener("change",function(e){S.bkDate=e.target.value;render();});
-    var tSel=document.createElement("select");tSel.className="inp";tSel.style.cssText="flex:0 0 110px;background:#fff";
-    for(var th=8;th<=15;th++){var to=document.createElement("option");to.value=th+":00";to.textContent=th+":00〜";if(S.bkTime===th+":00")to.selected=true;tSel.appendChild(to);}
-    tSel.addEventListener("change",function(e){S.bkTime=e.target.value;});
-    dtRow.appendChild(dIn);dtRow.appendChild(tSel);box.appendChild(dtRow);
-    var dtNote=d({style:{fontSize:"11px",color:"#9CA3AF",marginBottom:"14px"}});dtNote.textContent="細かい集合時間・場所は、予約後にメッセージで決めましょう";box.appendChild(dtNote);
+    // 日時は「同行します」の空き枠から選ぶ
+    lbl("② 日時（空いている枠から選ぶ）");
+    var slots=openSlotsOf(u);
+    if(S.bkSlotId&&!slots.some(function(x){return x.id===S.bkSlotId;}))S.bkSlotId=null;
+    if(!S.bkSlotId&&slots.length===1)S.bkSlotId=slots[0].id;
+    var curSlot=null;slots.forEach(function(x){if(x.id===S.bkSlotId)curSlot=x;});
+    if(curSlot){S.bkDate=curSlot.ride_date;S.bkTime=hm5(curSlot.start_time);}else{S.bkDate="";}
+    if(!slots.length){
+      var ns=d({style:{background:"#FFFBEB",border:"1.5px solid #FCD34D",borderRadius:"14px",padding:"12px 14px",marginBottom:"14px",fontSize:"12.5px",color:"#92400E",lineHeight:"1.7"}});
+      ns.textContent=u.name+"さんは、まだ空き日程を出していません。希望の日時をメッセージで相談してみましょう。";
+      box.appendChild(ns);
+      var tb=document.createElement("button");tb.textContent="💬 メッセージで相談する";tb.style.cssText="width:100%;padding:11px;border-radius:12px;background:#fff;color:#FF6B2B;border:1.5px solid #FF6B2B;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;margin-bottom:14px";
+      tb.addEventListener("click",function(){S.bookUser=null;talkTo(u);});box.appendChild(tb);
+    }else{
+      var sr=d({style:{display:"flex",flexDirection:"column",gap:"8px",marginBottom:"8px"}});
+      slots.forEach(function(x){var on=x.id===S.bkSlotId;var c=document.createElement("button");c.style.cssText="text-align:left;padding:11px 14px;border-radius:14px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;border:2px solid "+(on?"#FF6B2B":"#E5E7EB")+";background:"+(on?"#FFF0E8":"#fff")+";color:"+(on?"#FF6B2B":"#1A1A2E");c.textContent=dateLbl(x.ride_date)+"　"+hm5(x.start_time)+"〜"+hm5(x.end_time)+(x.resort?"　⛰️ "+x.resort:"");c.addEventListener("click",function(){S.bkSlotId=x.id;render();});sr.appendChild(c);});
+      box.appendChild(sr);
+      var dtNote=d({style:{fontSize:"11px",color:"#9CA3AF",marginBottom:"14px"}});dtNote.textContent="細かい集合時間・場所は、予約後にメッセージで決めましょう";box.appendChild(dtNote);
+    }
     // ひとこと
     lbl("③ ひとこと（任意）");
     var nIn=document.createElement("textarea");nIn.className="inp";nIn.rows=2;nIn.placeholder="例：初心者2人です／カービングを撮ってほしいです";nIn.style.cssText="width:100%;margin-bottom:14px;resize:none";
@@ -692,14 +834,14 @@ function BookModal(u){
     var payLabels={card:"💳 カードで支払う",paypay:"🔴 PayPayで支払う",applepay:"🍎 Apple Payで支払う",googlepay:"🔵 Google Payで支払う"};
     var payLbl="📩 予約を申し込む（決済はデモ）";
     br.appendChild(obtn(payLbl,function(){
-      if(!S.bkDate){alert("日付を選んでください");return;}
+      if(!S.bkDate){alert(openSlotsOf(u).length?"空いている枠を選んでください":"空き日程が出ていないため予約できません。メッセージで相談してください");return;}
       if(u.uid&&typeof sb!=="undefined"&&sb&&currentUser){
         if(u.uid===currentUser.id){alert("自分には予約できません");return;}
         if(S.bkSending)return;S.bkSending=true;
         sb.from("reservations").insert({customer:currentUser.id,provider:u.uid,plan:plan.k,plan_label:plan.lbl,hours:hrs,price_total:total,service_date:S.bkDate,start_time:S.bkTime,note:S.bkNote||""}).select().then(function(r){
           S.bkSending=false;
           if(r.error){alert("予約を送信できませんでした: "+r.error.message);return;}
-          S.bkFor=null;loadReservations();
+          S.bkFor=null;S.bkSlotId=null;loadReservations();
           R({confirmed:{user:u,isRequest:true},bookUser:null,selUser:null});
         }).catch(function(e){S.bkSending=false;alert("通信エラー: "+(e&&e.message?e.message:e));});
         return;
@@ -1321,6 +1463,10 @@ function renderOnboard(){
 
 function renderExplore(){
   var wrap=d({class:"pg"});
+  var exT=d({style:{display:"flex",background:"#EEF0F3",borderRadius:"14px",padding:"4px",marginBottom:"14px"}});
+  [["people","👥 仲間を探す"],["board","📅 募集掲示板"]].forEach(function(o){var on=(S.exTab||"people")===o[0];var x=document.createElement("button");x.textContent=o[1];x.style.cssText="flex:1;padding:10px 6px;border-radius:11px;border:none;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;background:"+(on?"#fff":"transparent")+";color:"+(on?"#FF6B2B":"#6B7280")+";box-shadow:"+(on?"0 1px 4px rgba(0,0,0,.08)":"none");x.addEventListener("click",function(){if(o[0]==="board")loadPosts();R({exTab:o[0]});});exT.appendChild(x);});
+  wrap.appendChild(exT);
+  if(S.exTab==="board")return renderBoard(wrap);
   var ht=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"4px"}});ht.textContent="🔍 仲間を探す";wrap.appendChild(ht);
   var sub=d({style:{color:"#6B7280",fontSize:"13px",marginBottom:"12px"}});sub.textContent="エリア・種目で絞り込もう";wrap.appendChild(sub);
 
@@ -2128,6 +2274,7 @@ function loadUsersFromSupabase(){
       });
     }
     for(var k=real.length-1;k>=0;k--)USERS.unshift(real[k]);
+    loadPosts();
     loadLikesFromSupabase();loadFollowerCounts();loadReservations();
     loadFollowsFromSupabase();
     refreshMyVerification();
@@ -3693,6 +3840,7 @@ function _renderInner(){
     }
   }
   if(S.bookUser)app.appendChild(BookModal(S.bookUser));
+  if(S.postModal)app.appendChild(PostModal());
   if(S.confirmed)app.appendChild(ConfirmedModal(S.confirmed));
   if(S.addPost)app.appendChild(AddPostModal());
   if(S.postDetail)app.appendChild(PostDetailModal(S.postDetail));
