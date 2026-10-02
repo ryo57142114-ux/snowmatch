@@ -1465,7 +1465,7 @@ function renderChat(){
     var wrap=d({class:"pg"});var t=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"16px"}});t.textContent="💬 メッセージ";wrap.appendChild(t);
     var has=false;
     for(var ui=0;ui<USERS.length;ui++){
-      if(S.chatMsgs[String(USERS[ui].id)]||(USERS[ui].isReal&&S.mutual&&S.mutual.indexOf(USERS[ui].id)>=0)){has=true;
+      if(S.chatMsgs[String(USERS[ui].id)]||(USERS[ui].isReal&&canMessage(USERS[ui]))){has=true;
         (function(u){
           var msgs=S.chatMsgs[String(u.id)]||[];var last=msgs[msgs.length-1];
           var c=d({class:"card",style:{cursor:"pointer"},onClick:function(){R({chatUser:u});}});
@@ -2149,6 +2149,7 @@ function loadFollowsFromSupabase(){
   });
 }
 function toggleFollow(u){if(S.isGuest){guestPrompt();return;}
+  if(!sb||!currentUser){alert("フォローするにはログインが必要です。マイページの「ログインする」からログインしてください。");return;}
   if(!S.following)S.following=[];
   var idx=S.following.indexOf(u.id);var wasF=idx>=0;
   if(wasF)S.following.splice(idx,1);else S.following.push(u.id);
@@ -2214,6 +2215,13 @@ function pwToggleWrap(inp){
 
 // ===== チャット（Supabase: dm_messages） =====
 function hmOf(d){d=d?new Date(d):new Date();return d.getHours()+":"+String(d.getMinutes()).padStart(2,"0");}
+function canMessage(u){
+  if(!u)return false;
+  if(S.mutual&&S.mutual.indexOf(u.id)>=0)return true;          // マッチ
+  if(S.following&&S.following.indexOf(u.id)>=0)return true;    // 自分がフォロー
+  if(S.followers&&S.followers.indexOf(u.id)>=0)return true;    // 相手が自分をフォロー（返信できるように）
+  return false;
+}
 function sendMsg(text){if(S.isGuest){guestPrompt();return;}
   var u=S.chatUser;if(!u)return;
   var body=(text!==undefined?text:(S.chatIn||"")).trim();
@@ -2221,7 +2229,7 @@ function sendMsg(text){if(S.isGuest){guestPrompt();return;}
   var cid=String(u.id);if(!S.chatMsgs[cid])S.chatMsgs[cid]=[];
   if(u.isReal){
     if(!sb||!currentUser){alert("メッセージを送るにはログインが必要です");return;}
-    if(!S.mutual||S.mutual.indexOf(u.id)<0){alert("お互いにいいね（マッチ）した相手とだけメッセージできます");return;}
+    if(!canMessage(u)){alert("メッセージを送るには、相手をフォローしてください（お互いにいいねしてマッチした相手にも送れます）");return;}
     var tmp={f:"m",t:body,time:hmOf(),pending:true};
     S.chatMsgs[cid].push(tmp);S.chatIn="";render();
     sb.from("dm_messages").insert({from_user:currentUser.id,to_user:u.uid,body:body}).select().single().then(function(r){
@@ -2425,7 +2433,7 @@ function renderKyc(){
       S.myProfile.nick=S.reg.nick;S.myProfile.name=S.reg.real;S.myProfile.age=S.reg.age;
       S.myProfile.email=S.reg.email;S.myProfile.act=S.reg.act;S.myProfile.lv=S.reg.lv;
       S.myProfile.resorts=S.reg.resorts||[];S.myProfile.bio=S.reg.bio||"";
-      S.myProfile.icon="🏂";S.myProfile.ok=false;S.myProfile.kycStatus="pending";
+      S.myProfile.icon="🏂";S.myProfile.ok=false;S.myProfile.kycStatus=null;
       saveD();R({pg:"main"});
     });
     wrap.appendChild(skip);
