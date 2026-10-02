@@ -319,6 +319,55 @@ function CostIncludedBox(u,compact){
   function fit(){var w=document.getElementById("chatwin");if(!w)return;w.style.top=vv.offsetTop+"px";w.style.height=vv.height+"px";var m=document.getElementById("chatmsgs");if(m)m.scrollTop=m.scrollHeight;}
   vv.addEventListener("resize",fit);vv.addEventListener("scroll",fit);
 })();
+// ===== チャットの写真 =====
+if(!window._chatImgUrl)window._chatImgUrl={};
+function chatImgUrl(path,cb){
+  var c=window._chatImgUrl[path];
+  if(c&&c.exp>Date.now())return c.url;
+  if(c&&c.loading)return null;
+  window._chatImgUrl[path]={loading:true};
+  sb.storage.from("chat").createSignedUrl(path,3600).then(function(r){
+    if(r.error||!r.data){window._chatImgUrl[path]={url:"",exp:Date.now()+60000};return;}
+    window._chatImgUrl[path]={url:r.data.signedUrl,exp:Date.now()+3300*1000};
+    if(cb)cb();
+  });
+  return null;
+}
+function shrinkImage(file,maxSide,cb){
+  var fr=new FileReader();
+  fr.onload=function(ev){
+    var im=new Image();
+    im.onload=function(){
+      var w=im.width,h=im.height,sc=Math.min(1,maxSide/Math.max(w,h));
+      var cv=document.createElement("canvas");cv.width=Math.round(w*sc);cv.height=Math.round(h*sc);
+      cv.getContext("2d").drawImage(im,0,0,cv.width,cv.height);
+      cv.toBlob(function(bl){cb(bl,cv.toDataURL("image/jpeg",0.6));},"image/jpeg",0.82);
+    };
+    im.onerror=function(){alert("この画像は読み込めませんでした");};
+    im.src=ev.target.result;
+  };
+  fr.readAsDataURL(file);
+}
+function sendPhoto(file){
+  if(S.isGuest){guestPrompt();return;}
+  var u=S.chatUser;if(!u||!file)return;
+  if(!u.isReal){alert("このユーザーには写真を送れません");return;}
+  if(!sb||!currentUser){alert("写真を送るにはログインが必要です");return;}
+  if(!canMessage(u)){alert("メッセージを送るには、相手をフォローしてください（お互いにいいねしてマッチした相手にも送れます）");return;}
+  var cid=String(u.id);if(!S.chatMsgs[cid])S.chatMsgs[cid]=[];
+  shrinkImage(file,1280,function(blob,preview){
+    var path=currentUser.id+"/"+Date.now()+"_"+u.uid+".jpg";
+    var tmp={f:"m",t:"📷 写真",img:path,preview:preview,time:hmOf(),pending:true};
+    S.chatMsgs[cid].push(tmp);render();
+    sb.storage.from("chat").upload(path,blob,{contentType:"image/jpeg"}).then(function(ur){
+      if(ur.error)throw new Error(ur.error.message);
+      return sb.from("dm_messages").insert({from_user:currentUser.id,to_user:u.uid,body:"📷 写真",image_path:path}).select().single();
+    }).then(function(r){
+      if(r&&r.error)throw new Error(r.error.message);
+      tmp.pending=false;if(r&&r.data)tmp.id=r.data.id;render();
+    }).catch(function(e){tmp.t="📷 写真（送信失敗）";tmp.failed=true;render();alert("写真を送れませんでした: "+(e&&e.message?e.message:e));});
+  });
+}
 function guestPrompt(){
   if(confirm("無料登録すると、メッセージ・予約・フォローができます。\n登録画面に進みますか？")){
     S.isGuest=false;S.myProfile=null;S.selUser=null;S.chatUser=null;S.bookUser=null;
@@ -1516,7 +1565,17 @@ function renderChat(){
     var mBox=d({style:{maxWidth:"72%"}});
     if(!isMe){var mName=d({style:{fontSize:"11px",color:"#9CA3AF",marginBottom:"2px",fontWeight:"700"}});mName.textContent=S.chatUser.name;mBox.appendChild(mName);}
     var mBub=d({style:{background:isMe?"linear-gradient(135deg,#FF6B2B,#FF8C55)":"#fff",color:isMe?"#fff":"#1A1A2E",padding:"10px 16px",borderRadius:isMe?"18px 18px 4px 18px":"18px 18px 18px 4px",fontSize:"14px",lineHeight:"1.6",boxShadow:"0 2px 8px rgba(0,0,0,.08)"}});
-    mBub.textContent=m.t;
+    if(m.img){
+      mBub.style.padding="6px";
+      var src=m.preview||(sb?chatImgUrl(m.img,function(){render();}):null);
+      if(src){
+        var im=document.createElement("img");im.src=src;im.alt="写真";
+        im.style.cssText="display:block;max-width:220px;max-height:280px;width:100%;border-radius:14px;object-fit:cover;cursor:pointer;background:#eee";
+        im.setAttribute("data-p",m.img);im.addEventListener("click",function(){var pth=this.getAttribute("data-p");var full=(window._chatImgUrl[pth]&&window._chatImgUrl[pth].url)||this.src;var w=window.open(full,"_blank");if(!w)location.href=full;});
+        mBub.appendChild(im);
+      }else{var ld=d({style:{width:"180px",height:"140px",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"12px",opacity:".7"}});ld.textContent=m.failed?"送信できませんでした":"📷 読み込み中…";mBub.appendChild(ld);}
+      if(m.pending){var pd=d({style:{fontSize:"10px",opacity:".8",padding:"2px 6px 0"}});pd.textContent="送信中…";mBub.appendChild(pd);}
+    }else mBub.textContent=m.t;
     var mTime=d({style:{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:"4px",marginTop:"3px"}});
     var mt=d({style:{fontSize:"10px",opacity:".6"}});mt.textContent=m.time;
     if(isMe&&(S.chatUser.isReal?!!m.readAt:true)){var rd=d({style:{fontSize:"10px",color:"rgba(255,255,255,0.7)"}});rd.textContent="既読";mTime.appendChild(rd);}
@@ -1534,13 +1593,18 @@ function renderChat(){
     quickBar.appendChild(qbtn);
   });
   cw.appendChild(quickBar);
-  var ir=d({style:{padding:"10px 16px calc(12px + env(safe-area-inset-bottom,0px))",background:"#fff",display:"flex",gap:"10px",borderTop:"none",flexShrink:"0"}});
+  var ir=d({style:{padding:"10px 16px calc(12px + env(safe-area-inset-bottom,0px))",background:"#fff",display:"flex",alignItems:"center",gap:"8px",borderTop:"none",flexShrink:"0"}});
   var ci2=document.createElement("input");ci2.type="text";ci2.className="inp";ci2.style.cssText="flex:1;border-radius:20px";
   ci2.id="chatinput";ci2.style.fontSize="16px";ci2.placeholder="メッセージを入力...";ci2.value=S.chatIn||"";
   ci2.addEventListener("input",function(ev){S.chatIn=ev.target.value;});
   ci2.addEventListener("keydown",function(ev){if(ev.key==="Enter"&&!ev.isComposing)sendMsg();});
   var sb=obtn("送信",function(){sendMsg();},"");sb.style.padding="10px 18px";
-  ir.appendChild(ci2);ir.appendChild(sb);cw.appendChild(ir);
+  var phIn=document.createElement("input");phIn.type="file";phIn.accept="image/*";phIn.style.display="none";
+  phIn.addEventListener("change",function(e){var f=e.target.files&&e.target.files[0];e.target.value="";if(f)sendPhoto(f);});
+  var phB=document.createElement("button");phB.textContent="📷";phB.title="写真を送る";
+  phB.style.cssText="flex-shrink:0;width:44px;height:44px;border-radius:50%;border:1.5px solid #E5E7EB;background:#fff;font-size:20px;cursor:pointer;padding:0";
+  phB.addEventListener("click",function(){phIn.click();});
+  ir.appendChild(phIn);ir.appendChild(phB);ir.appendChild(ci2);ir.appendChild(sb);cw.appendChild(ir);
   setTimeout(function(){ma.scrollTop=ma.scrollHeight;},0);
   return cw;
 }
@@ -2250,7 +2314,7 @@ function sendMsg(text){if(S.isGuest){guestPrompt();return;}
 }
 function loadMessagesFromSupabase(){
   if(!sb||!currentUser)return;
-  sb.from("dm_messages").select("id,from_user,to_user,body,created_at,read_at").or("from_user.eq."+currentUser.id+",to_user.eq."+currentUser.id).order("created_at",{ascending:true}).limit(1000).then(function(r){
+  sb.from("dm_messages").select("id,from_user,to_user,body,image_path,created_at,read_at").or("from_user.eq."+currentUser.id+",to_user.eq."+currentUser.id).order("created_at",{ascending:true}).limit(1000).then(function(r){
     if(r.error){console.error("messages load error",r.error);return;}
     for(var k in S.chatMsgs){if(k.indexOf("sb_")===0)delete S.chatMsgs[k];}
     var rows=r.data||[];
@@ -2264,8 +2328,8 @@ function addDmRow(row,live){
   var cid="sb_"+other;if(!S.chatMsgs[cid])S.chatMsgs[cid]=[];
   var list=S.chatMsgs[cid];
   for(var j=0;j<list.length;j++){if(list[j].id===row.id){if(row.read_at)list[j].readAt=row.read_at;return;}}
-  if(live&&mine){for(var j2=list.length-1;j2>=0;j2--){if(list[j2].pending&&list[j2].t===row.body){list[j2].pending=false;list[j2].id=row.id;return;}}}
-  list.push({id:row.id,f:mine?"m":"t",t:row.body,time:hmOf(row.created_at),readAt:row.read_at||null});
+  if(live&&mine){for(var j2=list.length-1;j2>=0;j2--){if(list[j2].pending&&list[j2].t===row.body&&(list[j2].img||null)===(row.image_path||null)){list[j2].pending=false;list[j2].id=row.id;return;}}}
+  list.push({id:row.id,f:mine?"m":"t",t:row.body,img:row.image_path||null,time:hmOf(row.created_at),readAt:row.read_at||null});
   if(live&&!mine){
     var u=findRealUser(other);var nm=u?u.name:"だれか";
     if(!S.notifs)S.notifs=[];
