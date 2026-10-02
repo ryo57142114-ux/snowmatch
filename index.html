@@ -135,7 +135,7 @@ var TERMS=[{id:"a",icon:"🩹",title:"怪我・事故は自己責任",body:"ス�
 
 var S={pg:"splash",blockedUsers:[],reportedUsers:[],showContact:false,showDeleteAccount:false,unreadChat:0,unreadBook:0,showWelcome:false,showNotif:false,following:[],followers:[],showFollowList:false,followListType:"following",notifs:[],rooms:{},checkins:[],reports:[],marketTab:"room",rankCat:"総合",openQA:null,openQAItem:null,showCheckin:false,showReport:false,openRoom:null,roomInput:"",splashIdx:0,onStep:0,kycStep:0,tab:"explore",selArea:null,selResort:null,openArea:null,openAreaReg:null,selAct:null,insOnly:false,camOnly:false,selCert:null,selUser:null,chatUser:null,chatMsgs:{},chatIn:"",liked:[],matches:[],bookUser:null,confirmed:null,postLikes:{},addPost:false,postDetail:null,reviewTarget:null,reviewRating:5,reviewComment:"",selPayment:"card",npType:"video",npCap:"",npImgSrc:null,npVideoSrc:null,npUrlInput:"",termChecks:{},myProfile:null,reg:{role:"user",nick:"",real:"",age:"",email:"",pw:"",act:"スノーボード",lv:"中級",resorts:[],bio:"",isIns:false,isCam:false,price:5000,unit:"1時間",camPrice:3000,camUnit:"30分",camMenu:[],icon:"🏂"}};
 
-function saveD(){try{localStorage.setItem("sm2",JSON.stringify({myProfile:S.myProfile,reg:S.reg,liked:S.liked,postLikes:S.postLikes,matches:S.matches,chatMsgs:S.chatMsgs}));}catch(e){}syncProfileToSupabase();}
+function saveD(){if(S.isGuest)return;try{localStorage.setItem("sm2",JSON.stringify({myProfile:S.myProfile,reg:S.reg,liked:S.liked,postLikes:S.postLikes,matches:S.matches,chatMsgs:S.chatMsgs}));}catch(e){}syncProfileToSupabase();}
 // プロフィール変更をSupabaseへ同期（1秒まとめて送信）
 var _syncTimer=null;
 var EXTRA_KEYS=["board","styles","stanceW2","frontAngle","backAngle","bindingName","camGear","costBreakdown","certText"];
@@ -954,7 +954,17 @@ function renderSplash(){
   cont.appendChild(badges);
   var sb=document.createElement("button");sb.textContent="はじめる（無料登録）";sb.style.cssText="width:100%;padding:17px 0;border-radius:18px;background:linear-gradient(135deg,#FF6B2B,#FF8C55);color:#fff;font-weight:900;font-size:17px;box-shadow:0 8px 32px rgba(255,107,43,.55);margin-bottom:12px;font-family:inherit;border:none;cursor:pointer;display:block";sb.addEventListener("click",function(){R({pg:"onboard"});});cont.appendChild(sb);
   var gb=document.createElement("button");gb.textContent="ゲストとして見る";gb.style.cssText="width:100%;padding:15px 0;border-radius:18px;background:rgba(255,255,255,.15);color:#fff;font-weight:800;font-size:15px;border:1.5px solid rgba(255,255,255,.4);font-family:inherit;cursor:pointer;display:block;margin-bottom:10px";
-  gb.addEventListener("click",function(){R({pg:"main",myProfile:{name:"ゲスト",nick:"ゲスト",age:25,act:"スノーボード",lv:"中級",resorts:[],bio:"ゲストです",isIns:false,price:5000,unit:"1時間",icon:"🏂",posts:[],ok:false,kycStatus:"approved"}});loadUsersFromSupabase();loadFollowerCounts();});cont.appendChild(gb);
+  gb.addEventListener("click",function(){
+    // ゲストで入るときは、端末に残っているログイン状態と個人データを外してから入る
+    function enterGuest(){
+      currentUser=null;
+      if(_rtChannel){try{sb.removeChannel(_rtChannel);}catch(e){}_rtChannel=null;}
+      S.resv=null;S.following=[];S.followers=[];S.notifs=[];S.chatMsgs={};S.liked=[];S.matches=[];
+      R({pg:"main",isGuest:true,myProfile:{name:"ゲスト",nick:"ゲスト",age:25,act:"スノーボード",lv:"中級",resorts:[],bio:"ゲストです",isIns:false,price:5000,unit:"1時間",icon:"🏂",posts:[],ok:false,kycStatus:"none"}});
+      loadUsersFromSupabase();loadFollowerCounts();
+    }
+    if(sb&&currentUser){sb.auth.signOut().then(enterGuest,enterGuest);}else{enterGuest();}
+  });cont.appendChild(gb);
 
   // メールログインボタン（Supabase）
   var emailLoginBtn=document.createElement("button");
@@ -1740,7 +1750,7 @@ function LoginModal(){
           loginBtn.disabled=false;loginBtn.textContent="ログイン";
           return;
         }
-        currentUser=res.data.user;
+        currentUser=res.data.user;S.isGuest=false;
         loadProfileFromSupabase();
       }).catch(function(e){
         errMsg.textContent="接続エラーが発生しました";errMsg.style.display="block";
@@ -2200,7 +2210,7 @@ function signUpToSupabase(){
       if(res.error.message && res.error.message.indexOf("already")>=0){
         sb.auth.signInWithPassword({email:email,password:pw}).then(function(res2){
           if(res2.error){alert("登録エラー: "+res2.error.message);finishLocalRegistration();return;}
-          currentUser=res2.data.user;
+          currentUser=res2.data.user;S.isGuest=false;
           saveProfileToSupabase();
         });
         return;
@@ -2209,7 +2219,7 @@ function signUpToSupabase(){
       finishLocalRegistration();
       return;
     }
-    currentUser=res.data.user;
+    currentUser=res.data.user;S.isGuest=false;
     saveProfileToSupabase();
   }).catch(function(e){
     console.error(e);
@@ -3421,7 +3431,7 @@ function _renderInner(){
 }
 
 try{window._hs=!!localStorage.getItem("sm2");}catch(e){window._hs=false;}
-if(sb){sb.auth.getSession().then(function(r){if(r&&r.data&&r.data.session){currentUser=r.data.session.user;loadUsersFromSupabase();}}).catch(function(){});}
+if(sb){sb.auth.getSession().then(function(r){if(r&&r.data&&r.data.session){currentUser=r.data.session.user;S.isGuest=false;loadUsersFromSupabase();}}).catch(function(){});}
 render();
 </script>
 <script>
