@@ -1921,7 +1921,7 @@ function EditProfileModal(){
 // Supabaseに登録された実ユーザーを「探す」に表示する
 function loadUsersFromSupabase(){
   if(!sb)return;
-  var uq=sb.from("profiles").select("*");
+  var uq=sb.from("profiles_public").select("*"); // 公開用ビュー（メール・本名・生年月日などは含まない）
   if(currentUser)uq=uq.neq("id",currentUser.id); // ログイン中だけ自分を除外（ゲストは全員表示）
   uq.limit(100).then(function(res){
     if(res.error){console.error("Users load error:",res.error);return;}
