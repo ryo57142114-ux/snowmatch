@@ -131,7 +131,7 @@ var QA_DATA=[
   ]}
 ];
 
-var TERMS=[{id:"a",icon:"🩹",title:"怪我・事故は自己責任",body:"スキー中の怪我や事故についてSnowMatchは責任を負いません。"},{id:"b",icon:"🛡️",title:"スポーツ保険への加入を推奨",body:"万が一に備えスポーツ傷害保険への加入を強くお勧めします。"},{id:"c",icon:"🚫",title:"勧誘・マルチ行為の禁止",body:"宗教・投資等の勧誘行為は厳禁。違反次第アカウント停止します。"},{id:"d",icon:"🤝",title:"ハラスメント行為の禁止",body:"性的ハラスメント・ストーキング・差別的言動を一切禁じます。"},{id:"e",icon:"✅",title:"虚偽情報の登録禁止",body:"資格・経歴の偽りなど虚偽記載は禁止。即アカウント停止します。"},{id:"f",icon:"🪪",title:"本人確認への協力義務",body:"全ユーザーに本人確認書類の提出を義務付けます。"},{id:"g",icon:"💳",title:"Stripe決済",body:"決済・資金管理はStripeが行います。SnowMatchはお金を預かりません。完了確認後にStripeが自動で振込します。"},{id:"h",icon:"🔒",title:"個人情報保護",body:"本名は本人確認のみ使用し他のユーザーには公開されません。"},{id:"i",icon:"🎿",title:"スキー場ルール・無許可レッスン禁止",body:"スキー場で許可なくレッスン行為を行うことは禁止されています。SnowMatchは『一緒に滑る仲間を見つける』コミュニティです。許可なき場所での指導・レッスン行為は行わないでください。SNSの動画撮影・滑りを一緒に見る・同行してもらう・仲間になるという目的の範囲でご利用ください。【重要】活動は必ずコース内で行ってください。バックカントリー・コース外への立入は遭難・雪崩・転落などの重大事故につながる危険があります。コース外での活動は当社では一切推奨せず、万が一の事故についても当社は責任を負いません。"}];
+var TERMS=[{id:"a",icon:"🩹",title:"怪我・事故は自己責任",body:"スキー・スノーボードはけがの危険を伴うスポーツです。参加は自己責任です。同行・撮影中のけがや事故について、SnowMatchは一切の責任を負いません。"},{id:"b",icon:"🛡️",title:"スポーツ保険への加入を推奨",body:"万が一に備えスポーツ傷害保険への加入を強くお勧めします。"},{id:"c",icon:"🚫",title:"勧誘・マルチ行為の禁止",body:"宗教・投資等の勧誘行為は厳禁。違反次第アカウント停止します。"},{id:"d",icon:"🤝",title:"ハラスメント行為の禁止",body:"性的ハラスメント・ストーキング・差別的言動を一切禁じます。"},{id:"e",icon:"✅",title:"虚偽情報の登録禁止",body:"資格・経歴の偽りなど虚偽記載は禁止。即アカウント停止します。"},{id:"f",icon:"🪪",title:"本人確認",body:"同行料金を受け取る方は本人確認（本名・生年月日・身分証）が必要です。提出内容は他のユーザーに公開されません。"},{id:"g",icon:"💳",title:"Stripe決済",body:"決済・資金管理はStripeが行います。SnowMatchはお金を預かりません。完了確認後にStripeが自動で振込します。"},{id:"h",icon:"🔒",title:"個人情報保護",body:"本名は本人確認のみ使用し他のユーザーには公開されません。"},{id:"i",icon:"🎿",title:"スキー場ルール・無許可レッスン禁止",body:"スキー場で許可なくレッスン行為を行うことは禁止されています。SnowMatchは『一緒に滑る仲間を見つける』コミュニティです。許可なき場所での指導・レッスン行為は行わないでください。SNSの動画撮影・滑りを一緒に見る・同行してもらう・仲間になるという目的の範囲でご利用ください。【重要】活動は必ずコース内で行ってください。バックカントリー・コース外への立入は遭難・雪崩・転落などの重大事故につながる危険があります。コース外での活動は当社では一切推奨せず、万が一の事故についても当社は責任を負いません。"}];
 
 var S={pg:"splash",blockedUsers:[],reportedUsers:[],showContact:false,showDeleteAccount:false,unreadChat:0,unreadBook:0,showWelcome:false,showNotif:false,following:[],followers:[],showFollowList:false,followListType:"following",notifs:[],rooms:{},checkins:[],reports:[],marketTab:"room",rankCat:"総合",openQA:null,openQAItem:null,showCheckin:false,showReport:false,openRoom:null,roomInput:"",splashIdx:0,onStep:0,kycStep:0,tab:"explore",selArea:null,selResort:null,openArea:null,openAreaReg:null,selAct:null,insOnly:false,camOnly:false,selCert:null,selUser:null,chatUser:null,chatMsgs:{},chatIn:"",liked:[],matches:[],bookUser:null,confirmed:null,postLikes:{},addPost:false,postDetail:null,reviewTarget:null,reviewRating:5,reviewComment:"",selPayment:"card",npType:"video",npCap:"",npImgSrc:null,npVideoSrc:null,npUrlInput:"",termChecks:{},myProfile:null,reg:{role:"user",nick:"",real:"",age:"",email:"",pw:"",act:"スノーボード",lv:"中級",resorts:[],bio:"",isIns:false,isCam:false,price:5000,unit:"1時間",camPrice:3000,camUnit:"30分",camMenu:[],icon:"🏂"}};
 
@@ -221,6 +221,28 @@ function cleanDemoData(){
 function clearD(){try{localStorage.removeItem("sm2");}catch(e){}}
 
 // ゲストはメッセージ・予約・フォローできない → 登録を案内
+// 利用規約（要点）画面：全文は terms.html / privacy.html
+function renderTerms(){
+  var wrap=d({class:"pg"});
+  var back=document.createElement("button");back.textContent="← 戻る";
+  back.style.cssText="background:none;border:none;color:#FF6B2B;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;padding:0;margin-bottom:12px";
+  back.addEventListener("click",function(){R({pg:S.myProfile?"main":"onboard"});});
+  wrap.appendChild(back);
+  var t=d({style:{fontWeight:"900",fontSize:"22px",color:"#1A1A2E",marginBottom:"14px"}});t.textContent="利用規約の要点";wrap.appendChild(t);
+  for(var i=0;i<TERMS.length;i++){
+    var c=d({style:{background:"#F9FAFB",borderRadius:"14px",padding:"12px 14px",marginBottom:"10px"}});
+    var h=d({style:{fontWeight:"800",fontSize:"14px",color:"#1A1A2E",marginBottom:"4px"}});h.textContent=TERMS[i].icon+" "+TERMS[i].title;
+    var b=d({style:{fontSize:"13px",color:"#4B5563",lineHeight:"1.7"}});b.textContent=TERMS[i].body;
+    c.appendChild(h);c.appendChild(b);wrap.appendChild(c);
+  }
+  var links=[["利用規約（全文）を読む","/terms.html"],["プライバシーポリシーを読む","/privacy.html"]];
+  for(var j=0;j<links.length;j++){
+    var a=document.createElement("a");a.href=links[j][1];a.target="_blank";a.rel="noopener";a.textContent=links[j][0];
+    a.style.cssText="display:block;text-align:center;padding:13px 0;margin-top:10px;border-radius:14px;border:1.5px solid #FF6B2B;color:#FF6B2B;font-weight:800;font-size:14px;text-decoration:none";
+    wrap.appendChild(a);
+  }
+  return wrap;
+}
 function guestPrompt(){
   if(confirm("無料登録すると、メッセージ・予約・フォローができます。\n登録画面に進みますか？")){
     S.isGuest=false;S.myProfile=null;S.selUser=null;S.chatUser=null;S.bookUser=null;
