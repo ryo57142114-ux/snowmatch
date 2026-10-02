@@ -2600,20 +2600,44 @@ function renderProfile(){
   bioCard.appendChild(bioSaveBtn);
   body.appendChild(bioCard);
 
-  // ── 活動スキー場タグ ──
-  if(S.myProfile && S.myProfile.resorts && S.myProfile.resorts.length) {
-    var rsCard = document.createElement("div");
-    rsCard.className = "card"; rsCard.style.marginBottom = "12px";
-    var rsTitle = document.createElement("div");
-    rsTitle.style.cssText = "font-weight:800;color:#1A1A2E;font-size:14px;margin-bottom:8px";
-    rsTitle.textContent = "🗻 活動スキー場";
-    rsCard.appendChild(rsTitle);
-    for(var rsi=0; rsi<S.myProfile.resorts.length; rsi++) {
-      var tag = document.createElement("span");
-      tag.className = "tag";
-      tag.textContent = "⛰️ " + S.myProfile.resorts[rsi];
-      rsCard.appendChild(tag);
-    }
+  // ── 活動エリア・スキー場（編集できる） ──
+  if(S.myProfile){
+    if(!S.myProfile.resorts)S.myProfile.resorts=[];
+    var myRs=S.myProfile.resorts;
+    var rsCard=document.createElement("div");rsCard.className="card";rsCard.style.marginBottom="12px";
+    var rsTitle=document.createElement("div");rsTitle.style.cssText="font-weight:800;color:#1A1A2E;font-size:14px;margin-bottom:4px";rsTitle.textContent="🗻 活動エリア・スキー場";rsCard.appendChild(rsTitle);
+    var rsSub=document.createElement("div");rsSub.style.cssText="font-size:11px;color:#9CA3AF;margin-bottom:10px";rsSub.textContent="よく滑るスキー場を選ぶと、そのエリアで探している人に見つけてもらいやすくなります（複数可）";rsCard.appendChild(rsSub);
+    var selRow=document.createElement("div");selRow.style.cssText="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px";
+    if(!myRs.length){var none=document.createElement("div");none.style.cssText="font-size:12px;color:#9CA3AF";none.textContent="まだ選ばれていません。下のエリアから選んでください。";selRow.appendChild(none);}
+    myRs.forEach(function(r){
+      var t=document.createElement("button");t.textContent="⛰️ "+r+"  ×";
+      t.style.cssText="background:#E0F2FE;color:#0369A1;border:none;border-radius:20px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit";
+      t.addEventListener("click",function(){var k=myRs.indexOf(r);if(k>=0)myRs.splice(k,1);saveD();render();});
+      selRow.appendChild(t);
+    });
+    rsCard.appendChild(selRow);
+    AREAS.forEach(function(area){
+      var cnt=area.resorts.filter(function(r){return myRs.indexOf(r)>=0;}).length;
+      var open=S.rsOpenArea===area.area;
+      var ab=document.createElement("button");
+      ab.textContent=(open?"▾ ":"▸ ")+area.area+(cnt?"（"+cnt+"）":"");
+      ab.style.cssText="display:block;width:100%;text-align:left;background:"+(open?"#FFF0E8":"#F9FAFB")+";border:1.5px solid "+(open?"#FF6B2B":"#EEF0F3")+";border-radius:12px;padding:10px 12px;margin-bottom:6px;font-size:13px;font-weight:800;color:#1A1A2E;cursor:pointer;font-family:inherit";
+      ab.addEventListener("click",function(){S.rsOpenArea=open?null:area.area;render();});
+      rsCard.appendChild(ab);
+      if(open){
+        var cr=document.createElement("div");cr.style.cssText="display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px";
+        area.resorts.forEach(function(r){
+          var on=myRs.indexOf(r)>=0;
+          var c=document.createElement("button");c.className="chip"+(on?" on":"");c.style.cssText="font-size:12px;padding:6px 10px";c.textContent=r;
+          c.addEventListener("click",function(){var k=myRs.indexOf(r);if(k>=0)myRs.splice(k,1);else myRs.push(r);saveD();render();});
+          cr.appendChild(c);
+        });
+        rsCard.appendChild(cr);
+      }
+    });
+    var rsSave=document.createElement("button");rsSave.className="obtn obtn-full";rsSave.style.marginTop="8px";rsSave.textContent="💾 保存する";
+    wireSaveBtn(rsSave,"💾 保存する");
+    rsCard.appendChild(rsSave);
     body.appendChild(rsCard);
   }
 
