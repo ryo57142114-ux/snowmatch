@@ -294,6 +294,9 @@ function PayoutCard(){
   return c;
 }
 var GENDERS=["回答しない","男性","女性","その他"];
+// 有料の同行をしている人か（料金プランが1つでもあれば有料）
+function isPaidUser(u){return !!u&&((parseInt(u.price)||0)>0||planList(u).length>0);}
+function minPlanPrice(u){var a=planList(u);if(!a.length)return parseInt(u.price)||0;var m=a[0].p;for(var i=1;i<a.length;i++)if(a[i].p<m)m=a[i].p;return m;}
 var COST_ITEMS=["🤝 同行謝礼","🚗 交通費","🍜 食事代","🎫 リフト券代","🏨 宿泊費","📷 撮影機材費"];
 // 料金に「含まれるもの／各自負担」をわかりやすく表示する
 function CostIncludedBox(u,compact){
@@ -1327,6 +1330,20 @@ function renderExplore(){
   if(rankData2.length>3)rankSec.appendChild(rankScroll);
   wrap.appendChild(rankSec);
 
+  // 無料の仲間探し／有料の同行 の切り替え
+  var pm=d({style:{display:"flex",gap:"8px",marginBottom:"8px"}});
+  [[null,"すべて"],["free","🤝 無料で一緒に滑る"],["paid","💴 有料の同行・撮影"]].forEach(function(o){
+    var on=(S.payMode||null)===o[0];
+    var x=document.createElement("button");x.textContent=o[1];
+    x.style.cssText="flex:"+(o[0]?"1":"0 0 auto")+";padding:10px 12px;border-radius:14px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;white-space:nowrap;border:1.5px solid "+(on?(o[0]==="free"?"#22C55E":"#FF6B2B"):"#E5E7EB")+";background:"+(on?(o[0]==="free"?"#F0FDF4":"#FFF0E8"):"#fff")+";color:"+(on?(o[0]==="free"?"#15803D":"#FF6B2B"):"#4B5563");
+    x.addEventListener("click",function(){R({payMode:o[0]});});
+    pm.appendChild(x);
+  });
+  wrap.appendChild(pm);
+  var pmHint=d({style:{fontSize:"11px",color:"#9CA3AF",margin:"0 2px 12px",lineHeight:"1.6"}});
+  pmHint.textContent=S.payMode==="free"?"お金のやり取りなしで、一緒に滑る仲間を探せます。気になる人にはメッセージを送ってみよう。":(S.payMode==="paid"?"料金を払って、同行や撮影をお願いできる人です。料金は全部込みの金額で表示されます。":"「無料で一緒に滑る」は友達探し、「有料の同行・撮影」はお願いして来てもらう人です。");
+  wrap.appendChild(pmHint);
+
   // フィルター
   var at=d({style:{display:"flex",gap:"8px",overflowX:"auto",paddingBottom:"4px",marginBottom:"14px"}});
   acr=at;
@@ -1393,6 +1410,8 @@ function renderExplore(){
       var pAc=!S.selAct||u.act===S.selAct||u.act==="両方"||(u.acts&&u.acts.indexOf(S.selAct)>=0);
       if(S.blockedUsers&&S.blockedUsers.indexOf(u.id)>=0)return;
       if(S.camOnly&&!u.isCam)return;
+      if(S.payMode==="free"&&isPaidUser(u))return;
+      if(S.payMode==="paid"&&!isPaidUser(u))return;
       if(!pAc)return; // エリア(pA)では絞り込まない
       var card=d({class:"card",style:{cursor:"pointer",marginBottom:"12px"},onClick:function(){R({selUser:u});}});
       var row=d({style:{display:"flex",gap:"12px"}});
@@ -1407,6 +1426,8 @@ function renderExplore(){
       if(u.ok)nl.appendChild(sp({style:{background:"rgba(46,204,113,.15)",color:"#27AE60",borderRadius:"20px",padding:"2px 8px",fontSize:"11px",fontWeight:"700"}},"🪪"));
       inf.appendChild(nl);
       var bd=d({style:{marginBottom:"4px"}});
+      if(isPaidUser(u)){var mp=minPlanPrice(u);bd.appendChild(sp({style:{background:"#FFF0E8",color:"#FF6B2B",display:"inline-block",padding:"3px 10px",borderRadius:"20px",fontSize:"11px",fontWeight:"800",marginRight:"6px"}},"💴 有料の同行"+(u.ok&&mp?" ¥"+mp.toLocaleString()+"〜":"")));}
+      else{bd.appendChild(sp({style:{background:"#F0FDF4",color:"#15803D",display:"inline-block",padding:"3px 10px",borderRadius:"20px",fontSize:"11px",fontWeight:"800",marginRight:"6px"}},"🤝 無料で仲間募集"));}
       if(u.isCam){
         var cb2=sp({style:{background:"#E8F5E9",color:"#2E7D32",display:"inline-block",padding:"3px 10px",borderRadius:"20px",fontSize:"11px",fontWeight:"700",marginRight:"6px"}},"🎥 追い撮り");bd.appendChild(cb2);
         if(u.gear&&u.gear.length){
@@ -2327,6 +2348,14 @@ function signUpToSupabase(){
       finishLocalRegistration();
       return;
     }
+    if(!res.data.session){
+      // メール確認が必要：ログインはまだ完了していないので、確認後にログインしてもらう
+      currentUser=null;
+      try{var raw0=localStorage.getItem("sm2");var dt0=raw0?JSON.parse(raw0):{};dt0.reg=S.reg;localStorage.setItem("sm2",JSON.stringify(dt0));}catch(e){}
+      alert("確認メールを送りました📧\n\n"+email+" に届いたメールの「Confirm email address」を押してから、このあと開くログイン画面で、登録したメールアドレスとパスワードでログインしてください。\n\n※メールが見つからないときは迷惑メールフォルダも確認してください。");
+      S.myProfile=null;R({pg:"splash",showLoginModal:true});
+      return;
+    }
     currentUser=res.data.user;S.isGuest=false;
     saveProfileToSupabase();
   }).catch(function(e){
@@ -2488,6 +2517,14 @@ function renderProfile(){
 
   hr.appendChild(hi);hero.appendChild(hr);wrap.appendChild(hero);
   var body=d({style:{padding:"16px 16px 0"}});
+  if(S.sessionChecked&&!currentUser&&!S.isGuest){
+    var lgb=d({style:{background:"#FFFBEB",border:"1.5px solid #FCD34D",borderRadius:"16px",padding:"12px 14px",marginBottom:"14px",fontSize:"13px",color:"#92400E",lineHeight:"1.7"}});
+    var lgt=d({style:{fontWeight:"900",marginBottom:"4px"}});lgt.textContent="⚠️ ログインしていません";lgb.appendChild(lgt);
+    var lgm=d();lgm.textContent="今の変更はこの端末にだけ保存されています。登録したメールアドレスとパスワードでログインすると、プロフィールが保存され、ほかの人にも表示されます。（確認メールのリンクをまだ押していない場合は、先に押してください）";lgb.appendChild(lgm);
+    var lgbtn=document.createElement("button");lgbtn.textContent="📧 ログインする";lgbtn.style.cssText="margin-top:10px;width:100%;padding:11px;border-radius:12px;background:#FF6B2B;color:#fff;border:none;font-weight:800;font-size:14px;font-family:inherit;cursor:pointer";
+    lgbtn.addEventListener("click",function(){S.showLoginModal=true;render();});lgb.appendChild(lgbtn);
+    body.appendChild(lgb);
+  }
 
   // ── プロフィール完成度バー ──
   var profItems2 = [
@@ -2858,7 +2895,7 @@ function renderProfile(){
   if(noPrice){ var nc=document.createElement("span");nc.style.cssText="color:#fff;font-size:11px;font-weight:900";nc.textContent="✓";noPriceChk.appendChild(nc); }
   var noPriceLbl = document.createElement("div");
   noPriceLbl.style.cssText = "font-size:13px;color:#6B7280";
-  noPriceLbl.textContent = "価格は相談・無料で使いたい";
+  noPriceLbl.textContent = "🤝 料金なし（無料で一緒に滑る仲間を募集する）";
   noPriceRow.appendChild(noPriceChk); noPriceRow.appendChild(noPriceLbl);
   noPriceRow.addEventListener("click", function(){
     S.myProfile.priceHour = 0; S.myProfile.priceHalf = 0; S.myProfile.priceDay = 0; syncMinPrice(S.myProfile); saveD(); render();
@@ -3489,9 +3526,10 @@ function _renderInner(){
           var pc=d({style:{background:"linear-gradient(135deg,#FFF4EC,#FFE7D6)",borderRadius:"14px",padding:"12px 14px",marginBottom:"14px",display:"flex",justifyContent:"space-between",alignItems:"center"}});
           pc.appendChild(sp({style:{fontSize:"12px",fontWeight:"800",color:"#9A5B34"}},"💰 同行料金"));
           var pv=parseInt(u.price)||0;
-          if(pv&&!u.ok)pc.appendChild(sp({style:{fontSize:"12px",fontWeight:"800",color:"#9CA3AF"}},"本人確認後に表示"));else if(planList(u).length){var pls=planList(u);pc.style.flexDirection="column";pc.style.alignItems="stretch";pc.style.gap="6px";for(var pli=0;pli<pls.length;pli++){(function(pk){var plr=d({style:{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",padding:"4px 0"}});plr.addEventListener("click",function(){R({selUser:null,bookUser:u,bkFor:u.id,bkPlan:pk,bkHours:1,bkDate:"",bkTime:"9:00",bkNote:""});});plr.appendChild(sp({style:{fontSize:"13px",fontWeight:"700",color:"#6B7280"}},pls[pli].lbl));plr.appendChild(sp({style:{fontSize:"18px",fontWeight:"900",color:"#FF6B2B"}},"¥"+pls[pli].p.toLocaleString()+" ›"));pc.appendChild(plr);})(pls[pli].k);}}else pc.appendChild(sp({style:{fontSize:pv?"18px":"13px",fontWeight:"900",color:pv?"#FF6B2B":"#9CA3AF"}},pv?("¥"+pv.toLocaleString()+(u.unit?" / "+u.unit:"")):"未設定"));
+          if(pv&&!u.ok)pc.appendChild(sp({style:{fontSize:"12px",fontWeight:"800",color:"#9CA3AF"}},"本人確認後に表示"));else if(planList(u).length){var pls=planList(u);pc.style.flexDirection="column";pc.style.alignItems="stretch";pc.style.gap="6px";for(var pli=0;pli<pls.length;pli++){(function(pk){var plr=d({style:{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",padding:"4px 0"}});plr.addEventListener("click",function(){R({selUser:null,bookUser:u,bkFor:u.id,bkPlan:pk,bkHours:1,bkDate:"",bkTime:"9:00",bkNote:""});});plr.appendChild(sp({style:{fontSize:"13px",fontWeight:"700",color:"#6B7280"}},pls[pli].lbl));plr.appendChild(sp({style:{fontSize:"18px",fontWeight:"900",color:"#FF6B2B"}},"¥"+pls[pli].p.toLocaleString()+" ›"));pc.appendChild(plr);})(pls[pli].k);}}else pc.appendChild(sp({style:{fontSize:pv?"18px":"14px",fontWeight:"900",color:pv?"#FF6B2B":"#15803D"}},pv?("¥"+pv.toLocaleString()+(u.unit?" / "+u.unit:"")):"🤝 無料で一緒に滑れます"));
           box.appendChild(pc);
-          if(pv)box.appendChild(CostIncludedBox(u,false));
+          if(pv&&u.ok)box.appendChild(CostIncludedBox(u,false));
+          if(!isPaidUser(u)){var fr=d({style:{background:"#F0FDF4",border:"1.5px solid #BBF7D0",borderRadius:"14px",padding:"10px 12px",margin:"-6px 0 14px",fontSize:"12px",color:"#14532D",lineHeight:"1.7"}});fr.textContent="お金のやり取りなしで、一緒に滑る仲間を募集しています。リフト券や交通費などはそれぞれ自分の分を払います。まずはメッセージで声をかけてみよう。";box.appendChild(fr);}
           // 活動スキー場
           sec("⛰️ 活動スキー場");
           var rr=d({style:{marginBottom:"14px"}});
@@ -3551,7 +3589,7 @@ function _renderInner(){
 
 try{window._hs=!!localStorage.getItem("sm2");}catch(e){window._hs=false;}
 if(/[?&]stripe=(return|refresh)/.test(location.search)){S.tab="profile";S.stripeSt=undefined;try{history.replaceState(null,"",location.pathname);}catch(e){}}
-if(sb){sb.auth.getSession().then(function(r){if(r&&r.data&&r.data.session){currentUser=r.data.session.user;S.isGuest=false;loadUsersFromSupabase();render();}}).catch(function(){});}
+if(sb){sb.auth.getSession().then(function(r){S.sessionChecked=true;if(r&&r.data&&r.data.session){currentUser=r.data.session.user;S.isGuest=false;loadUsersFromSupabase();}render();}).catch(function(){S.sessionChecked=true;render();});}
 render();
 </script>
 <script>
