@@ -313,6 +313,12 @@ function CostIncludedBox(u,compact){
   var c=d({style:{color:"#6B7280",fontSize:"11px",marginTop:"2px"}});c.textContent="予約時に支払うのはこの金額だけです。「各自負担」のものは、それぞれが自分の分を払います。";box.appendChild(c);
   return box;
 }
+// チャット画面：キーボードの開閉に合わせて高さを調整
+(function(){
+  var vv=window.visualViewport;if(!vv)return;
+  function fit(){var w=document.getElementById("chatwin");if(!w)return;w.style.top=vv.offsetTop+"px";w.style.height=vv.height+"px";var m=document.getElementById("chatmsgs");if(m)m.scrollTop=m.scrollHeight;}
+  vv.addEventListener("resize",fit);vv.addEventListener("scroll",fit);
+})();
 function guestPrompt(){
   if(confirm("無料登録すると、メッセージ・予約・フォローができます。\n登録画面に進みますか？")){
     S.isGuest=false;S.myProfile=null;S.selUser=null;S.chatUser=null;S.bookUser=null;
@@ -1485,8 +1491,9 @@ function renderChat(){
     if(!has){var em=d({style:{color:"#6B7280",textAlign:"center",marginTop:"40px"}});em.textContent="まだメッセージはありません";wrap.appendChild(em);}
     return wrap;
   }
-  var cw=d({style:{display:"flex",flexDirection:"column",height:"100vh"}});
-  var hdr=d({class:"hdr"});
+  var vv=window.visualViewport;
+  var cw=d({id:"chatwin",style:{display:"flex",flexDirection:"column",position:"fixed",left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:"430px",top:(vv?vv.offsetTop:0)+"px",height:(vv?vv.height+"px":"100%"),zIndex:"150",background:"#F5F7FA",paddingTop:"env(safe-area-inset-top,0px)",boxSizing:"border-box"}});
+  var hdr=d({class:"hdr",style:{flexShrink:"0"}});
   var bb=document.createElement("button");bb.style.cssText="color:#fff;font-size:22px;padding:0;background:none;border:none;cursor:pointer";bb.textContent="←";
   bb.addEventListener("click",function(){R({chatUser:null});});
   hdr.appendChild(bb);hdr.appendChild(avU(38,20,S.chatUser));
@@ -1499,7 +1506,7 @@ function renderChat(){
     chatBookBtn.addEventListener("click",function(){R({bookUser:S.chatUser});});hdr.appendChild(chatBookBtn);
   }
   cw.appendChild(hdr);
-  var ma=d({style:{flex:"1",overflowY:"auto",padding:"16px",background:"#F5F7FA"}});
+  var ma=d({id:"chatmsgs",style:{flex:"1",minHeight:"0",overflowY:"auto",WebkitOverflowScrolling:"touch",padding:"16px",background:"#F5F7FA"}});
   var msgs=S.chatMsgs[String(S.chatUser.id)]||[];
   markChatRead(S.chatUser,msgs);
   for(var mi=0;mi<msgs.length;mi++){
@@ -1516,7 +1523,7 @@ function renderChat(){
     mTime.appendChild(mt);mBub.appendChild(mTime);mBox.appendChild(mBub);mRow.appendChild(mBox);ma.appendChild(mRow);
   }
   cw.appendChild(ma);
-  var quickBar=d({style:{display:"flex",gap:"6px",padding:"8px 16px",background:"#fff",overflowX:"auto",borderTop:"1px solid #F0F0F0"}});
+  var quickBar=d({style:{display:"flex",gap:"6px",padding:"8px 16px",background:"#fff",overflowX:"auto",borderTop:"1px solid #F0F0F0",flexShrink:"0"}});
   var quickBtns=[{lbl:"📅 今週末どうですか？",msg:"今週末一緒に滑りませんか？"},{lbl:"🎥 追い撮りお願いしたい",msg:"追い撮りをお願いしたいです！どのくらいの費用でしょうか？"},{lbl:"💰 費用を教えてください",msg:"費用・条件を教えていただけますか？"},{lbl:"🙋 よろしくお願いします！",msg:"はじめまして！スノマで見つけました。よろしくお願いします！"}];
   quickBtns.forEach(function(qb){
     var qbtn=document.createElement("button");qbtn.style.cssText="flex-shrink:0;padding:5px 12px;background:#F5F7FA;border:1px solid #E8E8E8;border-radius:16px;font-size:11px;font-weight:700;color:#6B7280;font-family:inherit;cursor:pointer;white-space:nowrap";
@@ -1527,9 +1534,9 @@ function renderChat(){
     quickBar.appendChild(qbtn);
   });
   cw.appendChild(quickBar);
-  var ir=d({style:{padding:"10px 16px 12px",background:"#fff",display:"flex",gap:"10px",borderTop:"none"}});
+  var ir=d({style:{padding:"10px 16px calc(12px + env(safe-area-inset-bottom,0px))",background:"#fff",display:"flex",gap:"10px",borderTop:"none",flexShrink:"0"}});
   var ci2=document.createElement("input");ci2.type="text";ci2.className="inp";ci2.style.cssText="flex:1;border-radius:20px";
-  ci2.placeholder="メッセージを入力...";ci2.value=S.chatIn||"";
+  ci2.id="chatinput";ci2.style.fontSize="16px";ci2.placeholder="メッセージを入力...";ci2.value=S.chatIn||"";
   ci2.addEventListener("input",function(ev){S.chatIn=ev.target.value;});
   ci2.addEventListener("keydown",function(ev){if(ev.key==="Enter"&&!ev.isComposing)sendMsg();});
   var sb=obtn("送信",function(){sendMsg();},"");sb.style.padding="10px 18px";
@@ -2232,6 +2239,7 @@ function sendMsg(text){if(S.isGuest){guestPrompt();return;}
     if(!canMessage(u)){alert("メッセージを送るには、相手をフォローしてください（お互いにいいねしてマッチした相手にも送れます）");return;}
     var tmp={f:"m",t:body,time:hmOf(),pending:true};
     S.chatMsgs[cid].push(tmp);S.chatIn="";render();
+    var _ci=document.getElementById("chatinput");if(_ci)_ci.focus();
     sb.from("dm_messages").insert({from_user:currentUser.id,to_user:u.uid,body:body}).select().single().then(function(r){
       if(r.error){tmp.t=body+"（送信失敗）";render();alert("送信に失敗しました: "+r.error.message);return;}
       tmp.pending=false;tmp.id=r.data.id;
