@@ -958,12 +958,12 @@ function renderSplash(){
     // ゲストで入るときは、端末に残っているログイン状態と個人データを外してから入る
     function enterGuest(){
       currentUser=null;
-      if(_rtChannel){try{sb.removeChannel(_rtChannel);}catch(e){}_rtChannel=null;}
+      if(_rtChannel){try{window.sb.removeChannel(_rtChannel);}catch(e){}_rtChannel=null;}
       S.resv=null;S.following=[];S.followers=[];S.notifs=[];S.chatMsgs={};S.liked=[];S.matches=[];
       R({pg:"main",isGuest:true,myProfile:{name:"ゲスト",nick:"ゲスト",age:25,act:"スノーボード",lv:"中級",resorts:[],bio:"ゲストです",isIns:false,price:5000,unit:"1時間",icon:"🏂",posts:[],ok:false,kycStatus:"none"}});
       loadUsersFromSupabase();loadFollowerCounts();
     }
-    if(sb&&currentUser){sb.auth.signOut().then(enterGuest,enterGuest);}else{enterGuest();}
+    if(window.sb&&currentUser){window.sb.auth.signOut().then(enterGuest,enterGuest);}else{enterGuest();}
   });cont.appendChild(gb);
 
   // メールログインボタン（Supabase）
@@ -1278,6 +1278,16 @@ function renderExplore(){
       return sb2-sa;
     });
   }
+  // エリアを選んでも誰も隠さない：選んだエリアの人を上に並べるだけ
+  if(S.selArea){
+    var selAreaObj=null;for(var sai=0;sai<AREAS.length;sai++){if(AREAS[sai].area===S.selArea){selAreaObj=AREAS[sai];break;}}
+    if(selAreaObj){
+      var inArea=function(u){return (u.resorts||[]).some(function(r){return selAreaObj.resorts.indexOf(r)>=0;});};
+      var hit=[],rest=[];
+      for(var sui=0;sui<sortedUsers.length;sui++){(inArea(sortedUsers[sui])?hit:rest).push(sortedUsers[sui]);}
+      sortedUsers=hit.concat(rest);
+    }
+  }
   if(!sortedUsers.length){var usEmpty=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"13px",padding:"24px 0"}});usEmpty.textContent="まだ登録ユーザーがいません。友達を招待してみよう！";wrap.appendChild(usEmpty);}
   for(var ui=0;ui<sortedUsers.length;ui++){
     (function(u){
@@ -1286,7 +1296,7 @@ function renderExplore(){
       var pAc=!S.selAct||u.act===S.selAct||u.act==="両方"||(u.acts&&u.acts.indexOf(S.selAct)>=0);
       if(S.blockedUsers&&S.blockedUsers.indexOf(u.id)>=0)return;
       if(S.camOnly&&!u.isCam)return;
-      if(!pA||!pAc)return;
+      if(!pAc)return; // エリア(pA)では絞り込まない
       var card=d({class:"card",style:{cursor:"pointer",marginBottom:"12px"},onClick:function(){R({selUser:u});}});
       var row=d({style:{display:"flex",gap:"12px"}});
       if(u.profileImg){
