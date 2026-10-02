@@ -320,7 +320,7 @@ async function decide(p, status, btn) {
 
   btn.disabled = true;
   var res = await sb.from('profiles')
-    .update({ kyc_status: status, is_verified: status === 'approved' })
+    .update({ kyc_status: status, is_verified: status === 'approved', kyc_result_seen: false })
     .eq('id', p.id)
     .select('id');
 
