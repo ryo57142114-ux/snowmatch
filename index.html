@@ -954,7 +954,7 @@ function renderSplash(){
   cont.appendChild(badges);
   var sb=document.createElement("button");sb.textContent="はじめる（無料登録）";sb.style.cssText="width:100%;padding:17px 0;border-radius:18px;background:linear-gradient(135deg,#FF6B2B,#FF8C55);color:#fff;font-weight:900;font-size:17px;box-shadow:0 8px 32px rgba(255,107,43,.55);margin-bottom:12px;font-family:inherit;border:none;cursor:pointer;display:block";sb.addEventListener("click",function(){R({pg:"onboard"});});cont.appendChild(sb);
   var gb=document.createElement("button");gb.textContent="ゲストとして見る";gb.style.cssText="width:100%;padding:15px 0;border-radius:18px;background:rgba(255,255,255,.15);color:#fff;font-weight:800;font-size:15px;border:1.5px solid rgba(255,255,255,.4);font-family:inherit;cursor:pointer;display:block;margin-bottom:10px";
-  gb.addEventListener("click",function(){R({pg:"main",myProfile:{name:"ゲスト",nick:"ゲスト",age:25,act:"スノーボード",lv:"中級",resorts:[],bio:"ゲストです",isIns:false,price:5000,unit:"1時間",icon:"🏂",posts:[],ok:false,kycStatus:"approved"}});});cont.appendChild(gb);
+  gb.addEventListener("click",function(){R({pg:"main",myProfile:{name:"ゲスト",nick:"ゲスト",age:25,act:"スノーボード",lv:"中級",resorts:[],bio:"ゲストです",isIns:false,price:5000,unit:"1時間",icon:"🏂",posts:[],ok:false,kycStatus:"approved"}});loadUsersFromSupabase();loadFollowerCounts();});cont.appendChild(gb);
 
   // メールログインボタン（Supabase）
   var emailLoginBtn=document.createElement("button");
@@ -1893,8 +1893,10 @@ function EditProfileModal(){
 
 // Supabaseに登録された実ユーザーを「探す」に表示する
 function loadUsersFromSupabase(){
-  if(!sb||!currentUser)return;
-  sb.from("profiles").select("*").neq("id",currentUser.id).limit(100).then(function(res){
+  if(!sb)return;
+  var uq=sb.from("profiles").select("*");
+  if(currentUser)uq=uq.neq("id",currentUser.id); // ログイン中だけ自分を除外（ゲストは全員表示）
+  uq.limit(100).then(function(res){
     if(res.error){console.error("Users load error:",res.error);return;}
     var rows=res.data||[];
     // 以前読み込んだ実ユーザーを一度外す
