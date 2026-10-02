@@ -220,7 +220,14 @@ function cleanDemoData(){
 }
 function clearD(){try{localStorage.removeItem("sm2");}catch(e){}}
 
-function R(u){if(u){var k=Object.keys(u);for(var i=0;i<k.length;i++)S[k[i]]=u[k[i]];}render();}
+// ゲストはメッセージ・予約・フォローできない → 登録を案内
+function guestPrompt(){
+  if(confirm("無料登録すると、メッセージ・予約・フォローができます。\n登録画面に進みますか？")){
+    S.isGuest=false;S.myProfile=null;S.selUser=null;S.chatUser=null;S.bookUser=null;
+    R({pg:"onboard"});
+  }
+}
+function R(u){if(u&&S.isGuest&&(u.chatUser||u.bookUser)){guestPrompt();return;}if(u){var k=Object.keys(u);for(var i=0;i<k.length;i++)S[k[i]]=u[k[i]];}render();}
 
 function mk(tag,a,ch){
   var e=document.createElement(tag);
@@ -1947,7 +1954,7 @@ function loadUsersFromSupabase(){
 }
 
 // ===== いいね・マッチング（Supabase: user_likes） =====
-function toggleLike(u){
+function toggleLike(u){if(S.isGuest){guestPrompt();return;}
   if(!S.liked)S.liked=[];
   var idx=S.liked.indexOf(u.id);
   var adding=idx<0;
@@ -2029,7 +2036,7 @@ function loadFollowsFromSupabase(){
     render();
   });
 }
-function toggleFollow(u){
+function toggleFollow(u){if(S.isGuest){guestPrompt();return;}
   if(!S.following)S.following=[];
   var idx=S.following.indexOf(u.id);var wasF=idx>=0;
   if(wasF)S.following.splice(idx,1);else S.following.push(u.id);
@@ -2095,7 +2102,7 @@ function pwToggleWrap(inp){
 
 // ===== チャット（Supabase: dm_messages） =====
 function hmOf(d){d=d?new Date(d):new Date();return d.getHours()+":"+String(d.getMinutes()).padStart(2,"0");}
-function sendMsg(text){
+function sendMsg(text){if(S.isGuest){guestPrompt();return;}
   var u=S.chatUser;if(!u)return;
   var body=(text!==undefined?text:(S.chatIn||"")).trim();
   if(!body)return;
