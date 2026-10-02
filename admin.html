@@ -222,7 +222,7 @@ async function render() {
   }).join('') + '</div>';
 
   var res = await sb.from('profiles')
-    .select('id, nick, real_name, birth_date, age, email, kyc_status, is_verified')
+    .select('id, nick, real_name, birth_date, age, email, kyc_status, is_verified, kyc_images_deleted_at')
     .eq('kyc_status', currentTab)
     .order('nick');
 
@@ -241,7 +241,7 @@ async function render() {
 
   app.innerHTML = tabsHtml + people.map(personHtml).join('');
   bindTabs();
-  people.forEach(function (p) { loadPhotos(p.id); bindActions(p); });
+  people.forEach(function (p) { loadPhotos(p.id, p.kyc_images_deleted_at); bindActions(p); });
 }
 
 function ageFromBirth(b) {
@@ -280,8 +280,9 @@ function personHtml(p) {
   '</section>';
 }
 
-async function loadPhotos(userId) {
+async function loadPhotos(userId, deletedAt) {
   var box = document.getElementById('photos-' + userId);
+  if (deletedAt) { box.innerHTML = '<p class="nophoto" style="color:#6B7280">審査完了から30日たったため、身分証の画像は自動で削除済みです（' + esc(String(deletedAt).slice(0,10)) + '）</p>'; return; }
   var list = await sb.storage.from('kyc').list(userId, { sortBy: { column: 'created_at', order: 'desc' } });
   if (list.error) { box.innerHTML = '<p class="nophoto">画像を読み込めませんでした：' + esc(list.error.message) + '</p>'; return; }
 
