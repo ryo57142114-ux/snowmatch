@@ -1594,7 +1594,7 @@ function loadReservations(){
       else if(!meProv&&x.status==="approved"){msg=nm+"さんが予約を承認しました！";ic="✅";}
       else if(!meProv&&x.status==="declined"){msg=nm+"さんは今回の予約をお断りしました";ic="🙏";}
       else if(meProv&&x.status==="cancelled"){msg=nm+"さんが予約をキャンセルしました";ic="↩️";}
-      if(msg){var nid="rv_"+x.id+"_"+x.status;S.notifs.unshift({id:nid,uid:meProv?x.customer:x.provider,type:"book",icon:ic,msg:msg,time:"",read:!!readMap[nid]});}
+      if(msg){var nid="rv_"+x.id+"_"+x.status;S.notifs.unshift({id:nid,uid:meProv?x.customer:x.provider,type:"book",icon:ic,msg:msg,time:"",read:!!readMap[nid]||isNotifRead(nid)});}
     }
     render();
   });
@@ -1618,7 +1618,7 @@ function bookBadgeCount(){
   return n;
 }
 function renderResvList(){
-  (S.notifs||[]).forEach(function(x){if(String(x.id).indexOf("rv_")===0&&!/_pending$/.test(x.id))x.read=true;});
+  var rvRead=[];(S.notifs||[]).forEach(function(x){if(String(x.id).indexOf("rv_")===0&&!/_pending$/.test(x.id)){x.read=true;rvRead.push(x);}});saveNotifsRead(rvRead);
   var wrap=d({class:"pg"});
   var t=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"16px"}});t.textContent="🎿 予約";wrap.appendChild(t);
   var recv=S.resv.filter(function(x){return x.provider===currentUser.id;});
@@ -1965,10 +1965,10 @@ function findRealUser(uid){for(var i=0;i<USERS.length;i++){if(USERS[i].isReal&&U
 function notifyKycResult(ks){
   if(!S.notifs)S.notifs=[];
   if(ks==="approved"){
-    S.notifs.unshift({id:"kyc_"+Date.now(),type:"kyc",icon:"🪪",msg:"本人確認が承認されました。料金が他のユーザーに表示されるようになりました",time:"今",read:false});
+    S.notifs.unshift({id:"kyc_approved",type:"kyc",icon:"🪪",msg:"本人確認が承認されました。料金が他のユーザーに表示されるようになりました",time:"今",read:false});
     setTimeout(function(){alert("🎉 本人確認が承認されました！\n料金が他のユーザーに表示されるようになりました。");},300);
   }else if(ks==="rejected"){
-    S.notifs.unshift({id:"kyc_"+Date.now(),type:"kyc",icon:"⚠️",msg:"本人確認が承認されませんでした。内容を確認して、もう一度申請してください",time:"今",read:false});
+    S.notifs.unshift({id:"kyc_rejected",type:"kyc",icon:"⚠️",msg:"本人確認が承認されませんでした。内容を確認して、もう一度申請してください",time:"今",read:false});
     setTimeout(function(){alert("本人確認が承認されませんでした。\nマイページの料金設定から、内容を確認してもう一度申請してください。");},300);
   }
 }
@@ -2116,8 +2116,19 @@ function addDmRow(row,live){
   }
 }
 function hasChatWith(uid){var l=S.chatMsgs["sb_"+uid];return !!(l&&l.length);}
+// 通知の既読を端末に保存（アプリを開き直しても既読のまま）
+function nReadKey(){return "sm_nread_"+(currentUser?currentUser.id:"guest");}
+function nReadMap(){try{return JSON.parse(localStorage.getItem(nReadKey())||"{}")||{};}catch(e){return {};}}
+function isNotifRead(id){return !!nReadMap()[id];}
+function saveNotifsRead(list){
+  var m=nReadMap();
+  for(var i=0;i<list.length;i++){if(list[i]&&list[i].id!=null)m[list[i].id]=1;}
+  var ks=Object.keys(m);if(ks.length>400){for(var j=0;j<ks.length-400;j++)delete m[ks[j]];}
+  try{localStorage.setItem(nReadKey(),JSON.stringify(m));}catch(e){}
+}
 function visibleNotifs(){
-  return (S.notifs||[]).filter(function(n){return !(n.type==="match"&&n.uid&&hasChatWith(n.uid));});
+  var m=nReadMap();
+  return (S.notifs||[]).filter(function(n){if(m[n.id])n.read=true;return !(n.type==="match"&&n.uid&&hasChatWith(n.uid));});
 }
 function unreadChatItems(){
   var out=[];
@@ -3310,7 +3321,7 @@ function _renderInner(){
     var bellWrap=document.createElement("div");bellWrap.style.cssText="position:relative;flex-shrink:0;margin-left:auto";
     var bellBtn=document.createElement("button");bellBtn.style.cssText="font-size:22px;background:rgba(255,255,255,0.2);border:none;border-radius:12px;width:38px;height:38px;cursor:pointer;display:flex;align-items:center;justify-content:center";
     bellBtn.textContent="🔔";
-    bellBtn.addEventListener("click",function(){S.showNotif=!S.showNotif;for(var i=0;i<S.notifs.length;i++)S.notifs[i].read=true;render();});
+    bellBtn.addEventListener("click",function(){S.showNotif=!S.showNotif;for(var i=0;i<S.notifs.length;i++)S.notifs[i].read=true;saveNotifsRead(S.notifs);render();});
     if(unreadNotifs>0){
       var bellBdg=document.createElement("div");bellBdg.style.cssText="position:absolute;top:-4px;right:-4px;background:#FF3B30;color:#fff;border-radius:10px;min-width:16px;height:16px;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center;padding:0 3px";
       bellBdg.textContent=String(unreadNotifs);bellWrap.appendChild(bellBdg);
