@@ -1961,29 +1961,26 @@ function toggleLike(u){
 }
 function findRealUser(uid){for(var i=0;i<USERS.length;i++){if(USERS[i].isReal&&USERS[i].uid===uid)return USERS[i];}return null;}
 // 自分のいいね・自分へのいいねを読み込む
-// 本人確認の審査結果を本人に知らせる（申請中→承認/却下に変わったときに1回だけ）
-function checkKycResult(ks){
-  if(!currentUser)return;
-  var key="sm_kyc_"+currentUser.id,seen=null;
-  try{seen=localStorage.getItem(key);}catch(e){}
-  if(ks==="pending"){try{localStorage.setItem(key,"pending");}catch(e){}return;}
-  if(seen!=="pending"||(ks!=="approved"&&ks!=="rejected"))return;
-  try{localStorage.setItem(key,ks);}catch(e){}
+// 本人確認の審査結果を本人に知らせる（運営が承認/却下したあと、1回だけ）
+function notifyKycResult(ks){
   if(!S.notifs)S.notifs=[];
   if(ks==="approved"){
     S.notifs.unshift({id:"kyc_"+Date.now(),type:"kyc",icon:"🪪",msg:"本人確認が承認されました。料金が他のユーザーに表示されるようになりました",time:"今",read:false});
     setTimeout(function(){alert("🎉 本人確認が承認されました！\n料金が他のユーザーに表示されるようになりました。");},300);
-  }else{
+  }else if(ks==="rejected"){
     S.notifs.unshift({id:"kyc_"+Date.now(),type:"kyc",icon:"⚠️",msg:"本人確認が承認されませんでした。内容を確認して、もう一度申請してください",time:"今",read:false});
     setTimeout(function(){alert("本人確認が承認されませんでした。\nマイページの料金設定から、内容を確認してもう一度申請してください。");},300);
   }
 }
 function refreshMyVerification(){
   if(!sb||!currentUser||!S.myProfile)return;
-  sb.from("profiles").select("is_verified,kyc_status").eq("id",currentUser.id).maybeSingle().then(function(r){
+  sb.from("profiles").select("is_verified,kyc_status,kyc_result_seen").eq("id",currentUser.id).maybeSingle().then(function(r){
     if(r.error||!r.data)return;
     var ok=!!r.data.is_verified,ks=r.data.kyc_status||null;
-    checkKycResult(ks);
+    if(r.data.kyc_result_seen===false&&(ks==="approved"||ks==="rejected")){
+      sb.from("profiles").update({kyc_result_seen:true}).eq("id",currentUser.id).then(function(){});
+      notifyKycResult(ks);
+    }
     if(S.myProfile.ok!==ok||S.myProfile.kycStatus!==ks){S.myProfile.ok=ok;S.myProfile.kycStatus=ks;saveD();}
     render();
   });
@@ -2792,7 +2789,7 @@ function renderProfile(){
         return sb.from("profiles").update({kyc_status:"pending",real_name:kName,birth_date:kBirth}).eq("id",currentUser.id);
       }).then(function(r){
         if(r&&r.error)throw new Error(r.error.message);
-        S.myProfile.kycStatus="pending";try{localStorage.setItem("sm_kyc_"+currentUser.id,"pending");}catch(e){}S.myProfile.name=kName;S.myProfile.birthDate=kBirth;saveD();alert("申請しました。審査が終わるまでお待ちください");render();
+        S.myProfile.kycStatus="pending";S.myProfile.name=kName;S.myProfile.birthDate=kBirth;saveD();alert("申請しました。審査が終わるまでお待ちください");render();
       }).catch(function(e){kyBtn.disabled=false;kyBtn.textContent="本人確認を申請する";alert("申請エラー: "+(e&&e.message?e.message:e));});
     });
     kycBox.appendChild(kyBtn);
