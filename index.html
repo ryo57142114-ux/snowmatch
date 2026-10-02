@@ -3214,7 +3214,7 @@ function DeleteAccountModal(){
     var title=document.createElement("div");title.style.cssText="font-weight:900;font-size:18px;color:#1A1A2E;margin-bottom:8px;text-align:center";title.textContent="退会する";box.appendChild(title);
     var sub=document.createElement("div");sub.style.cssText="color:#6B7280;font-size:13px;margin-bottom:16px;text-align:center;line-height:1.7";sub.textContent="退会すると全てのデータが削除されます。\nこの操作は取り消せません。";box.appendChild(sub);
 
-    var warns=["プロフィール・投稿データが削除されます","マッチング・予約履歴が削除されます","ラウンジの投稿が削除されます","再登録時に本人確認が必要になります"];
+    var warns=["プロフィール・投稿データが削除されます","マッチング・予約履歴が削除されます","ラウンジの投稿が削除されます","身分証の画像・ログイン情報も削除されます","再登録時に本人確認が必要になります"];
     var warnCard=document.createElement("div");warnCard.style.cssText="background:#FFF5F5;border:1.5px solid #FECACA;border-radius:14px;padding:14px;margin-bottom:16px";
     warns.forEach(function(w){
       var wr=document.createElement("div");wr.style.cssText="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:13px;color:#DC2626";
@@ -3228,8 +3228,16 @@ function DeleteAccountModal(){
     cancelBtn.addEventListener("click",function(){S.showDeleteAccount=false;render();});
     var deleteBtn2=document.createElement("button");deleteBtn2.style.cssText="flex:1;padding:12px;border-radius:14px;background:#EF4444;color:#fff;font-weight:900;font-size:14px;border:none;cursor:pointer";deleteBtn2.textContent="退会する";
     deleteBtn2.addEventListener("click",function(){
-      deleteBtn2.textContent="処理中...";
-      setTimeout(function(){try{localStorage.removeItem("sm2");}catch(e){}location.reload();},1000);
+      if(deleteBtn2.disabled)return;
+      deleteBtn2.disabled=true;deleteBtn2.textContent="処理中...";
+      function finish(){try{localStorage.removeItem("sm2");}catch(e){}location.reload();}
+      if(!sb||!currentUser){finish();return;}
+      // サーバー側（Edge Function）で、身分証・写真・プロフィール・ログイン情報まで削除する
+      sb.functions.invoke("delete-account",{body:{}}).then(function(r){
+        var err=r.error?(r.error.message||String(r.error)):(r.data&&r.data.error);
+        if(err){deleteBtn2.disabled=false;deleteBtn2.textContent="退会する";alert("退会処理に失敗しました。時間をおいてもう一度お試しいただくか、snowmatch.info@gmail.com までご連絡ください。\n("+err+")");return;}
+        sb.auth.signOut().then(finish,finish);
+      }).catch(function(e){deleteBtn2.disabled=false;deleteBtn2.textContent="退会する";alert("通信エラーで退会できませんでした: "+(e&&e.message?e.message:e));});
     });
     confirmRow.appendChild(cancelBtn);confirmRow.appendChild(deleteBtn2);box.appendChild(confirmRow);
   });
