@@ -243,6 +243,55 @@ function renderTerms(){
   }
   return wrap;
 }
+// ===== Stripe Connect：同行料金の受け取り =====
+function stripeCall(action){
+  return sb.functions.invoke("stripe-connect",{body:{action:action}}).then(function(r){
+    if(r.error)throw new Error(r.error.message||String(r.error));
+    if(r.data&&r.data.error)throw new Error(r.data.error);
+    return r.data;
+  });
+}
+function loadStripeStatus(){
+  if(!sb||!currentUser)return;
+  S.stripeSt="loading";
+  stripeCall("status").then(function(dt){S.stripeSt=dt||{};render();})
+    .catch(function(e){S.stripeSt={error:e.message||String(e)};render();});
+}
+function PayoutCard(){
+  if(S.isGuest||!currentUser||!S.myProfile)return null;
+  var c=d({style:{margin:"16px 20px 0",background:"#fff",borderRadius:"18px",padding:"16px 16px 14px",border:"1px solid #EEF0F3",boxShadow:"0 1px 3px rgba(0,0,0,.05)"}});
+  var t=d({style:{fontWeight:"900",fontSize:"15px",color:"#1A1A2E",marginBottom:"6px"}});t.textContent="💴 同行料金の受け取り";c.appendChild(t);
+  var msg=d({style:{fontSize:"13px",color:"#4B5563",lineHeight:"1.7",marginBottom:"12px"}});c.appendChild(msg);
+  function btn(label,primary,fn){
+    var x=document.createElement("button");x.textContent=label;
+    x.style.cssText="width:100%;padding:12px;border-radius:14px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;margin-top:6px;"+(primary?"background:#FF6B2B;color:#fff;border:none":"background:#fff;color:#FF6B2B;border:1.5px solid #FF6B2B");
+    x.addEventListener("click",function(){if(x.disabled)return;x.disabled=true;var o=x.textContent;x.textContent="処理中...";
+      fn().catch(function(e){x.disabled=false;x.textContent=o;alert("うまくいきませんでした: "+(e&&e.message?e.message:e));});});
+    c.appendChild(x);
+  }
+  function go(action){return function(){return stripeCall(action).then(function(dt){
+    if(action==="dashboard"){var w=window.open(dt.url,"_blank");if(!w)location.href=dt.url;loadStripeStatus();}
+    else location.href=dt.url;});};}
+  var st=S.stripeSt;
+  if(!S.myProfile.ok){
+    msg.textContent="同行料金を受け取るには、先にSnowMatchの本人確認が必要です。本人確認が承認されると、受け取り口座を登録できるようになります。";
+    return c;
+  }
+  if(st===undefined){loadStripeStatus();msg.textContent="確認中...";return c;}
+  if(st==="loading"){msg.textContent="確認中...";return c;}
+  if(st.error){msg.textContent="状態を確認できませんでした。（"+st.error+"）";btn("もう一度確認する",false,function(){loadStripeStatus();return Promise.resolve();});return c;}
+  if(!st.has_account){
+    msg.textContent="同行の予約で受け取る料金は、Stripe（世界中で使われている決済サービス）を通じてあなたの銀行口座に振り込まれます。まずは受け取り口座を登録しましょう。";
+    btn("受け取り口座を登録する",true,go("onboard"));
+  }else if(st.payouts_enabled){
+    msg.textContent="✅ 受け取りの準備ができています。売上や入金予定はStripeの画面で確認できます。";
+    btn("売上・入金を確認する",false,go("dashboard"));
+  }else{
+    msg.textContent=st.details_submitted?"登録内容をStripeが確認中です。追加の情報を求められている場合は、登録を続けてください。":"登録が途中です。続きから入力してください。";
+    btn("登録を続ける",true,go("onboard"));
+  }
+  return c;
+}
 function guestPrompt(){
   if(confirm("無料登録すると、メッセージ・予約・フォローができます。\n登録画面に進みますか？")){
     S.isGuest=false;S.myProfile=null;S.selUser=null;S.chatUser=null;S.bookUser=null;
@@ -2917,6 +2966,8 @@ function renderProfile(){
     ep.appendChild(snsDiv2);
     body.appendChild(ep);
   }else{for(var pi2=0;pi2<S.myProfile.posts.length;pi2++)body.appendChild(PostCard(S.myProfile.posts[pi2]));}
+  // 同行料金の受け取り（Stripe Connect）
+  var payoutCard=PayoutCard();if(payoutCard)body.appendChild(payoutCard);
   // お問い合わせ・退会
   var supportDiv=d({style:{padding:"16px 20px 4px",display:"flex",flexDirection:"column",gap:"8px"}});
 
@@ -3478,7 +3529,8 @@ function _renderInner(){
 }
 
 try{window._hs=!!localStorage.getItem("sm2");}catch(e){window._hs=false;}
-if(sb){sb.auth.getSession().then(function(r){if(r&&r.data&&r.data.session){currentUser=r.data.session.user;S.isGuest=false;loadUsersFromSupabase();}}).catch(function(){});}
+if(/[?&]stripe=(return|refresh)/.test(location.search)){S.tab="profile";S.stripeSt=undefined;try{history.replaceState(null,"",location.pathname);}catch(e){}}
+if(sb){sb.auth.getSession().then(function(r){if(r&&r.data&&r.data.session){currentUser=r.data.session.user;S.isGuest=false;loadUsersFromSupabase();render();}}).catch(function(){});}
 render();
 </script>
 <script>
