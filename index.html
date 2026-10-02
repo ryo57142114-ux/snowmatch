@@ -235,7 +235,7 @@ function renderTerms(){
     var b=d({style:{fontSize:"13px",color:"#4B5563",lineHeight:"1.7"}});b.textContent=TERMS[i].body;
     c.appendChild(h);c.appendChild(b);wrap.appendChild(c);
   }
-  var links=[["利用規約（全文）を読む","/terms.html"],["プライバシーポリシーを読む","/privacy.html"]];
+  var links=[["利用規約（全文）を読む","/terms.html"],["プライバシーポリシーを読む","/privacy.html"],["特定商取引法に基づく表記","/tokushoho.html"]];
   for(var j=0;j<links.length;j++){
     var a=document.createElement("a");a.href=links[j][1];a.target="_blank";a.rel="noopener";a.textContent=links[j][0];
     a.style.cssText="display:block;text-align:center;padding:13px 0;margin-top:10px;border-radius:14px;border:1.5px solid #FF6B2B;color:#FF6B2B;font-weight:800;font-size:14px;text-decoration:none";
