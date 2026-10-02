@@ -1270,7 +1270,7 @@ function renderExplore(){
   var cbTitle=document.createElement("div");cbTitle.style.cssText="font-weight:900;color:#fff;font-size:16px;margin-bottom:3px";cbTitle.textContent="追い撮り・撮影カメラマン";
   var cbSub2=document.createElement("div");cbSub2.style.cssText="font-size:12px;color:rgba(255,255,255,0.7);margin-bottom:8px";cbSub2.textContent="スノー仲間が一緒に滑りながら撮影します";
   var camTagRow=document.createElement("div");camTagRow.style.cssText="display:flex;gap:5px;flex-wrap:wrap";
-  ["GoPro","Insta360","iPhone","スマホ","ビデオカメラ","ミラーレス"].forEach(function(t){
+  ["GoPro","Insta360","DJI","iPhone","スマホ","ビデオカメラ","ミラーレス"].forEach(function(t){
     var tag=document.createElement("span");tag.style.cssText="background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.85);border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700";tag.textContent=t;camTagRow.appendChild(tag);
   });
   cbInfo.appendChild(cbTitle);cbInfo.appendChild(cbSub2);cbInfo.appendChild(camTagRow);
@@ -2051,7 +2051,7 @@ function loadUsersFromSupabase(){
         isIns:!!p.is_ins,isCam:!!p.is_cam,price:p.price||null,unit:p.unit||"",
         priceHour:pfr(p,"hour"),priceHalf:pfr(p,"half"),priceDay:pfr(p,"day"),
         bio:p.bio||"",gear:p.gear||[],sns:p.sns||{},
-        board:(p.extra&&p.extra.board)||"",styles:(p.extra&&p.extra.styles)||[],camGear:(p.extra&&p.extra.camGear)||[],costBreakdown:(p.extra&&p.extra.costBreakdown)||[],
+        board:(p.extra&&p.extra.board)||"",styles:(p.extra&&p.extra.styles)||[],stanceW2:(p.extra&&p.extra.stanceW2)||"",frontAngle:(p.extra&&p.extra.frontAngle)||"",backAngle:(p.extra&&p.extra.backAngle)||"",bindingName:(p.extra&&p.extra.bindingName)||"",camGear:(p.extra&&p.extra.camGear)||[],costBreakdown:(p.extra&&p.extra.costBreakdown)||[],
         posts:[],likes:0,ok:!!p.is_verified
       });
     }
@@ -2781,7 +2781,7 @@ function renderProfile(){
   camLabel2.style.cssText = "font-size:12px;font-weight:700;color:#6B7280;margin-bottom:8px";
   camLabel2.textContent = "📷 撮影機材（追い撮りをする方）";
   gearCard.appendChild(camLabel2);
-  var camGears = ["GoPro","Insta360","iPhone","Androidスマホ","ミラーレス一眼","ビデオカメラ","ドローン（許可エリアのみ）","アクションカム"];
+  var camGears = ["GoPro","Insta360","DJI","iPhone","Androidスマホ","ミラーレス一眼","ビデオカメラ","ドローン（許可エリアのみ）","アクションカム"];
   if(!S.myProfile.camGear) S.myProfile.camGear=[];
   var camGearRow=document.createElement("div");camGearRow.style.cssText="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px";
   camGears.forEach(function(cg){
@@ -3547,15 +3547,28 @@ function _renderInner(){
           // 自己紹介
           sec("📝 自己紹介");
           box.appendChild(p2({style:{color:u.bio?"#374151":"#9CA3AF",fontSize:"14px",lineHeight:"1.7",margin:"0 0 14px",whiteSpace:"pre-wrap"}},u.bio||"まだ自己紹介はありません"));
-          // スタイル・板・撮影機材
-          var gearAll=[].concat(u.styles||[],u.gear||[],u.camGear||[]);
-          if(u.board||gearAll.length){
-            sec("🏂 スタイル・機材");
-            if(u.board){box.appendChild(p2({style:{fontSize:"13px",color:"#374151",fontWeight:"700",margin:"0 0 6px"}},u.board));}
-            var gr=d({style:{display:"flex",flexWrap:"wrap",gap:"6px",marginBottom:"14px"}});
-            for(var gi=0;gi<gearAll.length;gi++){var gt=d({style:{background:"#1a1a2e",color:"#fff",borderRadius:"8px",padding:"3px 10px",fontSize:"11px",fontWeight:"700"}});gt.textContent=gearAll[gi];gr.appendChild(gt);}
-            box.appendChild(gr);
-          }
+          // 板・セッティング・スタイル・撮影機材
+          (function(){
+            var hasSet=u.board||u.bindingName||u.stanceW2||u.frontAngle||u.backAngle;
+            var sty=u.styles||[];var cams=[].concat(u.camGear||[],u.gear||[]);
+            if(!hasSet&&!sty.length&&!cams.length)return;
+            sec("🏂 板・セッティング");
+            if(hasSet){
+              var tb=d({style:{background:"#F9FAFB",border:"1.5px solid #EEF0F3",borderRadius:"14px",padding:"10px 14px",marginBottom:"12px"}});
+              function row(k,v){if(!v)return;var r=d({style:{display:"flex",gap:"10px",padding:"5px 0",fontSize:"13px",borderBottom:"1px solid #F1F2F4"}});var a=d({style:{width:"84px",flexShrink:"0",color:"#6B7280",fontWeight:"700"}});a.textContent=k;var b=d({style:{flex:"1",color:"#1A1A2E",fontWeight:"700",wordBreak:"break-word"}});b.textContent=v;r.appendChild(a);r.appendChild(b);tb.appendChild(r);}
+              function deg(x){if(x===""||x==null)return "";var n=String(x).trim();if(/^-?\d+(\.\d+)?$/.test(n)&&parseFloat(n)>0&&n.charAt(0)!=="+")n="+"+n;return n+"°";}
+              row("板・スキー",u.board);
+              row("バインディング",u.bindingName);
+              row("スタンス幅",u.stanceW2?u.stanceW2+"cm":"");
+              var ang=(u.frontAngle!==""&&u.frontAngle!=null)||(u.backAngle!==""&&u.backAngle!=null)?("前 "+(deg(u.frontAngle)||"-")+" ／ 後 "+(deg(u.backAngle)||"-")):"";
+              row("角度",ang);
+              if(tb.lastChild)tb.lastChild.style.borderBottom="none";
+              box.appendChild(tb);
+            }
+            function chips(title,arr,bg,fg){if(!arr.length)return;var t=d({style:{fontSize:"12px",fontWeight:"700",color:"#6B7280",margin:"0 0 6px"}});t.textContent=title;box.appendChild(t);var gr=d({style:{display:"flex",flexWrap:"wrap",gap:"6px",marginBottom:"12px"}});arr.forEach(function(x){var gt=d({style:{background:bg,color:fg,borderRadius:"8px",padding:"4px 10px",fontSize:"12px",fontWeight:"700"}});gt.textContent=x;gr.appendChild(gt);});box.appendChild(gr);}
+            chips("滑りのスタイル",sty,"#FFF0E8","#C2410C");
+            chips("📷 撮影機材",cams,"#1a1a2e","#fff");
+          })();
           // SNS
           var snsKeys=[];if(u.sns){for(var sk in u.sns){if(u.sns[sk])snsKeys.push(sk);}}
           if(snsKeys.length){
