@@ -1766,7 +1766,7 @@ function loadProfileFromSupabase(){
       icon:p.icon||"🏂",profileImg:p.profile_img,isIns:p.is_ins,isCam:p.is_cam,
       price:p.price,unit:p.unit,gear:p.gear||[],sns:p.sns||{},
       priceHour:pfr(p,"hour"),priceHalf:pfr(p,"half"),priceDay:pfr(p,"day"),
-      ok:p.is_verified,kycStatus:p.kyc_status
+      ok:p.is_verified,kycStatus:p.kyc_status,birthDate:p.birth_date||null
     };
     if(p.extra){for(var ek in p.extra){if(p.extra.hasOwnProperty(ek))S.myProfile[ek]=p.extra[ek];}}
     saveD();
@@ -1864,7 +1864,8 @@ function EditProfileModal(){
       if(!sb||!currentUser){if(newImgBlob&&phImg.src)S.myProfile.profileImg=phImg.src;saveD();alert("この端末に保存しました（ログインしていないため、サーバーには保存されていません）");close();return;}
       btn.disabled=true;btn.textContent="保存中...";
       syncMinPrice(S.myProfile);
-      var row={id:currentUser.id,nick:f.nick,real_name:S.myProfile.name||"",age:f.age?parseInt(f.age):null,email:currentUser.email||"",act:f.act,acts:S.myProfile.acts||[],lv:f.lv,resorts:S.myProfile.resorts||[],bio:f.bio,icon:S.myProfile.icon||"🏂",price:S.myProfile.price?parseInt(S.myProfile.price):null,unit:S.myProfile.unit||"",price_hour:S.myProfile.priceHour||null,price_half:S.myProfile.priceHalf||null,price_day:S.myProfile.priceDay||null,gear:S.myProfile.gear||[],sns:S.myProfile.sns||{},kyc_status:S.myProfile.kycStatus||"approved"};
+      var row={id:currentUser.id,nick:f.nick,real_name:S.myProfile.name||"",age:f.age?parseInt(f.age):null,email:currentUser.email||"",act:f.act,acts:S.myProfile.acts||[],lv:f.lv,resorts:S.myProfile.resorts||[],bio:f.bio,icon:S.myProfile.icon||"🏂",price:S.myProfile.price?parseInt(S.myProfile.price):null,unit:S.myProfile.unit||"",price_hour:S.myProfile.priceHour||null,price_half:S.myProfile.priceHalf||null,price_day:S.myProfile.priceDay||null,gear:S.myProfile.gear||[],sns:S.myProfile.sns||{}};
+      if(S.myProfile.name)row.real_name=S.myProfile.name;else delete row.real_name;
       function fail(txt){msg.style.color="#EF4444";msg.textContent=txt;msg.style.display="block";btn.disabled=false;btn.textContent="保存する";}
       function saveRow(imgUrl){
         if(imgUrl)row.profile_img=imgUrl;
@@ -2738,19 +2739,33 @@ function renderProfile(){
       fr.onload=function(ev){var im=new Image();im.onload=function(){var mx=1600,sc=Math.min(1,mx/Math.max(im.width,im.height));var cv=document.createElement("canvas");cv.width=Math.round(im.width*sc);cv.height=Math.round(im.height*sc);cv.getContext("2d").drawImage(im,0,0,cv.width,cv.height);cv.toBlob(function(bl){kycBlob=bl;kfWrap.firstChild.textContent="✅ 写真を選びました";kfWrap.style.borderColor="#22C55E";},"image/jpeg",0.9);};im.src=ev.target.result;};
       fr.readAsDataURL(file);
     });
-    kfWrap.appendChild(kf);kycBox.appendChild(kfWrap);
+    kfWrap.appendChild(kf);
+    var knl=document.createElement("div");knl.style.cssText="font-size:12px;font-weight:700;color:#6B7280;margin-bottom:4px";knl.textContent="本名（身分証と同じ表記）";
+    var kn=document.createElement("input");kn.type="text";kn.className="inp";kn.placeholder="例：山田 太郎";kn.style.marginBottom="10px";kn.value=S.myProfile.name||"";
+    var kbl=document.createElement("div");kbl.style.cssText="font-size:12px;font-weight:700;color:#6B7280;margin-bottom:4px";kbl.textContent="生年月日";
+    var kb=document.createElement("input");kb.type="date";kb.className="inp";kb.style.marginBottom="10px";kb.max=new Date().toISOString().slice(0,10);if(S.myProfile.birthDate)kb.value=S.myProfile.birthDate;
+    kycBox.appendChild(knl);kycBox.appendChild(kn);kycBox.appendChild(kbl);kycBox.appendChild(kb);
+    kycBox.appendChild(kfWrap);
     var kyBtn=document.createElement("button");kyBtn.className="obtn obtn-full";kyBtn.style.cssText="font-size:13px;padding:10px";kyBtn.textContent="本人確認を申請する";
     kyBtn.addEventListener("click",function(){
+      var kName=(kn.value||"").replace(/^\s+|\s+$/g,"");
+      var kBirth=kb.value||"";
+      if(!kName){alert("本名を入力してください");return;}
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(kBirth)){alert("生年月日を入力してください");return;}
+      var bp=kBirth.split("-"),now=new Date();
+      var kAge=now.getFullYear()-parseInt(bp[0],10);
+      if(now.getMonth()+1<parseInt(bp[1],10)||(now.getMonth()+1===parseInt(bp[1],10)&&now.getDate()<parseInt(bp[2],10)))kAge--;
+      if(kAge<18){alert("料金を受け取れるのは18歳以上の方のみです");return;}
       if(!kycBlob){alert("身分証の写真を選んでください");return;}
       if(typeof sb==="undefined"||!sb||!currentUser){alert("ログインが必要です");return;}
       kyBtn.disabled=true;kyBtn.textContent="送信中...";
       var kpath=currentUser.id+"/id_"+Date.now()+".jpg";
       sb.storage.from("kyc").upload(kpath,kycBlob,{contentType:"image/jpeg"}).then(function(ur){
         if(ur.error){throw new Error(ur.error.message);}
-        return sb.from("profiles").update({kyc_status:"pending"}).eq("id",currentUser.id);
+        return sb.from("profiles").update({kyc_status:"pending",real_name:kName,birth_date:kBirth}).eq("id",currentUser.id);
       }).then(function(r){
         if(r&&r.error)throw new Error(r.error.message);
-        S.myProfile.kycStatus="pending";saveD();alert("申請しました。審査が終わるまでお待ちください");render();
+        S.myProfile.kycStatus="pending";S.myProfile.name=kName;S.myProfile.birthDate=kBirth;saveD();alert("申請しました。審査が終わるまでお待ちください");render();
       }).catch(function(e){kyBtn.disabled=false;kyBtn.textContent="本人確認を申請する";alert("申請エラー: "+(e&&e.message?e.message:e));});
     });
     kycBox.appendChild(kyBtn);

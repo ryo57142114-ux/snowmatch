@@ -222,7 +222,7 @@ async function render() {
   }).join('') + '</div>';
 
   var res = await sb.from('profiles')
-    .select('id, nick, real_name, age, email, kyc_status, is_verified')
+    .select('id, nick, real_name, birth_date, age, email, kyc_status, is_verified')
     .eq('kyc_status', currentTab)
     .order('nick');
 
@@ -244,8 +244,21 @@ async function render() {
   people.forEach(function (p) { loadPhotos(p.id); bindActions(p); });
 }
 
+function ageFromBirth(b) {
+  if (!b) return null;
+  var parts = String(b).split('-');
+  var y = parseInt(parts[0], 10), m = parseInt(parts[1], 10), d = parseInt(parts[2], 10);
+  var now = new Date();
+  var age = now.getFullYear() - y;
+  if (now.getMonth() + 1 < m || (now.getMonth() + 1 === m && now.getDate() < d)) age--;
+  return age;
+}
+
 function personHtml(p) {
-  var ageWarn = (p.age != null && p.age < 18) ? ' <span class="warn">18歳未満</span>' : '';
+  var realAge = ageFromBirth(p.birth_date);
+  var shownAge = realAge != null ? realAge : p.age;
+  var ageWarn = (shownAge != null && shownAge < 18) ? ' <span class="warn">18歳未満</span>' : '';
+  var birthText = p.birth_date ? esc(p.birth_date) + '（' + realAge + '歳）' : '未入力';
   var actions = '';
   if (p.kyc_status !== 'approved') actions += '<button class="btn ok" data-approve="' + p.id + '">承認する</button>';
   if (p.kyc_status !== 'rejected') actions += '<button class="btn ng" data-reject="' + p.id + '">却下する</button>';
@@ -256,7 +269,8 @@ function personHtml(p) {
       '<p class="status ' + esc(p.kyc_status) + '">' + (STATUS_LABEL[p.kyc_status] || esc(p.kyc_status)) + '</p>' +
       '<dl class="facts">' +
         '<dt>本名</dt><dd>' + esc(p.real_name || '未入力') + '</dd>' +
-        '<dt>年齢</dt><dd>' + esc(p.age == null ? '未入力' : p.age + '歳') + ageWarn + '</dd>' +
+        '<dt>生年月日</dt><dd>' + birthText + ageWarn + '</dd>' +
+        '<dt>自己申告の年齢</dt><dd>' + esc(p.age == null ? '未入力' : p.age + '歳') + '</dd>' +
         '<dt>メール</dt><dd>' + esc(p.email || '未入力') + '</dd>' +
         '<dt>ID</dt><dd>' + esc(p.id) + '</dd>' +
       '</dl>' +
