@@ -1627,7 +1627,7 @@ function renderExplore(){
   // 追い撮りバナー
   var camBanner=document.createElement("div");
   camBanner.style.cssText="background:linear-gradient(135deg,#0f3460,#16213e,#1a1a2e);border-radius:20px;padding:16px;margin-bottom:16px;cursor:pointer;position:relative;overflow:hidden";
-  camBanner.addEventListener("click",function(){S.camOnly=!S.camOnly;render();});
+  camBanner.addEventListener("click",function(){S.camOnly=!S.camOnly;if(!S.camOnly)S.camSel=[];render();});
   var cg1=document.createElement("div");cg1.style.cssText="position:absolute;top:-15px;right:-15px;width:80px;height:80px;background:radial-gradient(circle,rgba(34,197,94,0.3),transparent 70%);border-radius:50%";
   camBanner.appendChild(cg1);
   var cbRow=document.createElement("div");cbRow.style.cssText="display:flex;align-items:center;gap:14px;position:relative";
@@ -1637,14 +1637,27 @@ function renderExplore(){
   var cbTitle=document.createElement("div");cbTitle.style.cssText="font-weight:900;color:#fff;font-size:16px;margin-bottom:3px";cbTitle.textContent="追い撮り・撮影カメラマン";
   var cbSub2=document.createElement("div");cbSub2.style.cssText="font-size:12px;color:rgba(255,255,255,0.7);margin-bottom:8px";cbSub2.textContent="スノー仲間が一緒に滑りながら撮影します";
   var camTagRow=document.createElement("div");camTagRow.style.cssText="display:flex;gap:5px;flex-wrap:wrap";
-  ["GoPro","Insta360","DJI","iPhone","スマホ","ビデオカメラ","ミラーレス"].forEach(function(t){
-    var tag=document.createElement("span");tag.style.cssText="background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.85);border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700";tag.textContent=t;camTagRow.appendChild(tag);
+  if(!S.camSel)S.camSel=[];
+  // 機材ごとに選んで絞り込める（複数OK）。「すべて」は機材を問わず撮影できる人全員
+  ["すべて","GoPro","Insta360","DJI","iPhone","スマホ","ビデオカメラ","ミラーレス"].forEach(function(t){
+    var isAll=t==="すべて";
+    var on=S.camOnly&&(isAll?!S.camSel.length:S.camSel.indexOf(t)>=0);
+    var tag=document.createElement("button");
+    tag.style.cssText="border:none;font-family:inherit;cursor:pointer;border-radius:12px;padding:5px 10px;font-size:11px;font-weight:800;"+(on?"background:#22C55E;color:#fff":"background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.85)");
+    tag.textContent=(on?"✓ ":"")+t;
+    tag.addEventListener("click",function(e){
+      e.stopPropagation();
+      if(isAll){S.camSel=[];S.camOnly=true;}
+      else{var k=S.camSel.indexOf(t);if(k>=0)S.camSel.splice(k,1);else S.camSel.push(t);S.camOnly=true;}
+      render();
+    });
+    camTagRow.appendChild(tag);
   });
   cbInfo.appendChild(cbTitle);cbInfo.appendChild(cbSub2);cbInfo.appendChild(camTagRow);
   var cbArrow=document.createElement("div");cbArrow.style.cssText="color:rgba(255,255,255,0.4);font-size:22px;flex-shrink:0";cbArrow.textContent=S.camOnly?"✅":"›";
   cbRow.appendChild(cbIconWrap);cbRow.appendChild(cbInfo);cbRow.appendChild(cbArrow);
   camBanner.appendChild(cbRow);
-  if(S.camOnly){var cbActive=document.createElement("div");cbActive.style.cssText="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.1);font-size:12px;color:#86EFAC;font-weight:700;text-align:center";cbActive.textContent="🎥 追い撮り・カメラマンのみ表示中　タップで解除";camBanner.appendChild(cbActive);}
+  if(S.camOnly){var cbActive=document.createElement("div");cbActive.style.cssText="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.1);font-size:12px;color:#86EFAC;font-weight:700;text-align:center";cbActive.textContent=(S.camSel&&S.camSel.length?"🎥 "+S.camSel.join("・")+" で撮れる人を表示中":"🎥 追い撮り・カメラマンのみ表示中")+"　ここをタップで解除";camBanner.appendChild(cbActive);}
   wrap.appendChild(camBanner);
 
   // ランキング
@@ -1714,7 +1727,7 @@ function renderExplore(){
   // フィルター
   var at=d({style:{display:"flex",gap:"8px",overflowX:"auto",paddingBottom:"4px",marginBottom:"14px"}});
   acr=at;
-  at.appendChild(chip2("すべて",!S.selAct&&!S.camOnly,function(){R({selAct:null,camOnly:false});}));
+  at.appendChild(chip2("すべて",!S.selAct&&!S.camOnly,function(){R({selAct:null,camOnly:false,camSel:[]});}));
   for(var ai3=0;ai3<ACTS.length;ai3++){
     (function(a){
       var isCamTab=(a==="🎥 追い撮り・撮影");
@@ -1778,6 +1791,7 @@ function renderExplore(){
       var pAc=!S.selAct||u.act===S.selAct||u.act==="両方"||(u.acts&&u.acts.indexOf(S.selAct)>=0);
       if(S.blockedUsers&&S.blockedUsers.indexOf(u.id)>=0)return;
       if(S.camOnly&&!(u.isCam||(u.camGear&&u.camGear.length)))return; // 撮影機材を登録している人も撮影できる人として表示
+      if(S.camOnly&&S.camSel&&S.camSel.length){var ug=[].concat(u.camGear||[],u.gear||[]);if(!S.camSel.some(function(x){return ug.indexOf(x)>=0;}))return;}
       if(S.selArea&&!pA)return; // エリアで絞り込み（「すべて」なら全員）
       if(S.payMode==="free"&&isPaidUser(u))return;
       if(S.payMode==="paid"&&!isPaidUser(u))return;
