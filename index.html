@@ -1770,16 +1770,19 @@ function renderExplore(){
     }
   }
   if(!sortedUsers.length){var usEmpty=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"13px",padding:"24px 0"}});usEmpty.textContent="まだ登録ユーザーがいません。友達を招待してみよう！";wrap.appendChild(usEmpty);}
+  var _shown=0;
   for(var ui=0;ui<sortedUsers.length;ui++){
     (function(u){
       var pA=!S.selArea;
       if(S.selArea){for(var ri=0;ri<AREAS.length;ri++){if(AREAS[ri].area===S.selArea){pA=AREAS[ri].resorts.indexOf(u.resorts[0])>=0||u.resorts.some(function(r){return AREAS[ri].resorts.indexOf(r)>=0;});break;}}}
       var pAc=!S.selAct||u.act===S.selAct||u.act==="両方"||(u.acts&&u.acts.indexOf(S.selAct)>=0);
       if(S.blockedUsers&&S.blockedUsers.indexOf(u.id)>=0)return;
-      if(S.camOnly&&!u.isCam)return;
+      if(S.camOnly&&!(u.isCam||(u.camGear&&u.camGear.length)))return; // 撮影機材を登録している人も撮影できる人として表示
+      if(S.selArea&&!pA)return; // エリアで絞り込み（「すべて」なら全員）
       if(S.payMode==="free"&&isPaidUser(u))return;
       if(S.payMode==="paid"&&!isPaidUser(u))return;
-      if(!pAc)return; // エリア(pA)では絞り込まない
+      if(!pAc)return;
+      _shown++;
       var card=d({class:"card",style:{cursor:"pointer",marginBottom:"12px"},onClick:function(){R({selUser:u});}});
       var row=d({style:{display:"flex",gap:"12px"}});
       if(u.profileImg){
@@ -1824,6 +1827,7 @@ function renderExplore(){
       row.appendChild(lb);card.appendChild(row);wrap.appendChild(card);
     })(sortedUsers[ui]);
   }
+  if(sortedUsers.length&&!_shown){var ne=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"13px",padding:"24px 0",lineHeight:"1.7"}});ne.textContent="条件に合う人がいません。\n絞り込みを「すべて」に戻してみてください。";ne.style.whiteSpace="pre-line";wrap.appendChild(ne);}
   return wrap;
 }
 
