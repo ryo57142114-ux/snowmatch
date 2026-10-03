@@ -896,10 +896,9 @@ function renderSnowBoard(wrap){
     var c=d({class:"card",style:{marginBottom:"10px",padding:"0",overflow:"hidden",cursor:"pointer",border:open?"2px solid #0EA5E9":"none"}});
     var head=d({style:{display:"flex",gap:"12px",padding:"12px 14px",alignItems:"center"}});
     if(photo){var th=document.createElement("img");th.src=photo;th.alt="";th.style.cssText="width:64px;height:64px;border-radius:12px;object-fit:cover;flex-shrink:0;background:#eee";head.appendChild(th);}
-    else{var ph=d({style:{width:"64px",height:"64px",borderRadius:"12px",background:"linear-gradient(135deg,#E0F2FE,#DBEAFE)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"28px",flexShrink:"0"}});ph.textContent="🏔️";head.appendChild(ph);}
     var info=d({style:{flex:"1",minWidth:"0"}});
-    var nm=d({style:{fontWeight:"900",fontSize:"15px",color:"#1A1A2E"}});nm.textContent="⛰️ "+rs;info.appendChild(nm);
-    var big=d({style:{fontSize:"14px",fontWeight:"800",color:"#0369A1",margin:"2px 0"}});big.textContent=(sqLbl(SNOW_Q,top1)||"")+"　"+sqLbl(SNOW_W,latest.weather)+"　"+sqLbl(SNOW_C,latest.crowd);info.appendChild(big);
+    var nm=d({style:{fontWeight:"900",fontSize:"15px",color:"#1A1A2E"}});nm.textContent=rs;info.appendChild(nm);
+    var big=d({style:{fontSize:"14px",fontWeight:"800",color:"#0369A1",margin:"2px 0"}});big.textContent=[sqLbl(SNOW_Q,top1),sqLbl(SNOW_W,latest.weather),sqLbl(SNOW_C,latest.crowd)].filter(function(t){return !!t;}).join("　");info.appendChild(big);
     var mt=d({style:{fontSize:"11px",color:"#9CA3AF"}});mt.textContent="報告 "+arr.length+"件・最新 "+timeAgo(latest.created_at);info.appendChild(mt);
     head.appendChild(info);
     head.appendChild(sp({style:{color:"#9CA3AF",fontSize:"16px",flexShrink:"0"}},open?"▾":"›"));
@@ -2424,7 +2423,8 @@ function renderMarket(){
     allCI.forEach(function(ci){
       var card=d({class:"card",style:{marginBottom:"12px"}});
       var tr=d({style:{display:"flex",gap:"12px",alignItems:"center",marginBottom:"8px"}});
-      var ico=d({style:{fontSize:"24px",flexShrink:"0"}});ico.textContent=ci.icon;
+      var _mp=S.myProfile||{};var _ru=ci.uid?findRealUser(ci.uid):null;var _isMe=(ci.uid&&ci.uid===_mp.uid)||(!ci.uid&&ci.user===(_mp.nick||_mp.name));
+      var ico=avU(40,22,_isMe?_mp:(_ru||{profileImg:ci.profileImg,icon:ci.icon}));
       var info=d({style:{flex:"1"}});var name2=d({style:{fontWeight:"800",fontSize:"14px",color:"#1A1A2E"}});name2.textContent=ci.user;
       var resort2=d({style:{display:"flex",alignItems:"center",gap:"4px",marginTop:"2px"}});
       var pin=d({style:{fontSize:"14px"}});pin.textContent="📍";var rname=d({style:{fontWeight:"700",fontSize:"13px",color:"#FF6B2B"}});rname.textContent=ci.resort;
@@ -3936,7 +3936,7 @@ function CheckinModal(){
       if(!snow){alert("コンディションを入力してください");return;}
       var resort=rSel.value||ciResort;
       var now=new Date();var hm=now.getHours()+":"+String(now.getMinutes()).padStart(2,"0");
-      var ci={id:"c"+Date.now(),user:(S.myProfile&&(S.myProfile.nick||S.myProfile.name))||"あなた",icon:(S.myProfile&&S.myProfile.icon)||"🏂",resort:resort,snow:snow,time:hm,likes:0};
+      var ci={id:"c"+Date.now(),uid:(S.myProfile&&S.myProfile.uid)||null,profileImg:(S.myProfile&&S.myProfile.profileImg)||null,user:(S.myProfile&&(S.myProfile.nick||S.myProfile.name))||"あなた",icon:(S.myProfile&&S.myProfile.icon)||"🏂",resort:resort,snow:snow,time:hm,likes:0};
       if(!S.checkins)S.checkins=[];
       S.checkins.unshift(ci);
       saveD();
