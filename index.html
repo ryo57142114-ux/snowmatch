@@ -662,6 +662,61 @@ function deleteMyPost(post){
     loadUserPosts();
   });
 }
+// ===== 無料の人向け：「一緒に滑りたい」お誘い =====
+function RideInviteModal(){
+  var iv=S.invite,u=iv.u;
+  var slots=livePosts().filter(function(p){return p.user_id===u.uid&&p.kind==="offer"&&p.pay==="free";});
+  return Modal(false,function(){R({invite:null});},function(box){
+    var t=d({style:{fontWeight:"900",fontSize:"18px",color:"#1A1A2E",marginBottom:"4px"}});t.textContent="🤝 一緒に滑りたい";box.appendChild(t);
+    var st=d({style:{fontSize:"12px",color:"#6B7280",marginBottom:"14px",lineHeight:"1.6"}});st.textContent=u.name+"さんに、一緒に滑りたい日を送ります。お金のやり取りはありません。";box.appendChild(st);
+    function lbl(x){var l=d({style:{fontSize:"12px",fontWeight:"800",color:"#6B7280",margin:"0 0 6px"}});l.textContent=x;box.appendChild(l);}
+    if(slots.length){
+      lbl(u.name+"さんの空いている日");
+      var sr=d({style:{display:"flex",flexDirection:"column",gap:"6px",marginBottom:"12px"}});
+      slots.slice(0,10).forEach(function(x){var on=iv.slot===x.id;var c=document.createElement("button");c.style.cssText="text-align:left;padding:10px 12px;border-radius:12px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;border:2px solid "+(on?"#22C55E":"#E5E7EB")+";background:"+(on?"#F0FDF4":"#fff")+";color:"+(on?"#15803D":"#1A1A2E");c.textContent=dateLbl(x.ride_date)+"　"+hm5(x.start_time)+"〜"+hm5(x.end_time)+(x.resort?"　⛰️ "+x.resort:"");c.addEventListener("click",function(){iv.slot=on?null:x.id;if(!on){iv.date=x.ride_date;iv.time=hm5(x.start_time);iv.resort=x.resort||"";}render();});sr.appendChild(c);});
+      box.appendChild(sr);
+      var orl=d({style:{fontSize:"11px",color:"#9CA3AF",margin:"-4px 0 12px"}});orl.textContent="または、下で日付を自由に選べます";box.appendChild(orl);
+    }
+    lbl("日付と時間");
+    var dr=d({style:{display:"flex",gap:"8px",marginBottom:"12px"}});
+    var di=document.createElement("input");di.type="date";di.className="inp";di.style.cssText="flex:1;min-width:0";di.min=todayStr();di.value=iv.date||"";di.addEventListener("change",function(e){iv.date=e.target.value;iv.slot=null;});
+    var ts=document.createElement("select");ts.className="inp";ts.style.cssText="flex:0 0 110px;background:#fff";
+    for(var h=6;h<=20;h++){["00","30"].forEach(function(mm){var v=h+":"+mm;var o=document.createElement("option");o.value=v;o.textContent=v+"〜";if((iv.time||"9:00")===v)o.selected=true;ts.appendChild(o);});}
+    ts.addEventListener("change",function(e){iv.time=e.target.value;});
+    dr.appendChild(di);dr.appendChild(ts);box.appendChild(dr);
+    lbl("スキー場");
+    var rs=document.createElement("select");rs.className="inp";rs.style.cssText="margin-bottom:12px;background:#fff";
+    var o0=document.createElement("option");o0.value="";o0.textContent="相談して決めたい";rs.appendChild(o0);
+    var ur=u.resorts||[];if(ur.length){var og0=document.createElement("optgroup");og0.label=u.name+"さんのよく滑るスキー場";ur.forEach(function(r){var o=document.createElement("option");o.value=r;o.textContent=r;og0.appendChild(o);});rs.appendChild(og0);}
+    AREAS.forEach(function(a){var og=document.createElement("optgroup");og.label=a.area;a.resorts.forEach(function(r){var o=document.createElement("option");o.value=r;o.textContent=r;og.appendChild(o);});rs.appendChild(og);});
+    rs.value=iv.resort||"";rs.addEventListener("change",function(e){iv.resort=e.target.value;});box.appendChild(rs);
+    lbl("ひとこと（任意）");
+    var ta=document.createElement("textarea");ta.className="inp";ta.rows=2;ta.maxLength=200;ta.placeholder="例：同じくらいのレベルです！ゆるく一緒に滑りましょう";ta.style.cssText="width:100%;resize:none;margin-bottom:14px";ta.value=iv.note||"";ta.addEventListener("input",function(e){iv.note=e.target.value;});box.appendChild(ta);
+    var br=d({style:{display:"flex",gap:"10px"}});
+    br.appendChild(obtn("閉じる",function(){R({invite:null});},"obtn-s"));
+    var sendB=obtn("🤝 お誘いを送る",function(){
+      if(S.isGuest){guestPrompt();return;}
+      if(!sb||!currentUser){alert("送るにはログインが必要です");return;}
+      if(!iv.date){alert("日付を選んでください");return;}
+      if(iv.sending)return;iv.sending=true;sendB.textContent="送信中...";
+      var lines=["🤝 一緒に滑りませんか？","📆 "+dateLbl(iv.date)+" "+(iv.time||"9:00")+"〜","⛰️ "+(iv.resort||"スキー場は相談して決めたいです")];
+      if((iv.note||"").trim())lines.push("",iv.note.trim());
+      var body=lines.join("\n");
+      // 先にフォローしてから送る（メッセージはフォローした相手に送れる）
+      var fl=(S.following||[]).indexOf(u.id)>=0?Promise.resolve():sb.from("user_follows").insert({follower:currentUser.id,followee:u.uid}).then(function(){if(!S.following)S.following=[];if(S.following.indexOf(u.id)<0)S.following.push(u.id);});
+      fl.then(function(){return sb.from("dm_messages").insert({from_user:currentUser.id,to_user:u.uid,body:body}).select().single();})
+        .then(function(r){
+          iv.sending=false;
+          if(r&&r.error){sendB.textContent="🤝 お誘いを送る";alert("送れませんでした: "+r.error.message);return;}
+          var cid=String(u.id);if(!S.chatMsgs[cid])S.chatMsgs[cid]=[];
+          if(r&&r.data)addDmRow&&addDmRow(r.data,true);
+          alert("お誘いを送りました！返事はチャットに届きます");
+          R({invite:null,selUser:null,tab:"chat",chatUser:u});
+        }).catch(function(e){iv.sending=false;sendB.textContent="🤝 お誘いを送る";alert("送れませんでした: "+(e&&e.message?e.message:e));});
+    },"");
+    br.appendChild(sendB);box.appendChild(br);
+  });
+}
 function guestPrompt(){
   if(confirm("無料登録すると、メッセージ・予約・フォローができます。\n登録画面に進みますか？")){
     S.isGuest=false;S.myProfile=null;S.selUser=null;S.chatUser=null;S.bookUser=null;
@@ -4003,13 +4058,16 @@ function _renderInner(){
           fwb.addEventListener("click",function(){toggleFollow(u);});box.appendChild(fwb);
           var br=d({style:{display:"flex",gap:"10px",marginTop:"6px"}});var isLk=S.liked.indexOf(u.id)>=0;
           br.appendChild(obtn("💬 メッセージ",function(){R({selUser:null,chatUser:u,tab:"chat"});},"obtn-s"));
-          br.appendChild(obtn("🎿 予約する",function(){if(!u.price){alert("この方はまだ料金を設定していません。メッセージで相談してください");return;}R({selUser:null,bookUser:u});},""));box.appendChild(br);
+          if(isPaidUser(u))br.appendChild(obtn("🎿 予約する",function(){R({selUser:null,bookUser:u});},""));
+          else{var ivb=obtn("🤝 一緒に滑りたい",function(){if(S.isGuest){guestPrompt();return;}if(currentUser&&u.uid===currentUser.id)return;R({invite:{u:u,date:"",time:"9:00",resort:"",note:"",slot:null}});},"");ivb.style.background="linear-gradient(135deg,#22C55E,#16A34A)";ivb.style.boxShadow="0 4px 14px rgba(34,197,94,.35)";br.appendChild(ivb);}
+          box.appendChild(br);
         }));
       })(S.selUser);
     }
   }
   if(S.bookUser)app.appendChild(BookModal(S.bookUser));
   if(S.postModal)app.appendChild(PostModal());
+  if(S.invite)app.appendChild(RideInviteModal());
   if(S.confirmed)app.appendChild(ConfirmedModal(S.confirmed));
   if(S.addPost)app.appendChild(AddPostModal());
   if(S.postDetail)app.appendChild(PostDetailModal(S.postDetail));
