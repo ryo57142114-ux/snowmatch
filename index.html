@@ -829,6 +829,153 @@ function renderOpenBoard(wrap){
   });
   return wrap;
 }
+// ===== ❄️ ゲレンデ速報 =====
+var SNOW_Q=[["powder","❄️ パウダー"],["packed","🎿 圧雪バーン"],["slushy","💧 ザラメ・重め"],["icy","🧊 アイスバーン"],["crust","🥶 カリカリ・クラスト"]];
+var SNOW_W=[["sunny","☀️ 晴れ"],["cloudy","☁️ くもり"],["snow","🌨️ 雪"],["rain","🌧️ 雨"],["wind","🌬️ 強風"]];
+var SNOW_C=[["empty","🟢 空いてる"],["normal","🟡 ふつう"],["crowded","🔴 混んでる"]];
+function sqLbl(list,k){for(var i=0;i<list.length;i++)if(list[i][0]===k)return list[i][1];return "";}
+function todayStartIso(){var t=new Date();t.setHours(0,0,0,0);return t.toISOString();}
+function loadSnowReports(){
+  if(typeof sb==="undefined"||!sb)return;
+  sb.from("snow_reports").select("*").gte("created_at",todayStartIso()).order("created_at",{ascending:false}).limit(300).then(function(r){
+    if(r.error){console.error("snow load error",r.error.message||r.error);S.snowReports=S.snowReports||[];render();return;}
+    S.snowReports=r.data||[];render();
+  });
+}
+setInterval(function(){if(!document.hidden&&S.tab==="market"&&S.marketTab==="snow")loadSnowReports();},45000);
+function renderSnowBoard(wrap){
+  if(S.snowReports===undefined){S.snowReports=null;loadSnowReports();}
+  var now=new Date();
+  var top=d({style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"4px"}});
+  var ht=d({style:{fontWeight:"900",fontSize:"19px",color:"#1A1A2E"}});ht.textContent="❄️ 今日のゲレンデ速報";top.appendChild(ht);
+  var nb=document.createElement("button");nb.textContent="＋ 速報する";nb.style.cssText="background:linear-gradient(135deg,#0EA5E9,#2563EB);color:#fff;border:none;border-radius:14px;padding:9px 14px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit";
+  nb.addEventListener("click",function(){
+    if(S.isGuest){guestPrompt();return;}
+    if(!sb||!currentUser){alert("速報するにはログインが必要です");return;}
+    R({snowModal:{resort:(S.myProfile&&S.myProfile.resorts&&S.myProfile.resorts[0])||"",snow:"",weather:"",crowd:"",comment:"",photo:null,preview:null}});
+  });
+  top.appendChild(nb);wrap.appendChild(top);
+  var sub=d({style:{fontSize:"12px",color:"#6B7280",marginBottom:"12px",lineHeight:"1.6"}});sub.textContent=(now.getMonth()+1)+"月"+now.getDate()+"日の情報です。滑っている人が、雪質・天気・混み具合を写真つきで教えてくれます（毎日0時にリセット）";wrap.appendChild(sub);
+  // エリア
+  var ar=d({style:{display:"flex",gap:"6px",overflowX:"auto",marginBottom:"12px",paddingBottom:"2px"}});
+  [[null,"全エリア"]].concat(AREAS.map(function(a){return [a.area,a.area];})).forEach(function(o){var on=(S.srArea||null)===o[0];var c=document.createElement("button");c.className="chip"+(on?" on":"");c.style.cssText="flex-shrink:0;font-size:12px;padding:7px 12px";c.textContent=o[1];c.addEventListener("click",function(){R({srArea:o[0]});});ar.appendChild(c);});
+  wrap.appendChild(ar);
+  var list=S.snowReports;
+  if(list===null){var ld=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"13px",padding:"24px 0"}});ld.textContent="読み込み中…";wrap.appendChild(ld);return wrap;}
+  list=list.filter(function(x){return !S.srArea||areaOfResort(x.resort)===S.srArea;});
+  if(!list.length){var em=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"13px",padding:"24px 8px",lineHeight:"1.7"}});em.textContent="今日の速報はまだありません。\n滑りに来たら、最初の速報をお願いします！";em.style.whiteSpace="pre-line";wrap.appendChild(em);return wrap;}
+  // スキー場ごとにまとめる
+  var by={},order=[];
+  list.forEach(function(x){if(!by[x.resort]){by[x.resort]=[];order.push(x.resort);}by[x.resort].push(x);});
+  order.forEach(function(rs){
+    var arr=by[rs],latest=arr[0];
+    var cnt={};arr.forEach(function(x){if(x.snow)cnt[x.snow]=(cnt[x.snow]||0)+1;});
+    var top1="";var mx=0;Object.keys(cnt).forEach(function(k){if(cnt[k]>mx){mx=cnt[k];top1=k;}});
+    var photo=null;for(var i=0;i<arr.length;i++){if(arr[i].photo_url){photo=arr[i].photo_url;break;}}
+    var open=S.srOpen===rs;
+    var c=d({class:"card",style:{marginBottom:"10px",padding:"0",overflow:"hidden",cursor:"pointer",border:open?"2px solid #0EA5E9":"none"}});
+    var head=d({style:{display:"flex",gap:"12px",padding:"12px 14px",alignItems:"center"}});
+    if(photo){var th=document.createElement("img");th.src=photo;th.alt="";th.style.cssText="width:64px;height:64px;border-radius:12px;object-fit:cover;flex-shrink:0;background:#eee";head.appendChild(th);}
+    else{var ph=d({style:{width:"64px",height:"64px",borderRadius:"12px",background:"linear-gradient(135deg,#E0F2FE,#DBEAFE)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"28px",flexShrink:"0"}});ph.textContent="🏔️";head.appendChild(ph);}
+    var info=d({style:{flex:"1",minWidth:"0"}});
+    var nm=d({style:{fontWeight:"900",fontSize:"15px",color:"#1A1A2E"}});nm.textContent="⛰️ "+rs;info.appendChild(nm);
+    var big=d({style:{fontSize:"14px",fontWeight:"800",color:"#0369A1",margin:"2px 0"}});big.textContent=(sqLbl(SNOW_Q,top1)||"")+"　"+sqLbl(SNOW_W,latest.weather)+"　"+sqLbl(SNOW_C,latest.crowd);info.appendChild(big);
+    var mt=d({style:{fontSize:"11px",color:"#9CA3AF"}});mt.textContent="報告 "+arr.length+"件・最新 "+timeAgo(latest.created_at);info.appendChild(mt);
+    head.appendChild(info);
+    head.appendChild(sp({style:{color:"#9CA3AF",fontSize:"16px",flexShrink:"0"}},open?"▾":"›"));
+    c.appendChild(head);
+    c.addEventListener("click",function(){R({srOpen:open?null:rs});});
+    if(open){
+      var det=d({style:{borderTop:"1px solid #F1F2F4",padding:"6px 14px 12px",background:"#FAFCFF"}});
+      arr.forEach(function(x){
+        var mine=currentUser&&x.user_id===currentUser.id;
+        var u=mine?{name:(S.myProfile&&S.myProfile.nick)||"あなた",icon:(S.myProfile&&S.myProfile.icon)||"🏂",profileImg:S.myProfile&&S.myProfile.profileImg}:findRealUser(x.user_id);
+        var it=d({style:{padding:"10px 0",borderBottom:"1px solid #EEF2F7"}});
+        var ur=d({style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"6px"}});
+        ur.appendChild(avU(28,14,u||{icon:"🏂"}));
+        var un=sp({style:{fontWeight:"800",fontSize:"13px",color:"#1A1A2E"}},(u&&u.name)||"ユーザー");if(u&&!mine){un.style.cursor="pointer";un.addEventListener("click",function(e){e.stopPropagation();R({selUser:u});});}ur.appendChild(un);
+        ur.appendChild(sp({style:{fontSize:"11px",color:"#9CA3AF",marginLeft:"auto"}},timeAgo(x.created_at)));
+        it.appendChild(ur);
+        var tg=d({style:{display:"flex",flexWrap:"wrap",gap:"5px",marginBottom:x.comment||x.photo_url?"6px":"0"}});
+        [sqLbl(SNOW_Q,x.snow),sqLbl(SNOW_W,x.weather),sqLbl(SNOW_C,x.crowd)].forEach(function(t){if(!t)return;tg.appendChild(sp({style:{background:"#E0F2FE",color:"#0369A1",fontSize:"11px",fontWeight:"800",padding:"3px 8px",borderRadius:"10px",whiteSpace:"nowrap"}},t));});
+        it.appendChild(tg);
+        if(x.comment){var cm=d({style:{fontSize:"13px",color:"#374151",lineHeight:"1.6",whiteSpace:"pre-wrap",wordBreak:"break-word",marginBottom:x.photo_url?"6px":"0"}});cm.textContent=x.comment;it.appendChild(cm);}
+        if(x.photo_url){var pi=document.createElement("img");pi.src=x.photo_url;pi.alt="ゲレンデの写真";pi.style.cssText="display:block;width:100%;max-height:260px;object-fit:cover;border-radius:12px;background:#eee";pi.addEventListener("click",function(e){e.stopPropagation();var w=window.open(x.photo_url,"_blank");if(!w)location.href=x.photo_url;});it.appendChild(pi);}
+        if(mine||S.isAdmin){var db=document.createElement("button");db.textContent="🗑 削除";db.style.cssText="margin-top:6px;padding:4px 10px;border-radius:10px;border:1px solid #FCA5A5;background:#fff;color:#EF4444;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit";db.addEventListener("click",function(e){e.stopPropagation();if(!confirm("この速報を削除しますか？"))return;sb.from("snow_reports").delete().eq("id",x.id).then(function(r){if(r.error){alert("削除できませんでした: "+r.error.message);return;}loadSnowReports();});});it.appendChild(db);}
+        det.appendChild(it);
+      });
+      det.addEventListener("click",function(e){e.stopPropagation();});
+      c.appendChild(det);
+    }
+    wrap.appendChild(c);
+  });
+  return wrap;
+}
+function SnowReportModal(){
+  var f=S.snowModal;
+  return Modal(false,function(){R({snowModal:null});},function(box){
+    var t=d({style:{fontWeight:"900",fontSize:"18px",color:"#1A1A2E",marginBottom:"14px"}});t.textContent="❄️ ゲレンデ速報";box.appendChild(t);
+    function lbl(x){var l=d({style:{fontSize:"12px",fontWeight:"800",color:"#6B7280",margin:"0 0 6px"}});l.textContent=x;box.appendChild(l);}
+    function chips(list,key){var r=d({style:{display:"flex",flexWrap:"wrap",gap:"6px",marginBottom:"14px"}});list.forEach(function(o){var on=f[key]===o[0];var c=document.createElement("button");c.textContent=o[1];c.style.cssText="padding:8px 12px;border-radius:14px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;white-space:nowrap;border:2px solid "+(on?"#0EA5E9":"#E5E7EB")+";background:"+(on?"#E0F2FE":"#fff")+";color:"+(on?"#0369A1":"#4B5563");c.addEventListener("click",function(){f[key]=on?"":o[0];render();});r.appendChild(c);});box.appendChild(r);}
+    lbl("スキー場");
+    var rs=document.createElement("select");rs.className="inp";rs.style.cssText="margin-bottom:14px;background:#fff";
+    var o0=document.createElement("option");o0.value="";o0.textContent="選んでください";rs.appendChild(o0);
+    var mine=(S.myProfile&&S.myProfile.resorts)||[];
+    if(mine.length){var og0=document.createElement("optgroup");og0.label="よく滑るスキー場";mine.forEach(function(r){var o=document.createElement("option");o.value=r;o.textContent=r;og0.appendChild(o);});rs.appendChild(og0);}
+    AREAS.forEach(function(a){var og=document.createElement("optgroup");og.label=a.area;a.resorts.forEach(function(r){var o=document.createElement("option");o.value=r;o.textContent=r;og.appendChild(o);});rs.appendChild(og);});
+    rs.value=f.resort||"";rs.addEventListener("change",function(e){f.resort=e.target.value;});box.appendChild(rs);
+    lbl("雪質");chips(SNOW_Q,"snow");
+    lbl("天気");chips(SNOW_W,"weather");
+    lbl("混み具合");chips(SNOW_C,"crowd");
+    lbl("ひとこと（任意）");
+    var ta=document.createElement("textarea");ta.className="inp";ta.rows=2;ta.maxLength=200;ta.placeholder="例：朝イチ10cm新雪！山頂付近が最高です";ta.style.cssText="width:100%;resize:none;margin-bottom:14px";ta.value=f.comment||"";ta.addEventListener("input",function(e){f.comment=e.target.value;});box.appendChild(ta);
+    lbl("写真（任意）");
+    var fi=document.createElement("input");fi.type="file";fi.accept="image/*";fi.style.display="none";
+    fi.addEventListener("change",function(e){var file=e.target.files&&e.target.files[0];e.target.value="";if(!file)return;shrinkImage(file,1400,function(blob,prev){f.photo=blob;f.preview=prev;render();});});
+    box.appendChild(fi);
+    if(f.preview){var pv=document.createElement("img");pv.src=f.preview;pv.style.cssText="display:block;width:100%;max-height:220px;object-fit:cover;border-radius:12px;margin-bottom:8px";box.appendChild(pv);}
+    var pb=document.createElement("button");pb.textContent=f.preview?"📷 写真を変える":"📷 写真を追加する";pb.style.cssText="width:100%;padding:11px;border-radius:12px;border:1.5px dashed #93C5FD;background:#F0F9FF;color:#0369A1;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;margin-bottom:16px";pb.addEventListener("click",function(){fi.click();});box.appendChild(pb);
+    var br=d({style:{display:"flex",gap:"10px"}});
+    br.appendChild(obtn("閉じる",function(){R({snowModal:null});},"obtn-s"));
+    var sendB=obtn("❄️ 速報する",function(){
+      if(!f.resort){alert("スキー場を選んでください");return;}
+      if(!f.snow&&!f.weather&&!f.crowd&&!(f.comment||"").trim()&&!f.photo){alert("雪質・天気・混み具合のどれか1つは選んでください");return;}
+      if(f.sending)return;f.sending=true;sendB.textContent="送信中...";
+      function ins(url){
+        sb.from("snow_reports").insert({user_id:currentUser.id,resort:f.resort,snow:f.snow||null,weather:f.weather||null,crowd:f.crowd||null,comment:(f.comment||"").trim()||null,photo_url:url||null}).then(function(r){
+          f.sending=false;
+          if(r.error){sendB.textContent="❄️ 速報する";alert(String(r.error.message).indexOf("snow_reports:")>=0?r.error.message.split("snow_reports:")[1]:"送れませんでした: "+r.error.message);return;}
+          R({snowModal:null,srOpen:f.resort});loadSnowReports();
+        });
+      }
+      if(f.photo){
+        var path=currentUser.id+"/snow_"+Date.now()+".jpg";
+        sb.storage.from("posts").upload(path,f.photo,{contentType:"image/jpeg"}).then(function(ur){
+          if(ur.error){f.sending=false;sendB.textContent="❄️ 速報する";alert("写真を送れませんでした: "+ur.error.message);return;}
+          ins(sb.storage.from("posts").getPublicUrl(path).data.publicUrl);
+        });
+      }else ins(null);
+    },"");
+    br.appendChild(sendB);box.appendChild(br);
+  });
+}
+// ===== 戻る操作：画面の左端から右にスワイプでも戻れる =====
+function goBack(){
+  if(S.snowModal){R({snowModal:null});return true;}
+  if(S.invite){R({invite:null});return true;}
+  if(S.postModal){R({postModal:null});return true;}
+  if(S.bookUser){R({bookUser:null});return true;}
+  if(S.postDetail){S.postDetail=null;render();return true;}
+  if(S.selUser){R({selUser:null});return true;}
+  if(S.chatUser){R({chatUser:null});return true;}
+  if(S.tab==="market"&&S.openRoom){R({openRoom:null});return true;}
+  return false;
+}
+(function(){
+  var sx=0,sy=0,st=0,on=false;
+  document.addEventListener("touchstart",function(e){var t=e.touches[0];on=t.clientX<28;sx=t.clientX;sy=t.clientY;st=Date.now();},{passive:true});
+  document.addEventListener("touchend",function(e){if(!on)return;on=false;var t=e.changedTouches[0];var dx=t.clientX-sx,dy=Math.abs(t.clientY-sy);if(dx>70&&dy<60&&Date.now()-st<700)goBack();},{passive:true});
+})();
 function guestPrompt(){
   if(confirm("無料登録すると、メッセージ・予約・フォローができます。\n登録画面に進みますか？")){
     S.isGuest=false;S.myProfile=null;S.selUser=null;S.chatUser=null;S.bookUser=null;
@@ -2041,7 +2188,7 @@ function renderChat(){
   var vv=window.visualViewport;
   var cw=d({id:"chatwin",style:{display:"flex",flexDirection:"column",position:"fixed",left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:"430px",top:(vv?vv.offsetTop:0)+"px",height:(vv?vv.height+"px":"100%"),zIndex:"150",background:"#F5F7FA",paddingTop:"env(safe-area-inset-top,0px)",boxSizing:"border-box"}});
   var hdr=d({class:"hdr",style:{flexShrink:"0"}});
-  var bb=document.createElement("button");bb.style.cssText="color:#fff;font-size:22px;padding:0;background:none;border:none;cursor:pointer";bb.textContent="←";
+  var bb=document.createElement("button");bb.style.cssText="color:#fff;font-size:14px;font-weight:800;padding:8px 12px;min-height:40px;background:rgba(255,255,255,.22);border:none;border-radius:20px;cursor:pointer;font-family:inherit;flex-shrink:0;white-space:nowrap";bb.textContent="← 戻る";
   bb.addEventListener("click",function(){R({chatUser:null});});
   hdr.appendChild(bb);hdr.appendChild(avU(38,20,S.chatUser));
   var ci=d({style:{flex:"1"}});
@@ -2101,9 +2248,10 @@ function renderMarket(){
   if(!S.marketTab||S.marketTab==="room"&&!S._mtInit){S._mtInit=true;S.marketTab="open";}
   // 上のタブ：つぶやきは誰でも、ほかは本人確認済みの会員だけ
   var mt=d({style:{display:"flex",background:"#EEF0F3",borderRadius:"14px",padding:"4px",marginBottom:"14px"}});
-  [["open","📣 みんなのつぶやき"],["member","🛖 会員ラウンジ"]].forEach(function(o){var on=(S.marketTab==="open")===(o[0]==="open");var x=document.createElement("button");x.textContent=o[1];x.style.cssText="flex:1;padding:10px 6px;border-radius:11px;border:none;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;background:"+(on?"#fff":"transparent")+";color:"+(on?"#FF6B2B":"#6B7280")+";box-shadow:"+(on?"0 1px 4px rgba(0,0,0,.08)":"none");x.addEventListener("click",function(){if(o[0]==="open"){loadOpenPosts();R({marketTab:"open"});}else R({marketTab:"room",openRoom:null});});mt.appendChild(x);});
+  [["open","📣 つぶやき"],["snow","❄️ ゲレンデ速報"],["member","🛖 会員"]].forEach(function(o){var on=o[0]==="member"?(S.marketTab!=="open"&&S.marketTab!=="snow"):S.marketTab===o[0];var x=document.createElement("button");x.textContent=o[1];x.style.cssText="flex:1;padding:10px 6px;border-radius:11px;border:none;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;background:"+(on?"#fff":"transparent")+";color:"+(on?"#FF6B2B":"#6B7280")+";box-shadow:"+(on?"0 1px 4px rgba(0,0,0,.08)":"none");x.addEventListener("click",function(){if(o[0]==="open"){loadOpenPosts();R({marketTab:"open"});}else if(o[0]==="snow"){loadSnowReports();R({marketTab:"snow"});}else R({marketTab:"room",openRoom:null});});mt.appendChild(x);});
   wrap.appendChild(mt);
   if(S.marketTab==="open")return renderOpenBoard(wrap);
+  if(S.marketTab==="snow")return renderSnowBoard(wrap);
   if(!S.myProfile||!S.myProfile.ok){
     var locked=d({style:{textAlign:"center",padding:"40px 20px"}});
     var lico=d({style:{fontSize:"56px",marginBottom:"12px"}});lico.textContent="🔒";
@@ -2132,7 +2280,7 @@ function renderMarket(){
       if(!room){S.openRoom=null;render();return wrap;}
       var chatWrap=d({style:{display:"flex",flexDirection:"column",height:"calc(100vh - 160px)"}});
       var rHdr=d({style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"12px",paddingBottom:"12px",borderBottom:"1px solid #F0F0F0"}});
-      var backBtn=document.createElement("button");backBtn.style.cssText="font-size:22px;background:none;border:none;cursor:pointer;padding:0;flex-shrink:0";backBtn.textContent="←";
+      var backBtn=document.createElement("button");backBtn.style.cssText="font-size:14px;font-weight:800;background:#F3F4F6;border:none;border-radius:20px;cursor:pointer;padding:8px 14px;min-height:40px;flex-shrink:0;color:#4B5563;font-family:inherit";backBtn.textContent="← 戻る";
       backBtn.addEventListener("click",function(){S.openRoom=null;render();});
       var rInfo=d({style:{flex:"1"}});
       var rTitle=d({style:{fontWeight:"800",fontSize:"15px",color:"#1A1A2E"}});rTitle.textContent=room.icon+" "+room.title;
@@ -4180,6 +4328,7 @@ function _renderInner(){
           if(isPaidUser(u))br.appendChild(obtn("🎿 予約する",function(){R({selUser:null,bookUser:u});},""));
           else{var ivb=obtn("🤝 一緒に滑りたい",function(){if(S.isGuest){guestPrompt();return;}if(currentUser&&u.uid===currentUser.id)return;R({invite:{u:u,date:"",time:"9:00",resort:"",note:"",slot:null}});},"");ivb.style.background="linear-gradient(135deg,#22C55E,#16A34A)";ivb.style.boxShadow="0 4px 14px rgba(34,197,94,.35)";br.appendChild(ivb);}
           box.appendChild(br);
+          var bkb=obtn("← 戻る",function(){R({selUser:null});},"obtn-s obtn-full");bkb.style.marginTop="12px";box.appendChild(bkb);
         }));
       })(S.selUser);
     }
@@ -4187,6 +4336,7 @@ function _renderInner(){
   if(S.bookUser)app.appendChild(BookModal(S.bookUser));
   if(S.postModal)app.appendChild(PostModal());
   if(S.invite)app.appendChild(RideInviteModal());
+  if(S.snowModal)app.appendChild(SnowReportModal());
   if(S.confirmed)app.appendChild(ConfirmedModal(S.confirmed));
   if(S.addPost)app.appendChild(AddPostModal());
   if(S.postDetail)app.appendChild(PostDetailModal(S.postDetail));
