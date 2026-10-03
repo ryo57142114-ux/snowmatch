@@ -404,6 +404,16 @@ function talkTo(u){
   if(!S.following||S.following.indexOf(u.id)<0)toggleFollow(u);
   R({tab:"chat",chatUser:u,selUser:null});
 }
+// 掲示板は2分ごと・アプリに戻ってきたときに読み直す
+setInterval(function(){if(!document.hidden)loadPosts();},120000);
+document.addEventListener("visibilitychange",function(){if(!document.hidden)loadPosts();});
+function boardSeenAt(){try{return localStorage.getItem("sm_board_seen")||"";}catch(e){return "";}}
+function markBoardSeen(){try{localStorage.setItem("sm_board_seen",new Date().toISOString());}catch(e){}}
+// まだ見ていない新しい投稿の数（自分の投稿は数えない）
+function newBoardCount(){
+  var seen=boardSeenAt();var me=currentUser&&currentUser.id;
+  return livePosts().filter(function(p){return p.user_id!==me&&(!seen||String(p.created_at)>seen);}).length;
+}
 function renderBoard(wrap){
   var top=d({style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"6px"}});
   var ht=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E"}});ht.textContent="📅 募集掲示板";top.appendChild(ht);
@@ -1547,9 +1557,10 @@ function renderOnboard(){
 function renderExplore(){
   var wrap=d({class:"pg"});
   var exT=d({style:{display:"flex",background:"#EEF0F3",borderRadius:"14px",padding:"4px",marginBottom:"14px"}});
-  [["people","👥 仲間を探す"],["board","📅 募集掲示板"]].forEach(function(o){var on=(S.exTab||"people")===o[0];var x=document.createElement("button");x.textContent=o[1];x.style.cssText="flex:1;padding:10px 6px;border-radius:11px;border:none;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;background:"+(on?"#fff":"transparent")+";color:"+(on?"#FF6B2B":"#6B7280")+";box-shadow:"+(on?"0 1px 4px rgba(0,0,0,.08)":"none");x.addEventListener("click",function(){if(o[0]==="board")loadPosts();R({exTab:o[0]});});exT.appendChild(x);});
+  var _nb=(S.exTab==="board")?0:newBoardCount();
+  [["people","👥 仲間を探す"],["board","📅 募集掲示板"]].forEach(function(o){var on=(S.exTab||"people")===o[0];var x=document.createElement("button");x.textContent=o[1];x.style.position="relative";if(o[0]==="board"&&_nb>0){x.appendChild(unreadBadge(_nb,"position:absolute;top:-6px;right:6px;"));}x.style.cssText="flex:1;padding:10px 6px;border-radius:11px;border:none;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;background:"+(on?"#fff":"transparent")+";color:"+(on?"#FF6B2B":"#6B7280")+";box-shadow:"+(on?"0 1px 4px rgba(0,0,0,.08)":"none");x.addEventListener("click",function(){if(o[0]==="board")loadPosts();R({exTab:o[0]});});exT.appendChild(x);});
   wrap.appendChild(exT);
-  if(S.exTab==="board")return renderBoard(wrap);
+  if(S.exTab==="board"){markBoardSeen();return renderBoard(wrap);}
   var ht=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"4px"}});ht.textContent="🔍 仲間を探す";wrap.appendChild(ht);
   var sub=d({style:{color:"#6B7280",fontSize:"13px",marginBottom:"12px"}});sub.textContent="エリア・種目で絞り込もう";wrap.appendChild(sub);
 
@@ -3840,7 +3851,7 @@ function _renderInner(){
   if(!cf){
     var nav=d({class:"nav"});var navItems=[{id:"explore",ic:"🔍",lbl:"探す"},{id:"chat",ic:"💬",lbl:"チャット"},{id:"market",ic:"🛖",lbl:"ラウンジ"},{id:"bookings",ic:"🎿",lbl:"予約"},{id:"profile",ic:"👤",lbl:"マイページ"}];
     for(var ni=0;ni<navItems.length;ni++){
-      (function(item){var ne=b2({class:"ni"+(S.tab===item.id?" on":"")});var nic=d({style:{fontSize:"22px",marginBottom:"2px",position:"relative"}});nic.textContent=item.ic;if(item.id==="chat"){var tu=totalUnreadChat();if(tu>0)nic.appendChild(unreadBadge(tu,"position:absolute;top:-4px;left:50%;margin-left:6px;"));}if(item.id==="bookings"){var tb=bookBadgeCount();if(tb>0)nic.appendChild(unreadBadge(tb,"position:absolute;top:-4px;left:50%;margin-left:6px;"));}ne.appendChild(nic);ne.appendChild(document.createTextNode(item.lbl));ne.addEventListener("click",function(){if(item.id!=="chat")S.chatUser=null;R({tab:item.id});});nav.appendChild(ne);})(navItems[ni]);
+      (function(item){var ne=b2({class:"ni"+(S.tab===item.id?" on":"")});var nic=d({style:{fontSize:"22px",marginBottom:"2px",position:"relative"}});nic.textContent=item.ic;if(item.id==="explore"&&!(S.tab==="explore"&&S.exTab==="board")){var bn=newBoardCount();if(bn>0)nic.appendChild(unreadBadge(bn,"position:absolute;top:-4px;left:50%;margin-left:6px;"));}if(item.id==="chat"){var tu=totalUnreadChat();if(tu>0)nic.appendChild(unreadBadge(tu,"position:absolute;top:-4px;left:50%;margin-left:6px;"));}if(item.id==="bookings"){var tb=bookBadgeCount();if(tb>0)nic.appendChild(unreadBadge(tb,"position:absolute;top:-4px;left:50%;margin-left:6px;"));}ne.appendChild(nic);ne.appendChild(document.createTextNode(item.lbl));ne.addEventListener("click",function(){if(item.id!=="chat")S.chatUser=null;R({tab:item.id});});nav.appendChild(ne);})(navItems[ni]);
     }
     app.appendChild(nav);
   }
