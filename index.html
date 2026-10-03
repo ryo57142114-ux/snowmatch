@@ -514,6 +514,89 @@ function PostModal(){
     box.appendChild(br);
   });
 }
+// ===== マイページ：空き日程（期間・曜日・時間でまとめて登録） =====
+function MyAvailCard(){
+  if(S.isGuest||!currentUser||!S.myProfile)return null;
+  var me=S.myProfile;
+  var canPaid=!!me.ok&&isPaidUser({price:me.price,priceHour:me.priceHour,priceHalf:me.priceHalf,priceDay:me.priceDay});
+  if(!S.avForm)S.avForm={from:todayStr(),to:"",days:[true,true,true,true,true,true,true],start:"9:00",end:"15:00",resort:(me.resorts&&me.resorts[0])||"",pay:canPaid?"paid":"free",note:""};
+  var f=S.avForm;if(!canPaid)f.pay="free";
+  var c=document.createElement("div");c.className="card";c.style.marginBottom="12px";
+  var t=d({style:{fontWeight:"800",color:"#1A1A2E",fontSize:"14px",marginBottom:"4px"}});t.textContent="📅 空き日程（一緒に滑れる日）";c.appendChild(t);
+  var sb0=d({style:{fontSize:"11px",color:"#9CA3AF",marginBottom:"12px",lineHeight:"1.6"}});
+  sb0.textContent="「この期間の、この曜日の、この時間は空いてます」をまとめて登録できます。登録した日は募集掲示板に「🙋 同行します」として表示され、有料ならその枠から予約を受けられます。";c.appendChild(sb0);
+  function lbl(x){var l=d({style:{fontSize:"12px",fontWeight:"800",color:"#6B7280",margin:"0 0 6px"}});l.textContent=x;c.appendChild(l);}
+  lbl("期間");
+  var pr=d({style:{display:"flex",alignItems:"center",gap:"6px",marginBottom:"12px"}});
+  function dIn(key,ph){var x=document.createElement("input");x.type="date";x.className="inp";x.style.cssText="flex:1;min-width:0";x.min=todayStr();x.value=f[key]||"";x.placeholder=ph;x.addEventListener("change",function(e){f[key]=e.target.value;});return x;}
+  pr.appendChild(dIn("from"));pr.appendChild(sp({style:{fontWeight:"800",color:"#6B7280"}},"〜"));pr.appendChild(dIn("to"));c.appendChild(pr);
+  var pn=d({style:{fontSize:"11px",color:"#9CA3AF",margin:"-6px 0 12px"}});pn.textContent="1日だけなら、右側は空欄でOKです（最長60日分）";c.appendChild(pn);
+  lbl("曜日");
+  var wr=d({style:{display:"flex",gap:"5px",marginBottom:"12px"}});
+  "日月火水木金土".split("").forEach(function(w,i){var on=f.days[i];var b=document.createElement("button");b.textContent=w;b.style.cssText="flex:1;padding:8px 0;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;border:1.5px solid "+(on?"#FF6B2B":"#E5E7EB")+";background:"+(on?"#FFF0E8":"#fff")+";color:"+(on?"#FF6B2B":(i===0?"#EF4444":i===6?"#3B82F6":"#9CA3AF"));b.addEventListener("click",function(){f.days[i]=!f.days[i];render();});wr.appendChild(b);});
+  c.appendChild(wr);
+  var qr=d({style:{display:"flex",gap:"6px",margin:"-6px 0 12px"}});
+  [["毎日",[1,1,1,1,1,1,1]],["土日のみ",[1,0,0,0,0,0,1]],["平日のみ",[0,1,1,1,1,1,0]]].forEach(function(o){var b=document.createElement("button");b.textContent=o[0];b.style.cssText="padding:4px 10px;border-radius:20px;border:1px solid #E5E7EB;background:#F9FAFB;font-size:11px;font-weight:700;color:#6B7280;cursor:pointer;font-family:inherit";b.addEventListener("click",function(){f.days=o[1].map(Boolean);render();});qr.appendChild(b);});
+  c.appendChild(qr);
+  lbl("時間");
+  var tr=d({style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"12px"}});
+  function tsel(key){var s2=document.createElement("select");s2.className="inp";s2.style.cssText="flex:1;background:#fff";for(var h=6;h<=22;h++){["00","30"].forEach(function(mm){var v=h+":"+mm;var o=document.createElement("option");o.value=v;o.textContent=v;if(f[key]===v)o.selected=true;s2.appendChild(o);});}s2.addEventListener("change",function(e){f[key]=e.target.value;});return s2;}
+  tr.appendChild(tsel("start"));tr.appendChild(sp({style:{fontWeight:"800",color:"#6B7280"}},"〜"));tr.appendChild(tsel("end"));c.appendChild(tr);
+  lbl("スキー場");
+  var rs=document.createElement("select");rs.className="inp";rs.style.cssText="margin-bottom:12px;background:#fff";
+  var o0=document.createElement("option");o0.value="";o0.textContent="選んでください";rs.appendChild(o0);
+  var mine=me.resorts||[];
+  if(mine.length){var og0=document.createElement("optgroup");og0.label="よく滑るスキー場";mine.forEach(function(r){var o=document.createElement("option");o.value=r;o.textContent=r;og0.appendChild(o);});rs.appendChild(og0);}
+  AREAS.forEach(function(a){var og=document.createElement("optgroup");og.label=a.area;a.resorts.forEach(function(r){var o=document.createElement("option");o.value=r;o.textContent=r;og.appendChild(o);});rs.appendChild(og);});
+  rs.value=f.resort||"";rs.addEventListener("change",function(e){f.resort=e.target.value;});c.appendChild(rs);
+  lbl("料金");
+  var pyr=d({style:{display:"flex",gap:"8px",marginBottom:canPaid?"12px":"6px"}});
+  [["free","🤝 無料"],["paid","💴 有料"]].forEach(function(o){var on=f.pay===o[0];var dis=o[0]==="paid"&&!canPaid;var b=document.createElement("button");b.textContent=o[1];b.disabled=dis;b.style.cssText="flex:1;padding:10px;border-radius:12px;font-weight:800;font-size:13px;font-family:inherit;cursor:"+(dis?"not-allowed":"pointer")+";opacity:"+(dis?".45":"1")+";border:2px solid "+(on?"#FF6B2B":"#E5E7EB")+";background:"+(on?"#FFF0E8":"#fff")+";color:"+(on?"#FF6B2B":"#4B5563");b.addEventListener("click",function(){if(dis)return;f.pay=o[0];render();});pyr.appendChild(b);});
+  c.appendChild(pyr);
+  if(!canPaid){var pnn=d({style:{fontSize:"11px",color:"#9CA3AF",marginBottom:"12px",lineHeight:"1.6"}});pnn.textContent="有料にするには、本人確認の承認と、上の「同行費用の設定」での料金入力が必要です。";c.appendChild(pnn);}
+  lbl("ひとこと（任意）");
+  var ta=document.createElement("textarea");ta.className="inp";ta.rows=2;ta.maxLength=200;ta.placeholder="例：ニセコ全山どこでもOK。グラトリ撮影得意です";ta.style.cssText="width:100%;resize:none;margin-bottom:12px";ta.value=f.note||"";ta.addEventListener("input",function(e){f.note=e.target.value;});c.appendChild(ta);
+  var go=document.createElement("button");go.className="obtn obtn-full";go.textContent="📅 この内容で空き日程を登録";
+  go.addEventListener("click",function(){
+    if(!f.from){alert("開始日を選んでください");return;}
+    var to=f.to||f.from;if(to<f.from){alert("終わりの日は、始まりの日より後にしてください");return;}
+    function mins(x){var a=String(x).split(":");return (+a[0])*60+(+a[1]);}
+    if(mins(f.end)<=mins(f.start)){alert("終わりの時間は、始まりより後にしてください");return;}
+    if(!f.resort){alert("スキー場を選んでください");return;}
+    var p=f.from.split("-"),dt=new Date(+p[0],+p[1]-1,+p[2]),q=to.split("-"),end=new Date(+q[0],+q[1]-1,+q[2]);
+    if((end-dt)/86400000>60){alert("一度に登録できるのは60日分までです");return;}
+    var exist={};livePosts().forEach(function(x){if(x.user_id===currentUser.id&&x.kind==="offer")exist[x.ride_date+"|"+hm5(x.start_time)]=1;});
+    var rows=[],skip=0;
+    for(;dt<=end;dt.setDate(dt.getDate()+1)){
+      if(!f.days[dt.getDay()])continue;
+      var ds=dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0");
+      if(ds<todayStr())continue;
+      if(exist[ds+"|"+f.start]){skip++;continue;}
+      rows.push({user_id:currentUser.id,kind:"offer",ride_date:ds,start_time:f.start,end_time:f.end,resort:f.resort,pay:f.pay,note:(f.note||"").trim()});
+    }
+    if(!rows.length){alert(skip?"選んだ日はすでに登録済みです":"条件に合う日がありません（曜日の選び方を確認してください）");return;}
+    if(!confirm(rows.length+"日分の空き日程を登録します。よろしいですか？"+(skip?"\n（登録済みの"+skip+"日分はスキップします）":"")))return;
+    go.disabled=true;go.textContent="登録中...";
+    sb.from("ride_posts").insert(rows).then(function(r){
+      if(r.error){go.disabled=false;go.textContent="📅 この内容で空き日程を登録";alert("登録できませんでした: "+r.error.message);return;}
+      S.avForm=null;alert(rows.length+"日分を登録しました！募集掲示板にも表示されます");loadPosts();
+    });
+  });
+  c.appendChild(go);
+  // 登録済みの空き日程
+  var my=livePosts().filter(function(x){return x.user_id===currentUser.id&&x.kind==="offer";});
+  var lh=d({style:{fontSize:"12px",fontWeight:"800",color:"#6B7280",margin:"16px 0 6px"}});lh.textContent="登録中の空き日程（"+my.length+"件）";c.appendChild(lh);
+  if(!my.length){var nn=d({style:{fontSize:"12px",color:"#9CA3AF"}});nn.textContent="まだありません";c.appendChild(nn);}
+  my.slice(0,30).forEach(function(x){
+    var r=d({style:{display:"flex",alignItems:"center",gap:"8px",padding:"8px 0",borderBottom:"1px solid #F1F2F4",fontSize:"13px"}});
+    var tx=d({style:{flex:"1",minWidth:"0",color:"#1A1A2E",fontWeight:"700"}});tx.textContent=dateLbl(x.ride_date)+" "+hm5(x.start_time)+"〜"+hm5(x.end_time)+(x.pay==="paid"?"　💴":"　🤝");r.appendChild(tx);
+    var del=document.createElement("button");del.textContent="削除";del.style.cssText="flex-shrink:0;padding:4px 10px;border-radius:8px;border:1px solid #FCA5A5;background:#fff;color:#EF4444;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit";
+    del.addEventListener("click",function(){sb.from("ride_posts").delete().eq("id",x.id).then(function(rr){if(rr.error){alert("削除できませんでした: "+rr.error.message);return;}loadPosts();});});
+    r.appendChild(del);c.appendChild(r);
+  });
+  if(my.length>30){var mm=d({style:{fontSize:"11px",color:"#9CA3AF",marginTop:"6px"}});mm.textContent="ほか"+(my.length-30)+"件";c.appendChild(mm);}
+  return c;
+}
 function guestPrompt(){
   if(confirm("無料登録すると、メッセージ・予約・フォローができます。\n登録画面に進みますか？")){
     S.isGuest=false;S.myProfile=null;S.selUser=null;S.chatUser=null;S.bookUser=null;
@@ -2759,9 +2842,7 @@ function renderProfile(){
     {label:"プロフィール写真", done:!!(S.myProfile&&S.myProfile.profileImg)},
     {label:"自己紹介文", done:!!(S.myProfile&&S.myProfile.bio&&S.myProfile.bio.length>5)},
     {label:"活動スキー場", done:!!(S.myProfile&&S.myProfile.resorts&&S.myProfile.resorts.length>0)},
-    {label:"価格設定", done:!!(S.myProfile&&S.myProfile.price&&S.myProfile.price>0)},
-    {label:"板の情報", done:!!(S.myProfile&&S.myProfile.board&&S.myProfile.board.length>0)},
-    {label:"投稿・実績", done:!!(S.myProfile&&S.myProfile.posts&&S.myProfile.posts.length>0)}
+    {label:"板の情報", done:!!(S.myProfile&&S.myProfile.board&&S.myProfile.board.length>0)}
   ];
   var doneCount2=0;
   profItems2.forEach(function(it){if(it.done)doneCount2++;});
@@ -3228,6 +3309,7 @@ function renderProfile(){
   savedMsg.textContent = "✅ 保存しました";
   priceCard.appendChild(savedMsg);
   body.appendChild(priceCard);
+  var availCard=MyAvailCard();if(availCard)body.appendChild(availCard);
 
   var ph=d({style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"12px"}});
   var ptit=d({style:{fontWeight:"900",fontSize:"16px",color:"#1A1A2E"}});ptit.textContent="🎥 投稿・実績";ph.appendChild(ptit);
@@ -3630,9 +3712,7 @@ function WelcomeModal(){
       {label:"プロフィール写真", done:!!(S.myProfile&&S.myProfile.profileImg)},
       {label:"自己紹介文", done:!!(S.myProfile&&S.myProfile.bio&&S.myProfile.bio.length>5)},
       {label:"活動スキー場", done:!!(S.myProfile&&S.myProfile.resorts&&S.myProfile.resorts.length>0)},
-      {label:"価格設定", done:!!(S.myProfile&&S.myProfile.price&&S.myProfile.price>0)},
-      {label:"機材・板の情報", done:!!(S.myProfile&&S.myProfile.board&&S.myProfile.board.length>0)},
-      {label:"投稿・実績", done:!!(S.myProfile&&S.myProfile.posts&&S.myProfile.posts.length>0)}
+      {label:"機材・板の情報", done:!!(S.myProfile&&S.myProfile.board&&S.myProfile.board.length>0)}
     ];
     var doneCount = 0;
     profItems.forEach(function(it){ if(it.done) doneCount++; });
