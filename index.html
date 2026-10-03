@@ -2443,7 +2443,7 @@ function renderMarket(){
 function roomOpenNow(){return S.tab==="market"&&!!S.openRoom&&(S.marketTab==="room"||S.marketTab==="nayami")&&!!(S.myProfile&&S.myProfile.ok);}
 function findRoom(id){for(var i=0;i<ROOMS_SAMPLE.length;i++){if(ROOMS_SAMPLE[i].id===id)return ROOMS_SAMPLE[i];}return null;}
 function roomCard(room){
-  var card=d({class:"card",style:{cursor:"pointer",marginBottom:"12px"},onClick:function(){S.openRoom=room.id;S.roomInput="";render();}});
+  var card=d({class:"card",style:{cursor:"pointer",marginBottom:"12px"},onClick:function(){S.openRoom=room.id;S.roomInput="";S.roomReply=null;render();}});
   var tr=d({style:{display:"flex",gap:"12px",alignItems:"center"}});
   var ico=d({style:{width:"48px",height:"48px",borderRadius:"16px",background:"linear-gradient(135deg,#FFF0E8,#FFE4D6)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"24px",flexShrink:"0"}});ico.textContent=room.icon;
   var info=d({style:{flex:"1",minWidth:"0"}});
@@ -2482,12 +2482,47 @@ function roomMsgRow(m){
   var box=d({style:{maxWidth:"74%",display:"flex",flexDirection:"column",alignItems:isMe?"flex-end":"flex-start"}});
   if(!isMe){var n=d({style:{fontSize:"11px",color:"#6B7280",marginBottom:"3px",fontWeight:"700"}});n.textContent=nm;box.appendChild(n);}
   var line=d({style:{display:"flex",alignItems:"flex-end",gap:"6px",flexDirection:isMe?"row-reverse":"row"}});
-  var bub=d({style:{background:isMe?"linear-gradient(135deg,#FF6B2B,#FF8C55)":"#fff",color:isMe?"#fff":"#1A1A2E",padding:"9px 13px",borderRadius:isMe?"18px 18px 4px 18px":"4px 18px 18px 18px",fontSize:"14px",lineHeight:"1.6",boxShadow:"0 1px 4px rgba(0,0,0,0.07)",whiteSpace:"pre-wrap",wordBreak:"break-word"}});bub.textContent=m.body;
+  var bub=d({style:{background:isMe?"linear-gradient(135deg,#FF6B2B,#FF8C55)":"#fff",color:isMe?"#fff":"#1A1A2E",padding:"9px 13px",borderRadius:isMe?"18px 18px 4px 18px":"4px 18px 18px 18px",fontSize:"14px",lineHeight:"1.6",boxShadow:"0 1px 4px rgba(0,0,0,0.07)",wordBreak:"break-word",WebkitUserSelect:"none",userSelect:"none",WebkitTouchCallout:"none",transition:"transform .15s"}});
+  if(m.reply_to){
+    var q=d({style:{borderLeft:"3px solid "+(isMe?"rgba(255,255,255,.8)":"#FF8C55"),background:isMe?"rgba(255,255,255,.18)":"#FFF4EE",borderRadius:"6px",padding:"4px 8px",marginBottom:"6px",fontSize:"12px",lineHeight:"1.45",cursor:"pointer"}});
+    var qn=d({style:{fontWeight:"800",marginBottom:"1px",color:isMe?"#fff":"#FF6B2B"}});qn.textContent="↩ "+(m.reply_nick||"会員")+"さん";
+    var qb=d({style:{opacity:".85",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"220px"}});qb.textContent=m.reply_body||"";
+    q.appendChild(qn);q.appendChild(qb);
+    q.addEventListener("click",function(ev){ev.stopPropagation();var t=document.getElementById("rm_"+m.reply_to);if(t){t.scrollIntoView({behavior:"smooth",block:"center"});var b0=t.querySelector("[data-bub]");if(b0){b0.style.transform="scale(1.05)";setTimeout(function(){b0.style.transform="";},450);}}});
+    bub.appendChild(q);
+  }
+  var bt=d({style:{whiteSpace:"pre-wrap"}});bt.textContent=m.body;bub.appendChild(bt);
+  bub.setAttribute("data-bub","1");
+  roomLongPress(bub,m,nm);
   var tm=d({style:{fontSize:"10px",color:"#9CA3AF",flexShrink:"0"}});tm.textContent=hmOf(m.created_at);
   line.appendChild(bub);line.appendChild(tm);box.appendChild(line);row.appendChild(box);
+  row.id="rm_"+m.id;
   return row;
 }
 function roomDaySep(iso){var w=d({style:{textAlign:"center",margin:"6px 0 12px"}});var t=d({style:{display:"inline-block",background:"rgba(0,0,0,0.08)",color:"#4B5563",fontSize:"11px",fontWeight:"700",padding:"3px 10px",borderRadius:"10px"}});t.textContent=roomDayLbl(iso);w.appendChild(t);return w;}
+function roomLongPress(el,m,nm){
+  var tmr=null,sx=0,sy=0,fired=false;
+  function start(x,y){fired=false;sx=x;sy=y;clearTimeout(tmr);tmr=setTimeout(function(){fired=true;el.style.transform="scale(0.96)";setTimeout(function(){el.style.transform="";},150);try{if(navigator.vibrate)navigator.vibrate(15);}catch(e){}setRoomReply(m,nm);},450);}
+  function cancel(){clearTimeout(tmr);tmr=null;}
+  el.addEventListener("touchstart",function(e){var t=e.touches[0];start(t.clientX,t.clientY);},{passive:true});
+  el.addEventListener("touchmove",function(e){var t=e.touches[0];if(Math.abs(t.clientX-sx)>10||Math.abs(t.clientY-sy)>10)cancel();},{passive:true});
+  el.addEventListener("touchend",function(e){cancel();if(fired){e.preventDefault();var i=document.getElementById("roominput");if(i)i.focus();}});
+  el.addEventListener("touchcancel",cancel);
+  el.addEventListener("contextmenu",function(e){e.preventDefault();setRoomReply(m,nm);var i=document.getElementById("roominput");if(i)i.focus();});
+}
+function setRoomReply(m,nm){S.roomReply=m?{id:m.id,nick:nm,body:String(m.body||"").slice(0,80)}:null;updateReplyBar();}
+function updateReplyBar(){
+  var bar=document.getElementById("roomreply");if(!bar)return;
+  bar.innerHTML="";var r=S.roomReply;
+  if(!r){bar.style.display="none";return;}
+  bar.style.display="flex";
+  var tx=d({style:{flex:"1",minWidth:"0",borderLeft:"3px solid #FF8C55",paddingLeft:"8px"}});
+  var a=d({style:{fontSize:"12px",fontWeight:"800",color:"#FF6B2B"}});a.textContent="↩ "+r.nick+"さんに返信";
+  var b=d({style:{fontSize:"12px",color:"#6B7280",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}});b.textContent=r.body;
+  tx.appendChild(a);tx.appendChild(b);bar.appendChild(tx);
+  var x=document.createElement("button");x.textContent="✕";x.setAttribute("aria-label","返信をやめる");x.style.cssText="flex-shrink:0;width:32px;height:32px;border-radius:50%;border:none;background:#F3F4F6;color:#6B7280;font-size:14px;cursor:pointer";
+  x.addEventListener("click",function(){setRoomReply(null);});bar.appendChild(x);
+}
 function appendRoomRows(rows){
   var ma=document.getElementById("chatmsgs");if(!ma){render();return;}
   var near=ma.scrollHeight-ma.scrollTop-ma.clientHeight<120;
@@ -2505,7 +2540,7 @@ function renderRoomChat(){
   var cw=d({id:"chatwin",style:{display:"flex",flexDirection:"column",position:"fixed",left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:"430px",top:(vv?vv.offsetTop:0)+"px",height:(vv?vv.height+"px":"100%"),zIndex:"150",background:"#F5F7FA",paddingTop:"env(safe-area-inset-top,0px)",boxSizing:"border-box"}});
   var hdr=d({class:"hdr",style:{flexShrink:"0"}});
   var bb=document.createElement("button");bb.style.cssText="color:#fff;font-size:14px;font-weight:800;padding:8px 12px;min-height:40px;background:rgba(255,255,255,.22);border:none;border-radius:20px;cursor:pointer;font-family:inherit;flex-shrink:0;white-space:nowrap";bb.textContent="← 戻る";
-  bb.addEventListener("click",function(){S.openRoom=null;render();});
+  bb.addEventListener("click",function(){S.openRoom=null;S.roomReply=null;render();});
   hdr.appendChild(bb);
   var ic=d({style:{fontSize:"24px",flexShrink:"0"}});ic.textContent=room.icon;hdr.appendChild(ic);
   var ti=d({style:{flex:"1",minWidth:"0"}});
@@ -2513,13 +2548,15 @@ function renderRoomChat(){
   var ts=d({style:{color:"rgba(255,255,255,.8)",fontSize:"11px"}});ts.textContent="会員限定 · "+room.cat;
   ti.appendChild(tt);ti.appendChild(ts);hdr.appendChild(ti);cw.appendChild(hdr);
   var ma=d({id:"chatmsgs",style:{flex:"1",minHeight:"0",overflowY:"auto",WebkitOverflowScrolling:"touch",padding:"14px 14px 6px",background:"#F5F7FA"}});
-  var note=d({style:{textAlign:"center",fontSize:"10.5px",color:"#9CA3AF",marginBottom:"12px",lineHeight:"1.6"}});note.textContent=room.cat==="悩み相談"?"※誹謗中傷・個人情報の書き込みは禁止です。やさしく相談に乗ってあげてください。":"※誹謗中傷・個人情報・宣伝は禁止です。";ma.appendChild(note);
+  var note=d({style:{textAlign:"center",fontSize:"10.5px",color:"#9CA3AF",marginBottom:"12px",lineHeight:"1.6"}});note.textContent=(room.cat==="悩み相談"?"※誹謗中傷・個人情報の書き込みは禁止です。やさしく相談に乗ってあげてください。":"※誹謗中傷・個人情報・宣伝は禁止です。")+"\nメッセージを長押しすると返信できます。";note.style.whiteSpace="pre-line";ma.appendChild(note);
   var list=(S.roomMsgs&&S.roomMsgs[room.id]);
   if(list===undefined){var ld=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"13px",padding:"30px 0"}});ld.textContent="読み込み中...";ma.appendChild(ld);}
   else if(S.roomErr&&!list.length){var er=d({style:{textAlign:"center",color:"#EF4444",fontSize:"12px",padding:"30px 10px"}});er.textContent="読み込めませんでした: "+S.roomErr;ma.appendChild(er);}
   else if(!list.length){var em=d({id:"roomempty",style:{textAlign:"center",color:"#9CA3AF",fontSize:"13px",padding:"30px 0",lineHeight:"1.8"}});em.textContent=room.cat==="悩み相談"?"まだ相談はありません。\n気軽に書き込んでみてください。":"まだメッセージはありません。\n最初のひとことをどうぞ！";em.style.whiteSpace="pre-line";ma.appendChild(em);}
   else{var lastDay="";list.forEach(function(m){var day=new Date(m.created_at).toDateString();if(day!==lastDay){ma.appendChild(roomDaySep(m.created_at));lastDay=day;}ma.appendChild(roomMsgRow(m));});ma.setAttribute("data-day",lastDay);}
   cw.appendChild(ma);
+  var rbar=d({id:"roomreply",style:{display:"none",alignItems:"center",gap:"8px",padding:"8px 12px",background:"#fff",borderTop:"1px solid #F0F0F0",flexShrink:"0"}});cw.appendChild(rbar);
+  setTimeout(updateReplyBar,0);
   var ir=d({style:{padding:"10px 12px calc(10px + env(safe-area-inset-bottom,0px))",background:"#fff",display:"flex",alignItems:"center",gap:"8px",borderTop:"1px solid #F0F0F0",flexShrink:"0"}});
   var inp=document.createElement("input");inp.type="text";inp.className="inp";inp.id="roominput";inp.style.cssText="flex:1;border-radius:20px;font-size:16px";inp.maxLength=1000;
   inp.placeholder=room.cat==="悩み相談"?"相談を書き込む...":"メッセージを入力...";inp.value=S.roomInput||"";
@@ -2537,10 +2574,13 @@ function sendRoomMsg(roomId){
   if(S._roomSending)return;S._roomSending=true;
   var inp=document.getElementById("roominput");
   S.roomInput="";if(inp)inp.value="";
-  var me=S.myProfile||{};
-  sb.from("lounge_messages").insert({room_id:roomId,user_id:currentUser.id,nick:me.nick||me.name||"会員",icon:me.icon||"🏂",profile_img:me.profileImg||null,body:t}).select().single().then(function(r){
+  var me=S.myProfile||{};var rp=S.roomReply;
+  var row={room_id:roomId,user_id:currentUser.id,nick:me.nick||me.name||"会員",icon:me.icon||"🏂",profile_img:me.profileImg||null,body:t};
+  if(rp){row.reply_to=rp.id;row.reply_nick=rp.nick;row.reply_body=rp.body;}
+  setRoomReply(null);
+  sb.from("lounge_messages").insert(row).select().single().then(function(r){
     S._roomSending=false;
-    if(r.error){S.roomInput=t;var i2=document.getElementById("roominput");if(i2)i2.value=t;alert("送れませんでした: "+r.error.message);return;}
+    if(r.error){S.roomInput=t;var i2=document.getElementById("roominput");if(i2)i2.value=t;if(rp){S.roomReply=rp;updateReplyBar();}alert("送れませんでした: "+r.error.message);return;}
     if(!S.roomMsgs)S.roomMsgs={};if(!S.roomMsgs[roomId])S.roomMsgs[roomId]=[];
     if(!roomHasMsg(roomId,r.data.id)){S.roomMsgs[roomId].push(r.data);if(S.openRoom===roomId)appendRoomRows([r.data]);}
     var m=document.getElementById("chatmsgs");if(m)m.scrollTop=m.scrollHeight;
