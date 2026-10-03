@@ -411,11 +411,16 @@ function talkTo(u){
 setInterval(function(){if(!document.hidden)loadPosts();},120000);
 document.addEventListener("visibilitychange",function(){if(!document.hidden)loadPosts();});
 function boardSeenAt(){try{return localStorage.getItem("sm_board_seen")||"";}catch(e){return "";}}
-function markBoardSeen(){try{localStorage.setItem("sm_board_seen",new Date().toISOString());}catch(e){}}
+// 既読の基準は「サーバーの投稿時刻」で持つ（スマホの時計のずれに影響されないように）
+function markBoardSeen(){
+  var mx=Date.parse(boardSeenAt())||0;
+  (S.posts||[]).forEach(function(p){var t=Date.parse(p.created_at)||0;if(t>mx)mx=t;});
+  if(mx){try{localStorage.setItem("sm_board_seen",new Date(mx).toISOString());}catch(e){}}
+}
 // まだ見ていない新しい投稿の数（自分の投稿は数えない）
 function newBoardCount(){
-  var seen=boardSeenAt();var me=currentUser&&currentUser.id;
-  return livePosts().filter(function(p){return p.user_id!==me&&(!seen||String(p.created_at)>seen);}).length;
+  var seen=Date.parse(boardSeenAt())||0;var me=currentUser&&currentUser.id;
+  return livePosts().filter(function(p){return p.user_id!==me&&(!seen||(Date.parse(p.created_at)||0)>seen);}).length;
 }
 function renderBoard(wrap){
   var top=d({style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"6px"}});
