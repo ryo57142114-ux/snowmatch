@@ -462,22 +462,57 @@ function renderBoard(wrap){
     var isOffer=p.kind==="offer";
     bg.appendChild(sp({style:{background:isOffer?"#EEF2FF":"#FEF3C7",color:isOffer?"#4338CA":"#92400E",padding:"3px 10px",borderRadius:"20px",fontSize:"11px",fontWeight:"800"}},isOffer?"🙋 同行します":"🔍 同行してくれる人募集"));
     var paid=p.pay==="paid";var mp=(!mine&&paid&&isOffer&&u.ok)?minPlanPrice(u):0;
-    bg.appendChild(sp({style:{background:paid?"#FFF0E8":"#F0FDF4",color:paid?"#FF6B2B":"#15803D",padding:"3px 10px",borderRadius:"20px",fontSize:"11px",fontWeight:"800"}},paid?("💴 有料"+(mp?" ¥"+mp.toLocaleString()+"〜":"")):"🤝 無料"));
+    var reqPaid=paid&&!isOffer&&(parseInt(p.price,10)||0)>0;
+    bg.appendChild(sp({style:{background:paid?"#FFF0E8":"#F0FDF4",color:paid?"#FF6B2B":"#15803D",padding:"3px 10px",borderRadius:"20px",fontSize:"11px",fontWeight:"800"}},reqPaid?("💴 ¥"+(parseInt(p.price,10)).toLocaleString()+" お支払い"):(paid?("💴 有料"+(mp?" ¥"+mp.toLocaleString()+"〜":"")):"🤝 無料")));
     card.appendChild(bg);
     if(p.note){var nt=d({style:{fontSize:"13px",color:"#4B5563",lineHeight:"1.6",whiteSpace:"pre-wrap",marginBottom:"10px"}});nt.textContent=p.note;card.appendChild(nt);}
     var br=d({style:{display:"flex",gap:"8px"}});
     function b(lbl,primary,fn){var x=document.createElement("button");x.textContent=lbl;x.style.cssText="flex:1;padding:9px 6px;border-radius:12px;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit;"+(primary?"background:#FF6B2B;color:#fff;border:none":"background:#fff;color:#FF6B2B;border:1.5px solid #FF6B2B");x.addEventListener("click",fn);br.appendChild(x);}
     if(mine){
+      if(reqPaid){var apn=(S.resv||[]).filter(function(x){return x.post_id===p.id&&x.status==="pending";}).length;if(apn){var ap=d({style:{background:"#FEF3C7",color:"#92400E",borderRadius:"10px",padding:"8px 12px",fontSize:"12px",fontWeight:"800",marginBottom:"8px",cursor:"pointer"}});ap.textContent="🙋 応募が"+apn+"件届いています → 予約タブで選ぶ";ap.addEventListener("click",function(){R({tab:"bookings"});});card.appendChild(ap);}}
       b("締め切る",false,function(){if(!confirm("この投稿を締め切りますか？"))return;sb.from("ride_posts").update({status:"closed"}).eq("id",p.id).then(function(r){if(r.error){alert("できませんでした: "+r.error.message);return;}loadPosts();});});
       b("削除する",false,function(){if(!confirm("この投稿を削除しますか？"))return;sb.from("ride_posts").delete().eq("id",p.id).then(function(r){if(r.error){alert("できませんでした: "+r.error.message);return;}loadPosts();});});
     }else{
       b("👤 プロフィール",false,function(){R({selUser:u});});
-      b("💬 話しかける",!(isOffer&&paid&&u.ok),function(){talkTo(u);});
+      b(reqPaid?"💬 質問":"💬 話しかける",!(isOffer&&paid&&u.ok)&&!reqPaid,function(){talkTo(u);});
+      if(reqPaid){var myAp=myApplication(p.id);if(myAp)b(myAp.status==="approved"?"✅ お願いされました":"⏳ 応募済み",false,function(){R({tab:"bookings"});});else b("🙋 参加します",true,function(){applyToRequest(p,u);});}
       if(isOffer&&paid&&u.ok&&isPaidUser(u))b("📅 この枠で予約",true,function(){if(S.isGuest){guestPrompt();return;}S.bkSlotId=p.id;R({bookUser:u});});
     }
     card.appendChild(br);wrap.appendChild(card);
   });
   return wrap;
+}
+// ===== 有料の「同行してくれる人募集」への応募 =====
+function myApplication(postId){if(!currentUser)return null;var l=S.resv||[];for(var i=0;i<l.length;i++){var x=l[i];if(x.post_id===postId&&x.provider===currentUser.id&&(x.status==="pending"||x.status==="approved"))return x;}return null;}
+function applyToRequest(p,owner){
+  if(S.isGuest){guestPrompt();return;}
+  if(!sb||!currentUser){alert("応募するにはログインが必要です");return;}
+  var me=S.myProfile||{};
+  if(!me.ok){if(confirm("お金を受け取る応募には、本人確認の承認が必要です。\n本人確認の申請画面に進みますか？"))R({pg:"kyc"});return;}
+  var price=parseInt(p.price,10)||0;var fp=calcF(price);
+  var msg=dateLbl(p.ride_date)+" "+hm5(p.start_time)+"〜"+hm5(p.end_time)+"\n"+(p.resort||"")+"\n\n"+(owner.name||"相手")+"さんの募集に「参加します」と応募しますか？\n\nお支払い額：¥"+price.toLocaleString()+"\n受け取り予定：¥"+fp.payout.toLocaleString()+"（運営手数料15%を引いた額）\n\n相手があなたを選ぶと予約が確定します。";
+  if(!confirm(msg))return;
+  if(S.applySending)return;S.applySending=true;
+  sb.from("reservations").insert({customer:p.user_id,provider:currentUser.id,plan:"request",plan_label:"募集への応募",hours:0,price_total:price,service_date:p.ride_date,start_time:hm5(p.start_time),note:(p.resort||"")+"／"+hm5(p.start_time)+"〜"+hm5(p.end_time),post_id:p.id}).select().then(function(r){
+    S.applySending=false;
+    if(r.error){alert("応募できませんでした: "+r.error.message);return;}
+    alert("応募しました！相手に選ばれると予約が確定します。");
+    loadReservations();
+  }).catch(function(e){S.applySending=false;alert("通信エラー: "+(e&&e.message?e.message:e));});
+}
+function chooseApplicant(x,o){
+  var price=Number(x.price_total||0);
+  if(!confirm((o?o.name:"この人")+"さんにお願いしますか？\n\nお支払い額：¥"+price.toLocaleString()+"（決済はデモ）\n\nほかの応募者には自動でお断りが届き、募集は締め切られます。"))return;
+  sb.from("reservations").update({status:"approved"}).eq("id",x.id).select().then(function(r){
+    if(r.error){alert("できませんでした: "+r.error.message);return;}
+    if(!r.data||!r.data.length){alert("できませんでした（権限設定）");return;}
+    if(x.post_id){
+      sb.from("reservations").update({status:"declined"}).eq("post_id",x.post_id).eq("status","pending").neq("id",x.id).then(function(){loadReservations();});
+      sb.from("ride_posts").update({status:"closed"}).eq("id",x.post_id).then(function(){loadPosts();});
+    }
+    alert("予約が確定しました！メッセージで集合場所などを決めましょう");
+    loadReservations();
+  });
 }
 function PostModal(){
   var f=S.postModal;
@@ -501,6 +536,14 @@ function PostModal(){
     AREAS.forEach(function(a){var og=document.createElement("optgroup");og.label=a.area;a.resorts.forEach(function(r){var o=document.createElement("option");o.value=r;o.textContent=r;og.appendChild(o);});rs.appendChild(og);});
     rs.value=f.resort||"";rs.addEventListener("change",function(e){f.resort=e.target.value;});box.appendChild(rs);
     lbl("料金");seg([["free","🤝 無料"],["paid","💴 有料"]],"pay");
+    if(f.pay==="paid"&&f.kind==="request"){
+      lbl("お支払いする金額（全部込み）");
+      var pw=d({style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"6px"}});
+      var pi=document.createElement("input");pi.type="number";pi.inputMode="numeric";pi.min="500";pi.step="100";pi.className="inp";pi.style.cssText="flex:1";pi.placeholder="例：3000";pi.value=f.price||"";
+      pi.addEventListener("input",function(e){f.price=e.target.value;});
+      pw.appendChild(pi);pw.appendChild(sp({style:{fontWeight:"800",color:"#4B5563"}},"円"));box.appendChild(pw);
+      var ph=d({style:{fontSize:"11px",lineHeight:"1.6",margin:"0 0 14px",color:"#9CA3AF"}});ph.textContent="「参加します」と応募してくれた人の中から1人を選んで、この金額をお支払いします（謝礼・交通費などすべて込みの金額）。応募できるのは本人確認済みの人だけです。";box.appendChild(ph);
+    }
     if(f.pay==="paid"&&f.kind==="offer"){
       var me=S.myProfile||{};var ok=me.ok&&isPaidUser({price:me.price,priceHour:me.priceHour,priceHalf:me.priceHalf,priceDay:me.priceDay,plans:me.plans});
       var pn=d({style:{fontSize:"11px",lineHeight:"1.6",margin:"-8px 0 14px",color:ok?"#9CA3AF":"#B45309"}});
@@ -517,8 +560,12 @@ function PostModal(){
       if(mins(f.end)<=mins(f.start)){alert("終わりの時間は、始まりより後にしてください");return;}
       if(!f.resort){alert("スキー場を選んでください");return;}
       if(f.pay==="paid"&&f.kind==="offer"){var me=S.myProfile||{};if(!me.ok){alert("有料で受けるには、本人確認の承認が必要です。無料で投稿するか、先に本人確認を申請してください。");return;}}
+      var reqPrice=0;
+      if(f.pay==="paid"&&f.kind==="request"){reqPrice=parseInt(f.price,10)||0;if(reqPrice<500){alert("お支払いする金額を500円以上で入力してください");return;}if(reqPrice>200000){alert("金額が大きすぎます");return;}}
       if(S.postSending)return;S.postSending=true;
-      sb.from("ride_posts").insert({user_id:currentUser.id,kind:f.kind,ride_date:f.date,start_time:f.start,end_time:f.end,resort:f.resort,pay:f.pay,note:(f.note||"").trim()}).then(function(r){
+      var prow={user_id:currentUser.id,kind:f.kind,ride_date:f.date,start_time:f.start,end_time:f.end,resort:f.resort,pay:f.pay,note:(f.note||"").trim()};
+      if(reqPrice)prow.price=reqPrice;
+      sb.from("ride_posts").insert(prow).then(function(r){
         S.postSending=false;
         if(r.error){alert("投稿できませんでした: "+r.error.message);return;}
         S.exTab="board";R({postModal:null});loadPosts();
@@ -2653,7 +2700,14 @@ function loadReservations(){
       var x=S.resv[i];var meProv=x.provider===currentUser.id;
       var o=findRealUser(meProv?x.customer:x.provider);var nm=o?o.name:"ユーザー";
       var msg=null,ic="🎿";
-      if(meProv&&x.status==="pending")msg=nm+"さんから予約の申し込みが届きました（"+String(x.service_date).replace(/-/g,"/")+"）";
+      var isReq=x.plan==="request";
+      if(isReq){
+        if(!meProv&&x.status==="pending")msg=nm+"さんがあなたの募集に「参加します」と応募しました（"+String(x.service_date).replace(/-/g,"/")+"）";
+        else if(meProv&&x.status==="approved"){msg=nm+"さんがあなたにお願いしました！予約が確定です";ic="✅";}
+        else if(meProv&&x.status==="declined"){msg=nm+"さんの募集は、今回は別の人に決まりました";ic="🙏";}
+        else if(meProv&&x.status==="cancelled"){msg=nm+"さんが予約をキャンセルしました";ic="↩️";}
+      }
+      else if(meProv&&x.status==="pending")msg=nm+"さんから予約の申し込みが届きました（"+String(x.service_date).replace(/-/g,"/")+"）";
       else if(!meProv&&x.status==="approved"){msg=nm+"さんが予約を承認しました！";ic="✅";}
       else if(!meProv&&x.status==="declined"){msg=nm+"さんは今回の予約をお断りしました";ic="🙏";}
       else if(meProv&&x.status==="cancelled"){msg=nm+"さんが予約をキャンセルしました";ic="↩️";}
@@ -2675,7 +2729,7 @@ var RESV_ST={pending:["⏳ 申請中","#FFFBEB","#B45309"],approved:["✅ 確定
 function bookBadgeCount(){
   if(typeof currentUser==="undefined"||!currentUser||!S.resv)return 0;
   var n=0;
-  for(var i=0;i<S.resv.length;i++){if(S.resv[i].provider===currentUser.id&&S.resv[i].status==="pending")n++;}
+  for(var i=0;i<S.resv.length;i++){var _x=S.resv[i];if(_x.status!=="pending")continue;if(_x.plan==="request"?_x.customer===currentUser.id:_x.provider===currentUser.id)n++;}
   var nf=S.notifs||[];
   for(var k=0;k<nf.length;k++){var x=nf[k];if(String(x.id).indexOf("rv_")===0&&!x.read&&!/_pending$/.test(x.id))n++;}
   return n;
@@ -2684,9 +2738,12 @@ function renderResvList(){
   var rvRead=[];(S.notifs||[]).forEach(function(x){if(String(x.id).indexOf("rv_")===0&&!/_pending$/.test(x.id)){x.read=true;rvRead.push(x);}});saveNotifsRead(rvRead);
   var wrap=d({class:"pg"});
   var t=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"16px"}});t.textContent="🎿 予約";wrap.appendChild(t);
-  var recv=S.resv.filter(function(x){return x.provider===currentUser.id;});
-  var sent=S.resv.filter(function(x){return x.customer===currentUser.id;});
-  if(!recv.length&&!sent.length){
+  function reqPend(x){return x.plan==="request"&&x.status==="pending";}
+  var apps=S.resv.filter(function(x){return x.customer===currentUser.id&&reqPend(x);});
+  var applied=S.resv.filter(function(x){return x.provider===currentUser.id&&reqPend(x);});
+  var recv=S.resv.filter(function(x){return x.provider===currentUser.id&&!reqPend(x);});
+  var sent=S.resv.filter(function(x){return x.customer===currentUser.id&&!reqPend(x);});
+  if(!recv.length&&!sent.length&&!apps.length&&!applied.length){
     var em=d({style:{textAlign:"center",padding:"40px 20px"}});
     var eico=d({style:{fontSize:"52px",marginBottom:"12px"}});eico.textContent="🎿";
     var et=d({style:{fontWeight:"900",fontSize:"18px",color:"#1A1A2E",marginBottom:"8px"}});et.textContent="まだ予約がありません";
@@ -2695,7 +2752,7 @@ function renderResvList(){
     em.appendChild(obtn("仲間を探す",function(){R({tab:"explore"});},"obtn-full"));
     wrap.appendChild(em);return wrap;
   }
-  function section(title,list,meProv){
+  function section(title,list,meProv,mode){
     if(!list.length)return;
     var h=d({style:{fontWeight:"800",fontSize:"14px",color:"#6B7280",margin:"6px 0 10px"}});h.textContent=title;wrap.appendChild(h);
     list.forEach(function(x){
@@ -2704,18 +2761,27 @@ function renderResvList(){
       var tr=d({style:{display:"flex",gap:"12px",alignItems:"center",marginBottom:"10px"}});
       if(o)tr.appendChild(avU(44,22,o));else{var ic=d({style:{fontSize:"28px"}});ic.textContent="🏂";tr.appendChild(ic);}
       var info=d({style:{flex:"1",minWidth:"0"}});
-      var nm=d({style:{fontWeight:"800",fontSize:"16px",color:"#1A1A2E"}});nm.textContent=(o?o.name:"ユーザー")+(meProv?" さんから":" さんへ");
+      var nm=d({style:{fontWeight:"800",fontSize:"16px",color:"#1A1A2E"}});nm.textContent=(o?o.name:"ユーザー")+(mode==="apps"?" さんが応募":(mode==="applied"?" さんの募集":(x.plan==="request"?(meProv?" さんの募集":" さん（あなたの募集）"):(meProv?" さんから":" さんへ"))));
       var dt=d({style:{fontSize:"13px",color:"#4B5563",marginTop:"2px",fontWeight:"700"}});dt.textContent="📅 "+String(x.service_date).replace(/-/g,"/")+" "+(x.start_time||"")+"〜";
       info.appendChild(nm);info.appendChild(dt);tr.appendChild(info);
-      var st=RESV_ST[x.status]||RESV_ST.pending;
+      var st=(mode==="apps")?["🙋 応募あり","#FEF3C7","#92400E"]:(mode==="applied"?["⏳ 返事待ち","#FFFBEB","#B45309"]:(RESV_ST[x.status]||RESV_ST.pending));
       var badge=d({style:{background:st[1],color:st[2],borderRadius:"10px",padding:"4px 10px",fontSize:"12px",fontWeight:"800",flexShrink:"0"}});badge.textContent=st[0];
       tr.appendChild(badge);card.appendChild(tr);
       var det=d({style:{background:"#F9FAFB",borderRadius:"12px",padding:"10px 14px",fontSize:"13px",color:"#374151",lineHeight:"1.7"}});
       var pl=x.plan==="hour"?("1時間 × "+x.hours+"時間"):(x.plan_label||"");
-      det.textContent="プラン："+pl+"　合計：¥"+Number(x.price_total||0).toLocaleString()+(x.note?("\n💬 "+x.note):"");
+      if(x.plan==="request"){var _fp=calcF(Number(x.price_total||0));det.textContent=(x.note?("⛰️ "+x.note+"\n"):"")+"お支払い額：¥"+Number(x.price_total||0).toLocaleString()+(meProv?"\n受け取り予定：¥"+_fp.payout.toLocaleString()+"（手数料15%を引いた額）":"");}
+      else det.textContent="プラン："+pl+"　合計：¥"+Number(x.price_total||0).toLocaleString()+(x.note?("\n💬 "+x.note):"");
       det.style.whiteSpace="pre-wrap";card.appendChild(det);
       var bt=d({style:{display:"flex",gap:"8px",marginTop:"10px",flexWrap:"wrap"}});
-      if(meProv&&x.status==="pending"){
+      if(mode==="apps"){
+        if(o)bt.appendChild(obtn("👤 プロフィール",function(){R({selUser:o});},"obtn-s"));
+        bt.appendChild(obtn("見送る",function(){if(confirm("この応募を見送りますか？"))setResvStatus(x.id,"declined");},"obtn-s"));
+        bt.appendChild(obtn("✅ この人にお願いする",function(){chooseApplicant(x,o);},""));
+      }
+      else if(mode==="applied"){
+        bt.appendChild(obtn("応募を取り下げる",function(){if(confirm("この応募を取り下げますか？"))setResvStatus(x.id,"cancelled");},"obtn-s"));
+      }
+      else if(meProv&&x.status==="pending"){
         bt.appendChild(obtn("お断りする",function(){if(confirm("この予約をお断りしますか？"))setResvStatus(x.id,"declined");},"obtn-s"));
         bt.appendChild(obtn("✅ 承認する",function(){if(confirm("この予約を承認しますか？"))setResvStatus(x.id,"approved","予約が確定しました！メッセージで集合場所などを決めましょう");},""));
       }
@@ -2735,8 +2801,10 @@ function renderResvList(){
       wrap.appendChild(card);
     });
   }
+  section("🙋 あなたの募集に届いた応募",apps,false,"apps");
   section("📥 届いた予約",recv,true);
   section("📤 申し込んだ予約",sent,false);
+  section("✋ 応募中の募集",applied,true,"applied");
   return wrap;
 }
 function renderBookings(){
