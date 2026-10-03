@@ -607,6 +607,60 @@ function MyAvailCard(){
   if(my.length>30){var mm=d({style:{fontSize:"11px",color:"#9CA3AF",marginTop:"6px"}});mm.textContent="ほか"+(my.length-30)+"件";c.appendChild(mm);}
   return c;
 }
+// ===== プロフィールの投稿（写真・動画リンク・テキスト）をサーバーに保存 =====
+function dataUrlToJpeg(dataUrl,maxSide,cb){
+  var im=new Image();
+  im.onload=function(){var w=im.width,h=im.height,sc=Math.min(1,maxSide/Math.max(w,h));var cv=document.createElement("canvas");cv.width=Math.round(w*sc);cv.height=Math.round(h*sc);cv.getContext("2d").drawImage(im,0,0,cv.width,cv.height);cv.toBlob(function(bl){cb(bl);},"image/jpeg",0.85);};
+  im.onerror=function(){cb(null);};
+  im.src=dataUrl;
+}
+function savePostToServer(post){
+  return new Promise(function(resolve,reject){
+    function ins(url){
+      sb.from("user_posts").insert({user_id:currentUser.id,type:post.type,url:url||"",caption:post.cap||""}).then(function(r){if(r.error)reject(new Error(r.error.message));else resolve();});
+    }
+    if(post.type==="image"&&/^data:/.test(post.url||"")){
+      dataUrlToJpeg(post.url,1600,function(blob){
+        if(!blob){reject(new Error("画像を読み込めませんでした"));return;}
+        var path=currentUser.id+"/"+Date.now()+"_"+Math.random().toString(36).slice(2,7)+".jpg";
+        sb.storage.from("posts").upload(path,blob,{contentType:"image/jpeg"}).then(function(ur){
+          if(ur.error){reject(new Error(ur.error.message));return;}
+          ins(sb.storage.from("posts").getPublicUrl(path).data.publicUrl);
+        });
+      });
+    }else ins(post.url);
+  });
+}
+function loadUserPosts(){
+  if(typeof sb==="undefined"||!sb)return;
+  sb.from("user_posts").select("id,user_id,type,url,caption,created_at").order("created_at",{ascending:false}).limit(500).then(function(r){
+    if(r.error){console.error("user_posts load error",r.error.message||r.error);return;}
+    var by={};(r.data||[]).forEach(function(x){(by[x.user_id]=by[x.user_id]||[]).push({id:x.id,type:x.type,url:x.url,cap:x.caption||"",likes:0,server:true});});
+    for(var i=0;i<USERS.length;i++){if(USERS[i].isReal&&USERS[i].uid)USERS[i].posts=by[USERS[i].uid]||[];}
+    if(currentUser&&S.myProfile){
+      var local=(S.myProfile.posts||[]).filter(function(p){return !p.server;});
+      S.myProfile.posts=(by[currentUser.id]||[]).concat(local);
+      // 端末にだけ残っている投稿は、自動でサーバーに移す（1回だけ）
+      if(local.length&&!S._migratingPosts){
+        S._migratingPosts=true;
+        var chain=Promise.resolve(),done=0;
+        local.slice().reverse().forEach(function(p){chain=chain.then(function(){return savePostToServer(p).then(function(){done++;});}).catch(function(e){console.error("post migrate",e);});});
+        chain.then(function(){S._migratingPosts=false;if(done){S.myProfile.posts=(S.myProfile.posts||[]).filter(function(p){return p.server;});saveD();loadUserPosts();}});
+      }
+    }
+    render();
+  });
+}
+function deleteMyPost(post){
+  if(!confirm("この投稿を削除しますか？"))return;
+  if(!post.server){S.myProfile.posts=(S.myProfile.posts||[]).filter(function(p){return p!==post;});saveD();render();return;}
+  sb.from("user_posts").delete().eq("id",post.id).then(function(r){
+    if(r.error){alert("削除できませんでした: "+r.error.message);return;}
+    var m=String(post.url||"").split("/object/public/posts/")[1];
+    if(m)sb.storage.from("posts").remove([decodeURIComponent(m.split("?")[0])]);
+    loadUserPosts();
+  });
+}
 function guestPrompt(){
   if(confirm("無料登録すると、メッセージ・予約・フォローができます。\n登録画面に進みますか？")){
     S.isGuest=false;S.myProfile=null;S.selUser=null;S.chatUser=null;S.bookUser=null;
@@ -772,10 +826,15 @@ function AddPostModal(){
       else if(S.npType==="video")post={id:"p"+Date.now(),type:"video",url:S.npVideoSrc,cap:cv,likes:0};
       else if(S.npType==="photo")post={id:"p"+Date.now(),type:"image",url:S.npImgSrc,cap:cv,likes:0};
       if(!post)return;
+      function finish(){pb.textContent="✅ 投稿しました！";pb.style.background="#22C55E";
+        setTimeout(function(){S.addPost=false;S.npCap="";S.npImgSrc=null;S.npVideoSrc=null;S.npType="video";S.npUrlInput="";render();},800);}
+      if(sb&&currentUser&&!S.isGuest){
+        if(pb.disabled)return;pb.disabled=true;pb.textContent="保存中...";
+        savePostToServer(post).then(function(){finish();loadUserPosts();}).catch(function(e){pb.disabled=false;pb.textContent="💾 投稿して保存する";alert("投稿できませんでした: "+(e&&e.message?e.message:e));});
+        return;
+      }
       if(!S.myProfile.posts)S.myProfile.posts=[];
-      S.myProfile.posts.unshift(post);saveD();
-      pb.textContent="✅ 投稿しました！";pb.style.background="#22C55E";
-      setTimeout(function(){S.addPost=false;S.npCap="";S.npImgSrc=null;S.npVideoSrc=null;S.npType="video";S.npUrlInput="";render();},800);
+      S.myProfile.posts.unshift(post);saveD();finish();
     });
     box.appendChild(pb);
   });
@@ -2368,7 +2427,7 @@ function loadUsersFromSupabase(){
       });
     }
     for(var k=real.length-1;k>=0;k--)USERS.unshift(real[k]);
-    loadPosts();
+    loadPosts();loadUserPosts();
     loadLikesFromSupabase();loadFollowerCounts();loadReservations();
     loadFollowsFromSupabase();
     refreshMyVerification();
@@ -3368,7 +3427,7 @@ function renderProfile(){
     snsDiv2.appendChild(snsSaveBtn2);
     ep.appendChild(snsDiv2);
     body.appendChild(ep);
-  }else{for(var pi2=0;pi2<S.myProfile.posts.length;pi2++)body.appendChild(PostCard(S.myProfile.posts[pi2]));}
+  }else{for(var pi2=0;pi2<S.myProfile.posts.length;pi2++){(function(pp){var pw=d({style:{position:"relative"}});pw.appendChild(PostCard(pp));var db=document.createElement("button");db.textContent="🗑 削除";db.style.cssText="position:absolute;top:8px;right:8px;padding:4px 10px;border-radius:10px;border:none;background:rgba(0,0,0,.55);color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;z-index:2";db.addEventListener("click",function(e){e.stopPropagation();deleteMyPost(pp);});pw.appendChild(db);if(!pp.server&&currentUser){var lb=d({style:{fontSize:"11px",color:"#B45309",margin:"-6px 0 10px"}});lb.textContent="⏳ まだこの端末にだけ保存されています（自動でアップロードします）";pw.appendChild(lb);}body.appendChild(pw);})(S.myProfile.posts[pi2]);}}
   // 同行料金の受け取り（Stripe Connect）
   var payoutCard=PayoutCard();if(payoutCard)body.appendChild(payoutCard);
   // お問い合わせ・退会
