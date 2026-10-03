@@ -500,18 +500,56 @@ function applyToRequest(p,owner){
     loadReservations();
   }).catch(function(e){S.applySending=false;alert("通信エラー: "+(e&&e.message?e.message:e));});
 }
-function chooseApplicant(x,o){
-  var price=Number(x.price_total||0);
-  if(!confirm((o?o.name:"この人")+"さんにお願いしますか？\n\nお支払い額：¥"+price.toLocaleString()+"（決済はデモ）\n\nほかの応募者には自動でお断りが届き、募集は締め切られます。"))return;
+function chooseApplicant(x,o){R({reqPay:{x:x,o:o}});}
+function ReqPayModal(){
+  var st=S.reqPay;var x=st.x,o=st.o;var price=Number(x.price_total||0);
+  return Modal(false,function(){if(!st.sending)R({reqPay:null});},function(box){
+    var t=d({style:{fontWeight:"900",fontSize:"18px",color:"#1A1A2E",marginBottom:"14px"}});t.textContent="💳 お支払い";box.appendChild(t);
+    var who=d({style:{display:"flex",alignItems:"center",gap:"12px",background:"#F9FAFB",borderRadius:"14px",padding:"12px",marginBottom:"14px"}});
+    who.appendChild(o?avU(44,22,o):av(44,22,"🏂"));
+    var wi=d({style:{flex:"1",minWidth:"0"}});
+    var wn=d({style:{fontWeight:"800",fontSize:"15px",color:"#1A1A2E"}});wn.textContent=(o?o.name:"応募者")+" さんにお願いする";wi.appendChild(wn);
+    var wd=d({style:{fontSize:"12px",color:"#4B5563",marginTop:"2px",lineHeight:"1.6"}});wd.textContent="📅 "+String(x.service_date).replace(/-/g,"/")+(x.note?"\n⛰️ "+x.note:"");wd.style.whiteSpace="pre-line";wi.appendChild(wd);
+    who.appendChild(wi);box.appendChild(who);
+    var sum=d({style:{border:"1.5px solid #FED7AA",background:"#FFF7ED",borderRadius:"14px",padding:"12px 14px",marginBottom:"14px"}});
+    function line(a,b,strong){var r=d({style:{display:"flex",justifyContent:"space-between",fontSize:strong?"16px":"13px",fontWeight:strong?"900":"700",color:strong?"#1A1A2E":"#4B5563",marginTop:strong?"6px":"0",paddingTop:strong?"8px":"0",borderTop:strong?"1px solid #FED7AA":"none"}});r.appendChild(sp({},a));r.appendChild(sp({style:{color:strong?"#FF6B2B":"inherit"}},b));sum.appendChild(r);}
+    line("同行料金（全部込み）","¥"+price.toLocaleString());
+    line("お支払い合計","¥"+price.toLocaleString(),true);
+    var sn=d({style:{fontSize:"11px",color:"#9A3412",marginTop:"6px",lineHeight:"1.6"}});sn.textContent="追加の手数料はかかりません（運営手数料は受け取る側の金額から差し引かれます）。";sum.appendChild(sn);
+    box.appendChild(sum);
+    var pt=d({style:{fontWeight:"800",color:"#1A1A2E",fontSize:"14px",marginBottom:"8px"}});pt.textContent="支払い方法";box.appendChild(pt);
+    if(!S.selPayment)S.selPayment="card";
+    [["card","💳","クレジットカード"],["applepay","🍎","Apple Pay"],["googlepay","🔵","Google Pay"],["paypay","🔴","PayPay"]].forEach(function(m){
+      var on=S.selPayment===m[0];
+      var r=d({style:{display:"flex",alignItems:"center",gap:"10px",padding:"11px 14px",borderRadius:"14px",border:"2px solid "+(on?"#FF6B2B":"#E5E7EB"),background:on?"#FFF0E8":"#fff",marginBottom:"8px",cursor:"pointer"}});
+      r.addEventListener("click",function(){S.selPayment=m[0];render();});
+      r.appendChild(sp({style:{fontSize:"20px"}},m[1]));r.appendChild(sp({style:{flex:"1",fontWeight:"800",fontSize:"14px",color:"#1A1A2E"}},m[2]));
+      var ck=d({style:{width:"20px",height:"20px",borderRadius:"10px",border:"2px solid "+(on?"#FF6B2B":"#D1D5DB"),background:on?"#FF6B2B":"#fff",color:"#fff",fontSize:"11px",fontWeight:"900",display:"flex",alignItems:"center",justifyContent:"center"}});if(on)ck.textContent="✓";r.appendChild(ck);
+      box.appendChild(r);
+    });
+    var flow=d({style:{background:"#F0F7FF",borderRadius:"12px",padding:"10px 12px",margin:"6px 0 12px",fontSize:"11.5px",color:"#1565C0",lineHeight:"1.8"}});
+    flow.textContent="🔒 お支払いはStripeが安全に預かります\n① いま支払う → ② 当日一緒に滑る → ③ 滑走日のあとに相手へ送金";flow.style.whiteSpace="pre-line";box.appendChild(flow);
+    var cp=d({style:{fontSize:"11.5px",color:"#7C2D12",background:"#FFF7ED",borderRadius:"12px",padding:"10px 12px",marginBottom:"12px",lineHeight:"1.7",whiteSpace:"pre-line"}});
+    cp.textContent="📅 キャンセルポリシー\n・前日までのキャンセル：全額返金\n・当日のキャンセル：料金の100%\n・悪天候・リフト運休・相手側の都合の場合は全額返金";box.appendChild(cp);
+    var dm=d({style:{fontSize:"11px",color:"#9CA3AF",textAlign:"center",marginBottom:"10px"}});dm.textContent="※現在はデモのため、実際の請求は行われません";box.appendChild(dm);
+    var br=d({style:{display:"flex",gap:"10px"}});
+    br.appendChild(obtn("戻る",function(){if(!st.sending)R({reqPay:null});},"obtn-s"));
+    var pb=obtn(st.sending?"処理中...":"¥"+price.toLocaleString()+" を支払って確定",function(){
+      if(st.sending)return;st.sending=true;pb.textContent="処理中...";
+      confirmApplicant(x,o,function(ok){st.sending=false;if(ok){R({reqPay:null});alert("お支払いが完了し、予約が確定しました！（デモ）\nメッセージで集合場所などを決めましょう");}else{pb.textContent="¥"+price.toLocaleString()+" を支払って確定";}});
+    },"");
+    br.appendChild(pb);box.appendChild(br);
+  });
+}
+function confirmApplicant(x,o,cb){
   sb.from("reservations").update({status:"approved"}).eq("id",x.id).select().then(function(r){
-    if(r.error){alert("できませんでした: "+r.error.message);return;}
-    if(!r.data||!r.data.length){alert("できませんでした（権限設定）");return;}
+    if(r.error){alert("できませんでした: "+r.error.message);cb(false);return;}
+    if(!r.data||!r.data.length){alert("できませんでした（権限設定）");cb(false);return;}
     if(x.post_id){
       sb.from("reservations").update({status:"declined"}).eq("post_id",x.post_id).eq("status","pending").neq("id",x.id).then(function(){loadReservations();});
       sb.from("ride_posts").update({status:"closed"}).eq("id",x.post_id).then(function(){loadPosts();});
     }
-    alert("予約が確定しました！メッセージで集合場所などを決めましょう");
-    loadReservations();
+    loadReservations();cb(true);
   });
 }
 function PostModal(){
@@ -2769,7 +2807,7 @@ function renderResvList(){
       tr.appendChild(badge);card.appendChild(tr);
       var det=d({style:{background:"#F9FAFB",borderRadius:"12px",padding:"10px 14px",fontSize:"13px",color:"#374151",lineHeight:"1.7"}});
       var pl=x.plan==="hour"?("1時間 × "+x.hours+"時間"):(x.plan_label||"");
-      if(x.plan==="request"){var _fp=calcF(Number(x.price_total||0));det.textContent=(x.note?("⛰️ "+x.note+"\n"):"")+"お支払い額：¥"+Number(x.price_total||0).toLocaleString()+(meProv?"\n受け取り予定：¥"+_fp.payout.toLocaleString()+"（手数料15%を引いた額）":"");}
+      if(x.plan==="request"){var _fp=calcF(Number(x.price_total||0));det.textContent=(x.note?("⛰️ "+x.note+"\n"):"")+"お支払い額：¥"+Number(x.price_total||0).toLocaleString()+(x.status==="approved"&&!meProv?"（支払い済み・デモ）":"")+(meProv?"\n受け取り予定：¥"+_fp.payout.toLocaleString()+"（手数料15%を引いた額）":"");}
       else det.textContent="プラン："+pl+"　合計：¥"+Number(x.price_total||0).toLocaleString()+(x.note?("\n💬 "+x.note):"");
       det.style.whiteSpace="pre-wrap";card.appendChild(det);
       var bt=d({style:{display:"flex",gap:"8px",marginTop:"10px",flexWrap:"wrap"}});
@@ -4619,6 +4657,7 @@ function _renderInner(){
   }
   if(S.bookUser)app.appendChild(BookModal(S.bookUser));
   if(S.postModal)app.appendChild(PostModal());
+  if(S.reqPay)app.appendChild(ReqPayModal());
   if(S.invite)app.appendChild(RideInviteModal());
   if(S.snowModal)app.appendChild(SnowReportModal());
   if(S.confirmed)app.appendChild(ConfirmedModal(S.confirmed));
