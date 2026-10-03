@@ -723,7 +723,7 @@ function loadOpenPosts(){
   if(typeof sb==="undefined"||!sb)return;
   sb.from("open_posts_public").select("*").order("created_at",{ascending:false}).limit(100).then(function(r){
     if(r.error){console.error("open posts load error",r.error.message||r.error);S.openPosts=S.openPosts||[];render();return;}
-    S.openPosts=r.data||[];S.openLoadedAt=Date.now();render();
+    S.openPosts=r.data||[];S.openLoadedAt=Date.now();render();loadReactCounts(S.openPosts.slice(0,100).map(function(x){return x.id;}));
   });
 }
 setInterval(function(){if(document.hidden)return;if((S.tab==="market"&&(S.marketTab||"open")==="open")||(S.tab==="explore"&&S.exTab!=="board"))loadOpenPosts();},30000);
@@ -775,8 +775,16 @@ function renderOpenBoard(wrap){
   if(S.openPosts===undefined){S.openPosts=null;loadOpenPosts();}
   var logged=!!(sb&&currentUser&&!S.isGuest);
   var intro=d({style:{fontSize:"12px",color:"#6B7280",lineHeight:"1.6",marginBottom:"12px"}});
-  intro.textContent="登録していなくても、誰でも書き込めて誰でも見られる場所です。「今日ルスツいる人いる？」「来週ニセコ行きます」など気軽にどうぞ。";wrap.appendChild(intro);
-  // 書き込み欄
+  intro.textContent=logged?"誰でも見られる場所です。「今日ルスツいる人いる？」「来週ニセコ行きます」など気軽にどうぞ。":"誰でも見られて、リアクションできます。書き込みは登録した会員だけができます。";wrap.appendChild(intro);
+  // 書き込み欄（登録した会員だけ）
+  if(!logged){
+    var jc=d({class:"card",style:{marginBottom:"14px",padding:"14px",textAlign:"center",background:"linear-gradient(135deg,#FFF7F2,#fff)",border:"1.5px solid #FFE1CF"}});
+    var jt=d({style:{fontWeight:"900",fontSize:"14px",color:"#1A1A2E",marginBottom:"4px"}});jt.textContent="✍️ 書き込みは会員だけ";jc.appendChild(jt);
+    var js=d({style:{fontSize:"12px",color:"#6B7280",marginBottom:"10px",lineHeight:"1.6"}});js.textContent="無料登録（メールアドレスだけ）で書き込めます。読むのとリアクションはそのままどうぞ！";jc.appendChild(js);
+    var jb=document.createElement("button");jb.textContent="無料で登録する";jb.style.cssText="padding:10px 22px;border-radius:14px;border:none;background:linear-gradient(135deg,#FF6B2B,#FF8C55);color:#fff;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit";
+    jb.addEventListener("click",function(){if(S.isGuest)askJoin("無料登録すると、つぶやきに書き込めます。");else{S.showLoginModal=true;render();}});jc.appendChild(jb);
+    wrap.appendChild(jc);
+  }else{
   var cb=d({class:"card",style:{marginBottom:"14px",padding:"14px"}});
   if(!logged){
     var nm=document.createElement("input");nm.className="inp";nm.maxLength=20;nm.placeholder="ニックネーム（ゲスト）";nm.style.marginBottom="8px";
@@ -806,6 +814,7 @@ function renderOpenBoard(wrap){
   row.appendChild(pb);cb.appendChild(row);
   var rule=d({style:{fontSize:"10.5px",color:"#9CA3AF",marginTop:"8px",lineHeight:"1.6"}});rule.textContent="※誹謗中傷・個人情報・宣伝は禁止です。通報が多い書き込みは自動で非表示になります。"+(logged?"":"ゲストはURLを書き込めません。");cb.appendChild(rule);
   wrap.appendChild(cb);
+  }
   // 一覧
   var list=S.openPosts;
   if(list===null){var ld=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"13px",padding:"20px 0"}});ld.textContent="読み込み中…";wrap.appendChild(ld);return wrap;}
@@ -834,7 +843,7 @@ function renderOpenBoard(wrap){
       if(!confirm("この書き込みを通報しますか？\n（誹謗中傷・個人情報・宣伝・不適切な内容など）"))return;
       sb.from("open_post_reports").insert({post_id:p.id}).then(function(r){if(r.error&&String(r.error.message).indexOf("duplicate")<0){alert("通報できませんでした: "+r.error.message);return;}rp[p.id]=1;alert("通報しました。ご協力ありがとうございます");loadOpenPosts();});
     });
-    c.appendChild(ac);wrap.appendChild(c);
+    c.appendChild(ReactBar(p));c.appendChild(ac);wrap.appendChild(c);
   });
   return wrap;
 }
@@ -985,6 +994,107 @@ function goBack(){
   document.addEventListener("touchstart",function(e){var t=e.touches[0];on=t.clientX<28;sx=t.clientX;sy=t.clientY;st=Date.now();},{passive:true});
   document.addEventListener("touchend",function(e){if(!on)return;on=false;var t=e.changedTouches[0];var dx=t.clientX-sx,dy=Math.abs(t.clientY-sy);if(dx>70&&dy<60&&Date.now()-st<700)goBack();},{passive:true});
 })();
+// ===== ゲストも楽しめる：リアクション・今日どこ行く投票・気になる人 =====
+function askJoin(msg){
+  if(confirm((msg||"無料登録すると、書き込み・メッセージ・フォローができます。")+"\n登録画面に進みますか？")){
+    S.isGuest=false;S.myProfile=null;S.selUser=null;S.chatUser=null;S.bookUser=null;R({pg:"onboard"});
+  }
+}
+// --- リアクション ---
+var REACTS=["👍","🏂","😂"]; // 👍いいね 🏂一緒に滑りたい 😂わかる
+function myReacts(){try{return JSON.parse(localStorage.getItem("sm_reacts")||"{}");}catch(e){return {};}}
+function saveMyReacts(o){try{localStorage.setItem("sm_reacts",JSON.stringify(o));}catch(e){}}
+function loadReactCounts(ids){
+  if(!sb||!ids||!ids.length)return;
+  sb.from("open_post_reaction_counts").select("*").in("post_id",ids).then(function(r){
+    if(r.error){console.error("reaction counts",r.error.message||r.error);return;}
+    var m={};(r.data||[]).forEach(function(x){(m[x.post_id]=m[x.post_id]||{})[x.emoji]=x.cnt;});
+    S.reactCounts=m;render();
+  });
+}
+function ReactBar(p){
+  var bar=d({style:{display:"flex",gap:"6px",marginTop:"8px",flexWrap:"wrap"}});
+  var mine=myReacts();var cnt=(S.reactCounts&&S.reactCounts[p.id])||{};
+  REACTS.forEach(function(e){
+    var on=!!(mine[p.id]&&mine[p.id][e]);var n=cnt[e]||0;
+    var b=document.createElement("button");b.textContent=e+(n?" "+n:"");
+    b.style.cssText="padding:4px 10px;border-radius:14px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;border:1.5px solid "+(on?"#FF6B2B":"#E5E7EB")+";background:"+(on?"#FFF0E8":"#fff")+";color:"+(on?"#FF6B2B":"#6B7280");
+    b.addEventListener("click",function(ev){
+      ev.stopPropagation();if(b.disabled)return;b.disabled=true;
+      sb.rpc("toggle_open_reaction",{p_post:p.id,p_emoji:e}).then(function(r){
+        b.disabled=false;
+        if(r.error){alert(String(r.error.message).indexOf("open_posts:")>=0?r.error.message.split("open_posts:")[1]:"できませんでした: "+r.error.message);return;}
+        var res=r.data||{};var mr=myReacts();if(!mr[p.id])mr[p.id]={};
+        if(res.reacted)mr[p.id][e]=1;else delete mr[p.id][e];saveMyReacts(mr);
+        if(!S.reactCounts)S.reactCounts={};if(!S.reactCounts[p.id])S.reactCounts[p.id]={};S.reactCounts[p.id][e]=res.count||0;
+        render();
+      });
+    });
+    bar.appendChild(b);
+  });
+  return bar;
+}
+// --- 今日どこで滑る？投票 ---
+function jstToday(){var t=new Date(Date.now()+9*3600*1000);return t.toISOString().slice(0,10);}
+function loadVotes(){
+  if(typeof sb==="undefined"||!sb)return;
+  sb.from("ride_vote_counts").select("*").eq("vote_date",jstToday()).order("cnt",{ascending:false}).limit(20).then(function(r){
+    if(r.error){console.error("votes",r.error.message||r.error);S.votes=S.votes||[];render();return;}
+    S.votes=r.data||[];render();
+  });
+}
+function myVote(){try{var v=JSON.parse(localStorage.getItem("sm_vote")||"null");return v&&v.d===jstToday()?v.r:null;}catch(e){return null;}}
+function VoteCard(){
+  if(S.votes===undefined){S.votes=null;loadVotes();}
+  var mv=myVote();var list=S.votes||[];var total=list.reduce(function(a,x){return a+x.cnt;},0);
+  var c=d({class:"card",style:{marginBottom:"16px",padding:"14px"}});
+  var hr=d({style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"8px"}});
+  var tt=d({style:{fontWeight:"900",fontSize:"15px",color:"#1A1A2E"}});tt.textContent="🗳️ 今日どこで滑る？";hr.appendChild(tt);
+  hr.appendChild(sp({style:{fontSize:"11px",color:"#9CA3AF"}},total?total+"人が投票":"だれでも投票できます"));
+  c.appendChild(hr);
+  if(list.length){
+    var mx=list[0].cnt||1;
+    list.slice(0,5).forEach(function(x){
+      var row=d({style:{marginBottom:"7px",cursor:"pointer"}});
+      var top=d({style:{display:"flex",justifyContent:"space-between",fontSize:"12px",fontWeight:"800",color:"#1A1A2E",marginBottom:"3px"}});
+      top.appendChild(sp({},(mv===x.resort?"✅ ":"⛰️ ")+x.resort));top.appendChild(sp({style:{color:"#FF6B2B"}},x.cnt+"人"));row.appendChild(top);
+      var bg=d({style:{height:"8px",borderRadius:"6px",background:"#F3F4F6",overflow:"hidden"}});
+      var fg=d({style:{height:"100%",width:Math.max(6,Math.round(x.cnt/mx*100))+"%",background:mv===x.resort?"#22C55E":"linear-gradient(90deg,#FF6B2B,#FF8C55)",borderRadius:"6px"}});bg.appendChild(fg);row.appendChild(bg);
+      row.addEventListener("click",function(){var ar=areaOfResort(x.resort);R({tab:"explore",exTab:"people",selArea:ar||null});});
+      c.appendChild(row);
+    });
+    var hint=d({style:{fontSize:"10.5px",color:"#9CA3AF",margin:"2px 0 8px"}});hint.textContent="スキー場をタップすると、そのエリアの仲間が見られます";c.appendChild(hint);
+  }else if(S.votes!==null){var em=d({style:{fontSize:"12px",color:"#9CA3AF",marginBottom:"8px"}});em.textContent="まだ投票がありません。今日滑るスキー場を教えてください！";c.appendChild(em);}
+  var sel=document.createElement("select");sel.className="inp";sel.style.cssText="margin-bottom:8px;background:#fff";
+  var o0=document.createElement("option");o0.value="";o0.textContent=mv?"投票を変える（今："+mv+"）":"スキー場を選んで投票";sel.appendChild(o0);
+  AREAS.forEach(function(a){var og=document.createElement("optgroup");og.label=a.area;a.resorts.forEach(function(r){var o=document.createElement("option");o.value=r;o.textContent=r;og.appendChild(o);});sel.appendChild(og);});
+  sel.addEventListener("change",function(e){
+    var r0=e.target.value;if(!r0)return;
+    sb.rpc("cast_ride_vote",{p_resort:r0}).then(function(r){
+      if(r.error){alert("投票できませんでした: "+r.error.message);return;}
+      try{localStorage.setItem("sm_vote",JSON.stringify({d:jstToday(),r:r0}));}catch(err){}
+      loadVotes();
+    });
+  });
+  c.appendChild(sel);
+  return c;
+}
+setInterval(function(){if(!document.hidden&&S.tab==="explore"&&S.exTab!=="board")loadVotes();},60000);
+// --- 気になる人（端末に保存） ---
+function getFavs(){try{return JSON.parse(localStorage.getItem("sm_favs")||"[]");}catch(e){return [];}}
+function isFav(u){return !!u&&!!u.uid&&getFavs().indexOf(u.uid)>=0;}
+function toggleFav(u){var f=getFavs();var k=f.indexOf(u.uid);if(k>=0)f.splice(k,1);else f.unshift(u.uid);try{localStorage.setItem("sm_favs",JSON.stringify(f.slice(0,100)));}catch(e){}render();}
+function FavStrip(){
+  var f=getFavs();if(!f.length)return null;
+  var us=f.map(function(id){return findRealUser(id);}).filter(Boolean);if(!us.length)return null;
+  var c=d({class:"card",style:{marginBottom:"16px",padding:"12px 14px"}});
+  var tt=d({style:{fontWeight:"900",fontSize:"14px",color:"#1A1A2E",marginBottom:"8px"}});tt.textContent="⭐ 気になる人";c.appendChild(tt);
+  var row=d({style:{display:"flex",gap:"12px",overflowX:"auto",paddingBottom:"2px"}});
+  us.forEach(function(u){var it=d({style:{display:"flex",flexDirection:"column",alignItems:"center",gap:"4px",cursor:"pointer",flexShrink:"0",width:"58px"}});it.appendChild(avU(48,24,u));var nm=d({style:{fontSize:"11px",fontWeight:"700",color:"#374151",width:"58px",textAlign:"center",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}});nm.textContent=u.name;it.appendChild(nm);it.addEventListener("click",function(){R({selUser:u});});row.appendChild(it);});
+  c.appendChild(row);
+  if(S.isGuest||!currentUser){var nt=d({style:{fontSize:"10.5px",color:"#9CA3AF",marginTop:"6px"}});nt.textContent="この端末に保存されています。登録すると、フォローやメッセージができます";c.appendChild(nt);}
+  return c;
+}
 function guestPrompt(){
   if(confirm("無料登録すると、メッセージ・予約・フォローができます。\n登録画面に進みますか？")){
     S.isGuest=false;S.myProfile=null;S.selUser=null;S.chatUser=null;S.bookUser=null;
@@ -1945,6 +2055,8 @@ function renderExplore(){
   wrap.appendChild(exT);
   if(S.exTab==="board"){markBoardSeen();return renderBoard(wrap);}
   var opc=OpenPreviewCard();if(opc)wrap.appendChild(opc);
+  wrap.appendChild(VoteCard());
+  var fvs=FavStrip();if(fvs)wrap.appendChild(fvs);
   var ht=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"4px"}});ht.textContent="🔍 仲間を探す";wrap.appendChild(ht);
   var sub=d({style:{color:"#6B7280",fontSize:"13px",marginBottom:"12px"}});sub.textContent="エリア・種目で絞り込もう";wrap.appendChild(sub);
 
@@ -4337,6 +4449,7 @@ function _renderInner(){
           if(isPaidUser(u))br.appendChild(obtn("🎿 予約する",function(){R({selUser:null,bookUser:u});},""));
           else{var ivb=obtn("🤝 一緒に滑りたい",function(){if(S.isGuest){guestPrompt();return;}if(currentUser&&u.uid===currentUser.id)return;R({invite:{u:u,date:"",time:"9:00",resort:"",note:"",slot:null}});},"");ivb.style.background="linear-gradient(135deg,#22C55E,#16A34A)";ivb.style.boxShadow="0 4px 14px rgba(34,197,94,.35)";br.appendChild(ivb);}
           box.appendChild(br);
+          if(!(currentUser&&u.uid===currentUser.id)){var fv=isFav(u);var fb=obtn(fv?"⭐ 気になる（保存済み）":"☆ 気になる人に保存",function(){toggleFav(u);},"obtn-s obtn-full");fb.style.marginTop="10px";if(fv){fb.style.background="#FEF3C7";fb.style.color="#B45309";fb.style.borderColor="#FCD34D";}box.appendChild(fb);}
           var bkb=obtn("← 戻る",function(){R({selUser:null});},"obtn-s obtn-full");bkb.style.marginTop="12px";box.appendChild(bkb);
         }));
       })(S.selUser);
