@@ -2452,13 +2452,14 @@ function loadRoomMsgs(roomId,initial){
   if(!S.roomMsgs)S.roomMsgs={};
   var list=S.roomMsgs[roomId];
   var q=sb.from("lounge_messages").select("*").eq("room_id",roomId);
-  if(initial||!list||!list.length){q=q.order("created_at",{ascending:false}).limit(200);}
-  else{q=q.gt("created_at",list[list.length-1].created_at).order("created_at",{ascending:true}).limit(100);}
+  if(initial||!list){q=q.order("created_at",{ascending:false}).limit(200);}
+  else if(list.length){q=q.gt("created_at",list[list.length-1].created_at).order("created_at",{ascending:true}).limit(100);}
+  else{q=q.order("created_at",{ascending:true}).limit(100);}
   q.then(function(r){
     if(r.error){console.error("lounge load",r.error.message||r.error);if(initial){S.roomMsgs[roomId]=S.roomMsgs[roomId]||[];S.roomErr=r.error.message;if(S.openRoom===roomId)render();}return;}
     S.roomErr=null;
     var rows=r.data||[];
-    if(initial||!list||!list.length){S.roomMsgs[roomId]=rows.reverse();if(S.openRoom===roomId)render();return;}
+    if(initial||!list){S.roomMsgs[roomId]=rows.reverse();if(S.openRoom===roomId)render();return;}
     var added=[];rows.forEach(function(x){if(!roomHasMsg(roomId,x.id)){S.roomMsgs[roomId].push(x);added.push(x);}});
     if(added.length&&S.openRoom===roomId)appendRoomRows(added);
   });
@@ -4324,7 +4325,9 @@ function render(){
   var key=viewKey();var same=(key===_lastViewKey);_lastViewKey=key;
   var appTop=app?app.scrollTop:0;
   var mbs=app?app.querySelectorAll(".mbox"):[];var mbTop=mbs.length?mbs[mbs.length-1].scrollTop:0;
+  var _ae=document.activeElement,_aid=(_ae&&_ae.id&&(_ae.id==="roominput"||_ae.id==="chatinput"))?_ae.id:null,_ss=_aid?_ae.selectionStart:0;
   _renderInner();
+  if(_aid){var _ne=document.getElementById(_aid);if(_ne){try{_ne.focus({preventScroll:true});_ne.setSelectionRange(_ss,_ss);}catch(e){}}}
   if(same&&app){
     app.scrollTop=appTop;
     var mbs2=app.querySelectorAll(".mbox");if(mbs2.length)mbs2[mbs2.length-1].scrollTop=mbTop;
