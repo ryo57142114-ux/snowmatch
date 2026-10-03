@@ -46,6 +46,7 @@ img{display:block;width:100%}
 .upzone input{position:absolute;top:0;right:0;bottom:0;left:0;opacity:0;cursor:pointer;font-size:16px}
 #splash{position:relative;min-height:100vh;overflow:hidden;display:flex;flex-direction:column}
 .spc{position:relative;z-index:10;display:flex;flex-direction:column;justify-content:flex-end;flex:1;padding:0 24px calc(52px + env(safe-area-inset-bottom,0px))}
+.bdrow>*{white-space:nowrap;display:inline-block;margin-right:0!important;margin-bottom:0!important}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
@@ -1791,7 +1792,7 @@ function renderExplore(){
       var nm=d({style:{fontWeight:"800",color:"#1A1A2E",fontSize:"16px"}});nm.textContent=u.name;nl.appendChild(nm);
       if(u.ok)nl.appendChild(sp({style:{background:"rgba(46,204,113,.15)",color:"#27AE60",borderRadius:"20px",padding:"2px 8px",fontSize:"11px",fontWeight:"700"}},"🪪"));
       inf.appendChild(nl);
-      var bd=d({style:{marginBottom:"4px"}});
+      var bd=d({class:"bdrow",style:{marginBottom:"4px",display:"flex",flexWrap:"wrap",gap:"4px 6px",alignItems:"center"}});
       if(isPaidUser(u)){var mp=minPlanPrice(u);bd.appendChild(sp({style:{background:"#FFF0E8",color:"#FF6B2B",display:"inline-block",padding:"3px 10px",borderRadius:"20px",fontSize:"11px",fontWeight:"800",marginRight:"6px"}},"💴 有料の同行"+(u.ok&&mp?" ¥"+mp.toLocaleString()+"〜":"")));}
       else{bd.appendChild(sp({style:{background:"#F0FDF4",color:"#15803D",display:"inline-block",padding:"3px 10px",borderRadius:"20px",fontSize:"11px",fontWeight:"800",marginRight:"6px"}},"🤝 無料で仲間募集"));}
       if(u.isCam){
