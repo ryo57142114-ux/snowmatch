@@ -749,14 +749,23 @@ function OpenPreviewCard(){
   if(S.openPosts===null){var ld=d({style:{fontSize:"12px",color:"#9CA3AF"}});ld.textContent="読み込み中…";c.appendChild(ld);return c;}
   if(!list.length){var em=d({style:{fontSize:"12px",color:"#9CA3AF",lineHeight:"1.6"}});em.textContent="まだ書き込みがありません。「今日ルスツいる人いる？」など、最初のひとことをどうぞ！（登録なしでも書けます）";c.appendChild(em);return c;}
   list.forEach(function(p,i){
-    var u=p.user_id?findRealUser(p.user_id):null;
-    var row=d({style:{padding:"8px 0",borderTop:i?"1px solid #F3F4F6":"none"}});
+    var mine=currentUser&&p.user_id===currentUser.id;
+    var u=p.user_id?(mine?{name:(S.myProfile&&S.myProfile.nick)||"あなた",icon:(S.myProfile&&S.myProfile.icon)||"🏂",profileImg:S.myProfile&&S.myProfile.profileImg}:findRealUser(p.user_id)):null;
+    var row=d({style:{display:"flex",gap:"10px",alignItems:"flex-start",padding:"9px 0",borderTop:i?"1px solid #F3F4F6":"none"}});
+    // アイコン：登録ユーザーはタップでプロフィールへ
+    var ic=u?avU(38,19,u):av(38,19,"👤");ic.style.flexShrink="0";
+    if(u&&!mine){ic.style.cursor="pointer";ic.addEventListener("click",function(e){e.stopPropagation();R({selUser:u});});}
+    row.appendChild(ic);
+    var col=d({style:{flex:"1",minWidth:"0"}});
     var top=d({style:{display:"flex",alignItems:"center",gap:"6px",fontSize:"12px",marginBottom:"2px"}});
-    top.appendChild(sp({style:{fontWeight:"800",color:"#1A1A2E"}},u?u.name:(p.guest_name||"ゲスト")));
-    top.appendChild(sp({style:{fontSize:"10px",fontWeight:"800",padding:"1px 6px",borderRadius:"8px",background:u?"#FFF0E8":"#F3F4F6",color:u?"#FF6B2B":"#6B7280"}},u?"✔ 登録":"ゲスト"));
-    top.appendChild(sp({style:{color:"#9CA3AF",marginLeft:"auto",fontSize:"11px"}},timeAgo(p.created_at)));
-    row.appendChild(top);
-    var bd=d({style:{fontSize:"13px",color:"#374151",lineHeight:"1.6",display:"-webkit-box",WebkitLineClamp:"2",WebkitBoxOrient:"vertical",overflow:"hidden",wordBreak:"break-word"}});bd.textContent=p.body;row.appendChild(bd);
+    var nm=sp({style:{fontWeight:"800",color:"#1A1A2E",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"55%"}},u?u.name:(p.guest_name||"ゲスト"));
+    if(u&&!mine){nm.style.cursor="pointer";nm.addEventListener("click",function(e){e.stopPropagation();R({selUser:u});});}
+    top.appendChild(nm);
+    top.appendChild(sp({style:{fontSize:"10px",fontWeight:"800",padding:"1px 6px",borderRadius:"8px",whiteSpace:"nowrap",background:u?"#FFF0E8":"#F3F4F6",color:u?"#FF6B2B":"#6B7280"}},u?"✔ 登録":"ゲスト"));
+    top.appendChild(sp({style:{color:"#9CA3AF",marginLeft:"auto",fontSize:"11px",whiteSpace:"nowrap"}},timeAgo(p.created_at)));
+    col.appendChild(top);
+    var bd=d({style:{fontSize:"13px",color:"#374151",lineHeight:"1.6",display:"-webkit-box",WebkitLineClamp:"2",WebkitBoxOrient:"vertical",overflow:"hidden",wordBreak:"break-word"}});bd.textContent=p.body;col.appendChild(bd);
+    row.appendChild(col);
     c.appendChild(row);
   });
   return c;
