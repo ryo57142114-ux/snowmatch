@@ -994,7 +994,7 @@ function goBack(){
   document.addEventListener("touchstart",function(e){var t=e.touches[0];on=t.clientX<28;sx=t.clientX;sy=t.clientY;st=Date.now();},{passive:true});
   document.addEventListener("touchend",function(e){if(!on)return;on=false;var t=e.changedTouches[0];var dx=t.clientX-sx,dy=Math.abs(t.clientY-sy);if(dx>70&&dy<60&&Date.now()-st<700)goBack();},{passive:true});
 })();
-// ===== ゲストも楽しめる：リアクション・今日どこ行く投票・気になる人 =====
+// ===== ゲストも楽しめる：リアクション・気になる人 =====
 function askJoin(msg){
   if(confirm((msg||"無料登録すると、書き込み・メッセージ・フォローができます。")+"\n登録画面に進みますか？")){
     S.isGuest=false;S.myProfile=null;S.selUser=null;S.chatUser=null;S.bookUser=null;R({pg:"onboard"});
@@ -1034,52 +1034,6 @@ function ReactBar(p){
   });
   return bar;
 }
-// --- 今日どこで滑る？投票 ---
-function jstToday(){var t=new Date(Date.now()+9*3600*1000);return t.toISOString().slice(0,10);}
-function loadVotes(){
-  if(typeof sb==="undefined"||!sb)return;
-  sb.from("ride_vote_counts").select("*").eq("vote_date",jstToday()).order("cnt",{ascending:false}).limit(20).then(function(r){
-    if(r.error){console.error("votes",r.error.message||r.error);S.votes=S.votes||[];render();return;}
-    S.votes=r.data||[];render();
-  });
-}
-function myVote(){try{var v=JSON.parse(localStorage.getItem("sm_vote")||"null");return v&&v.d===jstToday()?v.r:null;}catch(e){return null;}}
-function VoteCard(){
-  if(S.votes===undefined){S.votes=null;loadVotes();}
-  var mv=myVote();var list=S.votes||[];var total=list.reduce(function(a,x){return a+x.cnt;},0);
-  var c=d({class:"card",style:{marginBottom:"16px",padding:"14px"}});
-  var hr=d({style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"8px"}});
-  var tt=d({style:{fontWeight:"900",fontSize:"15px",color:"#1A1A2E"}});tt.textContent="🗳️ 今日どこで滑る？";hr.appendChild(tt);
-  hr.appendChild(sp({style:{fontSize:"11px",color:"#9CA3AF"}},total?total+"人が投票":"だれでも投票できます"));
-  c.appendChild(hr);
-  if(list.length){
-    var mx=list[0].cnt||1;
-    list.slice(0,5).forEach(function(x){
-      var row=d({style:{marginBottom:"7px",cursor:"pointer"}});
-      var top=d({style:{display:"flex",justifyContent:"space-between",fontSize:"12px",fontWeight:"800",color:"#1A1A2E",marginBottom:"3px"}});
-      top.appendChild(sp({},(mv===x.resort?"✅ ":"⛰️ ")+x.resort));top.appendChild(sp({style:{color:"#FF6B2B"}},x.cnt+"人"));row.appendChild(top);
-      var bg=d({style:{height:"8px",borderRadius:"6px",background:"#F3F4F6",overflow:"hidden"}});
-      var fg=d({style:{height:"100%",width:Math.max(6,Math.round(x.cnt/mx*100))+"%",background:mv===x.resort?"#22C55E":"linear-gradient(90deg,#FF6B2B,#FF8C55)",borderRadius:"6px"}});bg.appendChild(fg);row.appendChild(bg);
-      row.addEventListener("click",function(){var ar=areaOfResort(x.resort);R({tab:"explore",exTab:"people",selArea:ar||null});});
-      c.appendChild(row);
-    });
-    var hint=d({style:{fontSize:"10.5px",color:"#9CA3AF",margin:"2px 0 8px"}});hint.textContent="スキー場をタップすると、そのエリアの仲間が見られます";c.appendChild(hint);
-  }else if(S.votes!==null){var em=d({style:{fontSize:"12px",color:"#9CA3AF",marginBottom:"8px"}});em.textContent="まだ投票がありません。今日滑るスキー場を教えてください！";c.appendChild(em);}
-  var sel=document.createElement("select");sel.className="inp";sel.style.cssText="margin-bottom:8px;background:#fff";
-  var o0=document.createElement("option");o0.value="";o0.textContent=mv?"投票を変える（今："+mv+"）":"スキー場を選んで投票";sel.appendChild(o0);
-  AREAS.forEach(function(a){var og=document.createElement("optgroup");og.label=a.area;a.resorts.forEach(function(r){var o=document.createElement("option");o.value=r;o.textContent=r;og.appendChild(o);});sel.appendChild(og);});
-  sel.addEventListener("change",function(e){
-    var r0=e.target.value;if(!r0)return;
-    sb.rpc("cast_ride_vote",{p_resort:r0}).then(function(r){
-      if(r.error){alert("投票できませんでした: "+r.error.message);return;}
-      try{localStorage.setItem("sm_vote",JSON.stringify({d:jstToday(),r:r0}));}catch(err){}
-      loadVotes();
-    });
-  });
-  c.appendChild(sel);
-  return c;
-}
-setInterval(function(){if(!document.hidden&&S.tab==="explore"&&S.exTab!=="board")loadVotes();},60000);
 // --- 気になる人（端末に保存） ---
 function getFavs(){try{return JSON.parse(localStorage.getItem("sm_favs")||"[]");}catch(e){return [];}}
 function isFav(u){return !!u&&!!u.uid&&getFavs().indexOf(u.uid)>=0;}
@@ -2055,7 +2009,6 @@ function renderExplore(){
   wrap.appendChild(exT);
   if(S.exTab==="board"){markBoardSeen();return renderBoard(wrap);}
   var opc=OpenPreviewCard();if(opc)wrap.appendChild(opc);
-  wrap.appendChild(VoteCard());
   var fvs=FavStrip();if(fvs)wrap.appendChild(fvs);
   var ht=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"4px"}});ht.textContent="🔍 仲間を探す";wrap.appendChild(ht);
   var sub=d({style:{color:"#6B7280",fontSize:"13px",marginBottom:"12px"}});sub.textContent="エリア・種目で絞り込もう";wrap.appendChild(sub);
