@@ -17,6 +17,7 @@
 html,body{height:100%;background:#F5F7FA;font-family:'Nunito','Hiragino Kaku Gothic ProN',sans-serif;-webkit-tap-highlight-color:transparent;overflow:hidden}
 #app{height:100%;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;max-width:430px;margin:0 auto;background:#F5F7FA;padding-top:env(safe-area-inset-top,0px)}
 ::-webkit-scrollbar{display:none}
+body::before{content:"";position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top,0px);background:#F5F7FA;z-index:100;pointer-events:none}
 button{font-family:inherit;cursor:pointer;border:none;background:none;-webkit-appearance:none}
 input,textarea,select{font-family:inherit;-webkit-appearance:none;font-size:16px;outline:none}
 button:active{opacity:.75}
@@ -1001,7 +1002,7 @@ function askJoin(msg){
   }
 }
 // --- リアクション ---
-var REACTS=["👍","🏂","😂"]; // 👍いいね 🏂一緒に滑りたい 😂わかる
+var REACTS=["👍"]; // 👍いいね
 function myReacts(){try{return JSON.parse(localStorage.getItem("sm_reacts")||"{}");}catch(e){return {};}}
 function saveMyReacts(o){try{localStorage.setItem("sm_reacts",JSON.stringify(o));}catch(e){}}
 function loadReactCounts(ids){
