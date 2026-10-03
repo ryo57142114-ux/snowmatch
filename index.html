@@ -717,6 +717,84 @@ function RideInviteModal(){
     br.appendChild(sendB);box.appendChild(br);
   });
 }
+// ===== 誰でも書ける「みんなのつぶやき」 =====
+function timeAgo(iso){var t=new Date(iso).getTime(),s=Math.floor((Date.now()-t)/1000);if(s<60)return "たった今";if(s<3600)return Math.floor(s/60)+"分前";if(s<86400)return Math.floor(s/3600)+"時間前";if(s<86400*7)return Math.floor(s/86400)+"日前";var d0=new Date(t);return (d0.getMonth()+1)+"/"+d0.getDate();}
+function loadOpenPosts(){
+  if(typeof sb==="undefined"||!sb)return;
+  sb.from("open_posts_public").select("*").order("created_at",{ascending:false}).limit(100).then(function(r){
+    if(r.error){console.error("open posts load error",r.error.message||r.error);S.openPosts=S.openPosts||[];render();return;}
+    S.openPosts=r.data||[];S.openLoadedAt=Date.now();render();
+  });
+}
+setInterval(function(){if(!document.hidden&&S.tab==="market"&&(S.marketTab||"open")==="open")loadOpenPosts();},60000);
+function checkAdmin(){if(!sb||!currentUser)return;sb.rpc("is_admin").then(function(r){S.isAdmin=!!(r&&r.data);});}
+function renderOpenBoard(wrap){
+  if(S.openPosts===undefined){S.openPosts=null;loadOpenPosts();}
+  var logged=!!(sb&&currentUser&&!S.isGuest);
+  var intro=d({style:{fontSize:"12px",color:"#6B7280",lineHeight:"1.6",marginBottom:"12px"}});
+  intro.textContent="登録していなくても、誰でも書き込めて誰でも見られる場所です。「今日ルスツいる人いる？」「来週ニセコ行きます」など気軽にどうぞ。";wrap.appendChild(intro);
+  // 書き込み欄
+  var cb=d({class:"card",style:{marginBottom:"14px",padding:"14px"}});
+  if(!logged){
+    var nm=document.createElement("input");nm.className="inp";nm.maxLength=20;nm.placeholder="ニックネーム（ゲスト）";nm.style.marginBottom="8px";
+    try{nm.value=S.openName||localStorage.getItem("sm_open_name")||"";}catch(e){nm.value=S.openName||"";}
+    nm.addEventListener("input",function(e){S.openName=e.target.value;});cb.appendChild(nm);
+  }else{
+    var me=d({style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"8px",fontSize:"13px",fontWeight:"800",color:"#1A1A2E"}});
+    me.appendChild(avU(28,14,{icon:(S.myProfile&&S.myProfile.icon)||"🏂",profileImg:S.myProfile&&S.myProfile.profileImg}));
+    me.appendChild(sp({},((S.myProfile&&S.myProfile.nick)||"あなた")+" として書き込む"));cb.appendChild(me);
+  }
+  var ta=document.createElement("textarea");ta.className="inp";ta.rows=3;ta.maxLength=300;ta.placeholder="いまどこで滑ってる？誰か一緒に滑らない？";ta.style.cssText="width:100%;resize:none;margin-bottom:8px";ta.value=S.openDraft||"";
+  ta.addEventListener("input",function(e){S.openDraft=e.target.value;cnt.textContent=(e.target.value||"").length+"/300";});cb.appendChild(ta);
+  var row=d({style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:"8px"}});
+  var cnt=d({style:{fontSize:"11px",color:"#9CA3AF"}});cnt.textContent=(S.openDraft||"").length+"/300";row.appendChild(cnt);
+  var pb=document.createElement("button");pb.textContent="📣 つぶやく";pb.style.cssText="padding:9px 18px;border-radius:12px;border:none;background:linear-gradient(135deg,#FF6B2B,#FF8C55);color:#fff;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit";
+  pb.addEventListener("click",function(){
+    var body=(S.openDraft||"").trim();if(!body){alert("内容を入力してください");return;}
+    var row2={body:body};
+    if(!logged){var gn=(S.openName||"").trim();if(!gn){alert("ニックネームを入力してください");return;}row2.guest_name=gn;try{localStorage.setItem("sm_open_name",gn);}catch(e){}}
+    if(pb.disabled)return;pb.disabled=true;pb.textContent="送信中...";
+    sb.from("open_posts").insert(row2).then(function(r){
+      pb.disabled=false;pb.textContent="📣 つぶやく";
+      if(r.error){alert(r.error.message.indexOf("open_posts:")>=0?r.error.message.split("open_posts:")[1]:("書き込めませんでした: "+r.error.message));return;}
+      S.openDraft="";loadOpenPosts();
+    });
+  });
+  row.appendChild(pb);cb.appendChild(row);
+  var rule=d({style:{fontSize:"10.5px",color:"#9CA3AF",marginTop:"8px",lineHeight:"1.6"}});rule.textContent="※誹謗中傷・個人情報・宣伝は禁止です。通報が多い書き込みは自動で非表示になります。"+(logged?"":"ゲストはURLを書き込めません。");cb.appendChild(rule);
+  wrap.appendChild(cb);
+  // 一覧
+  var list=S.openPosts;
+  if(list===null){var ld=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"13px",padding:"20px 0"}});ld.textContent="読み込み中…";wrap.appendChild(ld);return wrap;}
+  if(!list.length){var em=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"13px",padding:"20px 0"}});em.textContent="まだ書き込みがありません。最初のひとことをどうぞ！";wrap.appendChild(em);return wrap;}
+  list.forEach(function(p){
+    var mine=logged&&p.user_id===currentUser.id;
+    var u=p.user_id?(mine?{uid:currentUser.id,name:(S.myProfile&&S.myProfile.nick)||"あなた",icon:(S.myProfile&&S.myProfile.icon)||"🏂",profileImg:S.myProfile&&S.myProfile.profileImg}:findRealUser(p.user_id)):null;
+    var c=d({class:"card",style:{marginBottom:"10px",padding:"12px 14px"}});
+    var hr=d({style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"6px"}});
+    if(u){var avEl=avU(36,18,u);avEl.style.cursor=mine?"default":"pointer";if(!mine)avEl.addEventListener("click",function(){R({selUser:u});});hr.appendChild(avEl);}
+    else hr.appendChild(av(36,18,"👤"));
+    var hi=d({style:{flex:"1",minWidth:"0"}});
+    var nmL=d({style:{fontWeight:"800",fontSize:"13px",color:"#1A1A2E",display:"flex",alignItems:"center",gap:"6px",flexWrap:"wrap"}});
+    if(u){nmL.appendChild(sp({style:{cursor:mine?"default":"pointer"}},u.name+(mine?"（あなた）":"")));nmL.appendChild(sp({style:{background:"#FFF0E8",color:"#FF6B2B",fontSize:"10px",fontWeight:"800",padding:"1px 7px",borderRadius:"10px"}},"✔ 登録ユーザー"));if(!mine)nmL.firstChild.addEventListener("click",function(){R({selUser:u});});}
+    else{nmL.appendChild(sp({},(p.guest_name||"ゲスト")));nmL.appendChild(sp({style:{background:"#F3F4F6",color:"#6B7280",fontSize:"10px",fontWeight:"800",padding:"1px 7px",borderRadius:"10px"}},"ゲスト"));}
+    hi.appendChild(nmL);
+    var tm=d({style:{fontSize:"11px",color:"#9CA3AF"}});tm.textContent=timeAgo(p.created_at);hi.appendChild(tm);
+    hr.appendChild(hi);c.appendChild(hr);
+    var bd=d({style:{fontSize:"14px",color:"#1A1A2E",lineHeight:"1.7",whiteSpace:"pre-wrap",wordBreak:"break-word"}});bd.textContent=p.body;c.appendChild(bd);
+    var ac=d({style:{display:"flex",gap:"8px",justifyContent:"flex-end",marginTop:"6px"}});
+    function sbtn(t,fn){var x=document.createElement("button");x.textContent=t;x.style.cssText="padding:4px 10px;border-radius:10px;border:1px solid #E5E7EB;background:#fff;color:#6B7280;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit";x.addEventListener("click",fn);ac.appendChild(x);}
+    if(u&&!mine)sbtn("👤 プロフィールを見る",function(){R({selUser:u});});
+    if(mine||S.isAdmin)sbtn("🗑 削除",function(){if(!confirm("この書き込みを削除しますか？"))return;sb.from("open_posts").delete().eq("id",p.id).then(function(r){if(r.error){alert("削除できませんでした: "+r.error.message);return;}loadOpenPosts();});});
+    if(!mine)sbtn("🚩 通報",function(){
+      var rp=window._reportedOpen||(window._reportedOpen={});if(rp[p.id]){alert("通報済みです");return;}
+      if(!confirm("この書き込みを通報しますか？\n（誹謗中傷・個人情報・宣伝・不適切な内容など）"))return;
+      sb.from("open_post_reports").insert({post_id:p.id}).then(function(r){if(r.error&&String(r.error.message).indexOf("duplicate")<0){alert("通報できませんでした: "+r.error.message);return;}rp[p.id]=1;alert("通報しました。ご協力ありがとうございます");loadOpenPosts();});
+    });
+    c.appendChild(ac);wrap.appendChild(c);
+  });
+  return wrap;
+}
 function guestPrompt(){
   if(confirm("無料登録すると、メッセージ・予約・フォローができます。\n登録画面に進みますか？")){
     S.isGuest=false;S.myProfile=null;S.selUser=null;S.chatUser=null;S.bookUser=null;
@@ -1985,6 +2063,12 @@ function renderChat(){
 
 function renderMarket(){
   var wrap=d({class:"pg"});
+  if(!S.marketTab||S.marketTab==="room"&&!S._mtInit){S._mtInit=true;S.marketTab="open";}
+  // 上のタブ：つぶやきは誰でも、ほかは本人確認済みの会員だけ
+  var mt=d({style:{display:"flex",background:"#EEF0F3",borderRadius:"14px",padding:"4px",marginBottom:"14px"}});
+  [["open","📣 みんなのつぶやき"],["member","🛖 会員ラウンジ"]].forEach(function(o){var on=(S.marketTab==="open")===(o[0]==="open");var x=document.createElement("button");x.textContent=o[1];x.style.cssText="flex:1;padding:10px 6px;border-radius:11px;border:none;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;background:"+(on?"#fff":"transparent")+";color:"+(on?"#FF6B2B":"#6B7280")+";box-shadow:"+(on?"0 1px 4px rgba(0,0,0,.08)":"none");x.addEventListener("click",function(){if(o[0]==="open"){loadOpenPosts();R({marketTab:"open"});}else R({marketTab:"room",openRoom:null});});mt.appendChild(x);});
+  wrap.appendChild(mt);
+  if(S.marketTab==="open")return renderOpenBoard(wrap);
   if(!S.myProfile||!S.myProfile.ok){
     var locked=d({style:{textAlign:"center",padding:"40px 20px"}});
     var lico=d({style:{fontSize:"56px",marginBottom:"12px"}});lico.textContent="🔒";
@@ -2501,7 +2585,7 @@ function loadUsersFromSupabase(){
       });
     }
     for(var k=real.length-1;k>=0;k--)USERS.unshift(real[k]);
-    loadPosts();loadUserPosts();
+    loadPosts();loadUserPosts();checkAdmin();
     loadLikesFromSupabase();loadFollowerCounts();loadReservations();
     loadFollowsFromSupabase();
     refreshMyVerification();
