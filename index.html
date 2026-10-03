@@ -100,7 +100,8 @@ var ROOMS_SAMPLE=[
   {id:"r2",icon:"⛷️",title:"カービングターンを極めたい",cat:"スキー",members:0,msgs:[],last:""},
   {id:"r3",icon:"🌨️",title:"パウダー情報・今シーズンの積雪",cat:"情報共有",members:0,msgs:[],last:""},
   {id:"r4",icon:"🎥",title:"滑り動画を見せ合おう・フォーム分析",cat:"動画",members:0,msgs:[],last:""},
-  {id:"r5",icon:"🏔️",title:"初心者・今シーズン始めた人の部屋",cat:"初心者",members:0,msgs:[],last:""}
+  {id:"r5",icon:"🏔️",title:"初心者・今シーズン始めた人の部屋",cat:"初心者",members:0,msgs:[],last:""},
+  {id:"n1",icon:"💭",title:"悩み相談部屋",cat:"悩み相談",members:0,msgs:[],last:"",desc:"上達・道具・人間関係など、なんでも気軽に相談しよう"}
 ];
 var CHECKIN_SAMPLE=[];
 var REPORT_SAMPLE=[];
@@ -2336,10 +2337,10 @@ function renderMarket(){
   }
   var hd=d({style:{marginBottom:"14px"}});
   var ht=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"4px"}});ht.textContent="🛖 スノマラウンジ";
-  var hs=d({style:{color:"#6B7280",fontSize:"13px"}});hs.textContent="会員限定 · 仲間と語ろう・チェックイン・レポート";
+  var hs=d({style:{color:"#6B7280",fontSize:"13px"}});hs.textContent="会員限定 · 仲間と語ろう・チェックイン・悩み相談";
   hd.appendChild(ht);hd.appendChild(hs);wrap.appendChild(hd);
   var tabs=d({style:{display:"flex",gap:"0",marginBottom:"16px",background:"#F5F7FA",borderRadius:"16px",padding:"4px"}});
-  var tabDefs=[["room","💬 雑談部屋"],["qa","📖 Q&A"],["checkin","📍 チェックイン"],["report","📊 レポート"]];
+  var tabDefs=[["room","💬 雑談部屋"],["nayami","💭 悩み相談"],["qa","📖 Q&A"],["checkin","📍 チェックイン"]];
   for(var ti=0;ti<tabDefs.length;ti++){
     (function(id,lbl){
       var tb=document.createElement("button");
@@ -2349,41 +2350,12 @@ function renderMarket(){
   }
   wrap.appendChild(tabs);
 
+  if(S.openRoom&&(S.marketTab==="room"||S.marketTab==="nayami")){var _rc=renderRoomChat();if(_rc)return _rc;}
+  if(S.marketTab==="nayami"){
+    var nyNote=d({style:{color:"#6B7280",fontSize:"12.5px",lineHeight:"1.7",marginBottom:"12px"}});nyNote.textContent="滑りの悩み、道具選び、仲間づくりのことなど、気軽に相談できる部屋です。";wrap.appendChild(nyNote);
+    ROOMS_SAMPLE.filter(function(r){return r.cat==="悩み相談";}).forEach(function(room){wrap.appendChild(roomCard(room));});
+  }
   if(S.marketTab==="room"){
-    if(S.openRoom){
-      var room=null;for(var ri=0;ri<ROOMS_SAMPLE.length;ri++){if(ROOMS_SAMPLE[ri].id===S.openRoom){room=ROOMS_SAMPLE[ri];break;}}
-      if(!room){S.openRoom=null;render();return wrap;}
-      var chatWrap=d({style:{display:"flex",flexDirection:"column",height:"calc(100vh - 160px)"}});
-      var rHdr=d({style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"12px",paddingBottom:"12px",borderBottom:"1px solid #F0F0F0"}});
-      var backBtn=document.createElement("button");backBtn.style.cssText="font-size:14px;font-weight:800;background:#F3F4F6;border:none;border-radius:20px;cursor:pointer;padding:8px 14px;min-height:40px;flex-shrink:0;color:#4B5563;font-family:inherit";backBtn.textContent="← 戻る";
-      backBtn.addEventListener("click",function(){S.openRoom=null;render();});
-      var rInfo=d({style:{flex:"1"}});
-      var rTitle=d({style:{fontWeight:"800",fontSize:"15px",color:"#1A1A2E"}});rTitle.textContent=room.icon+" "+room.title;
-      var rMeta=d({style:{fontSize:"11px",color:"#9CA3AF"}});rMeta.textContent=(room.members>0?room.members+"人参加中 · ":"")+room.cat;
-      rInfo.appendChild(rTitle);rInfo.appendChild(rMeta);rHdr.appendChild(backBtn);rHdr.appendChild(rInfo);
-      wrap.insertBefore(rHdr,wrap.firstChild);
-      var ma=d({style:{flex:"1",overflowY:"auto",marginBottom:"12px"}});
-      var rmsgs=room.msgs.concat(S.rooms[room.id]||[]);
-      for(var mi=0;mi<rmsgs.length;mi++){
-        var m=rmsgs[mi];var isMe=(S.myProfile&&(S.myProfile.nick||S.myProfile.name)===m.user);
-        var mRow=d({style:{display:"flex",justifyContent:isMe?"flex-end":"flex-start",marginBottom:"10px",gap:"8px",alignItems:"flex-end"}});
-        if(!isMe){var mIco=d({style:{fontSize:"20px",flexShrink:"0"}});mIco.textContent=m.icon;mRow.appendChild(mIco);}
-        var mBox=d({style:{maxWidth:"72%"}});
-        if(!isMe){var mName=d({style:{fontSize:"11px",color:"#9CA3AF",marginBottom:"2px",fontWeight:"700"}});mName.textContent=m.user;mBox.appendChild(mName);}
-        var mBub=d({style:{background:isMe?"linear-gradient(135deg,#FF6B2B,#FF8C55)":"#fff",color:isMe?"#fff":"#1A1A2E",padding:"10px 14px",borderRadius:isMe?"18px 18px 4px 18px":"18px 18px 18px 4px",fontSize:"13px",lineHeight:"1.6",boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}});
-        mBub.textContent=m.t;var mTime=d({style:{fontSize:"10px",color:isMe?"rgba(255,255,255,0.7)":"#9CA3AF",marginTop:"3px",textAlign:isMe?"right":"left"}});mTime.textContent=m.time;
-        mBox.appendChild(mBub);mBox.appendChild(mTime);mRow.appendChild(mBox);ma.appendChild(mRow);
-      }
-      chatWrap.appendChild(ma);
-      var ir=d({style:{display:"flex",gap:"8px",alignItems:"center",background:"#fff",padding:"10px 0",borderTop:"1px solid #F0F0F0"}});
-      var rci=document.createElement("input");rci.type="text";rci.className="inp";rci.style.cssText="flex:1;border-radius:20px;font-size:14px";
-      rci.placeholder="メッセージを入力...";rci.value=S.roomInput||"";
-      rci.addEventListener("input",function(e){S.roomInput=e.target.value;});
-      rci.addEventListener("keydown",function(e){if(e.key==="Enter")sendRoomMsg(room.id);});
-      var rsb=document.createElement("button");rsb.className="obtn";rsb.style.padding="10px 18px";rsb.textContent="送信";
-      rsb.addEventListener("click",function(){sendRoomMsg(room.id);});
-      ir.appendChild(rci);ir.appendChild(rsb);chatWrap.appendChild(ir);wrap.appendChild(chatWrap);return wrap;
-    }
     var cats2=["すべて","スノーボード","スキー","初心者","情報共有","動画"];
     var catRow=d({style:{display:"flex",gap:"8px",overflowX:"auto",paddingBottom:"4px",marginBottom:"14px"}});
     if(!S.marketCat)S.marketCat="すべて";
@@ -2392,23 +2364,8 @@ function renderMarket(){
       cb.addEventListener("click",function(){S.marketCat=c;render();});catRow.appendChild(cb);
     });
     wrap.appendChild(catRow);
-    var rooms2=ROOMS_SAMPLE.filter(function(r){return S.marketCat==="すべて"||r.cat===S.marketCat;});
-    rooms2.forEach(function(room){
-      var card=d({class:"card",style:{cursor:"pointer",marginBottom:"12px"},onClick:function(){S.openRoom=room.id;render();}});
-      var tr=d({style:{display:"flex",gap:"12px",alignItems:"center",marginBottom:"10px"}});
-      var ico=d({style:{width:"48px",height:"48px",borderRadius:"16px",background:"linear-gradient(135deg,#FFF0E8,#FFE4D6)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"24px",flexShrink:"0"}});ico.textContent=room.icon;
-      var info=d({style:{flex:"1"}});
-      var rt=d({style:{fontWeight:"800",fontSize:"14px",color:"#1A1A2E",marginBottom:"3px"}});rt.textContent=room.title;
-      var rm=d({style:{display:"flex",alignItems:"center",gap:"8px"}});
-      var catBdg=d({style:{background:"#EEF6FF",color:"#2196F3",borderRadius:"8px",padding:"2px 8px",fontSize:"10px",fontWeight:"700"}});catBdg.textContent=room.cat;
-      var memEl=d({style:{fontSize:"12px",color:"#9CA3AF"}});memEl.textContent=room.members>0?"👥 "+room.members+"人":"";
-      rm.appendChild(catBdg);rm.appendChild(memEl);info.appendChild(rt);info.appendChild(rm);
-      var arr=d({style:{color:"#D1D5DB",fontSize:"20px",flexShrink:"0"}});arr.textContent="›";
-      tr.appendChild(ico);tr.appendChild(info);tr.appendChild(arr);card.appendChild(tr);
-      var lastMsg=room.msgs[room.msgs.length-1];
-      if(lastMsg){var lm=d({style:{background:"#F5F7FA",borderRadius:"10px",padding:"8px 12px",fontSize:"12px",color:"#6B7280",lineHeight:"1.5"}});var lmUser=document.createElement("span");lmUser.style.cssText="font-weight:700;color:#1A1A2E";lmUser.textContent=lastMsg.user+": ";var lmTxt=document.createTextNode(lastMsg.t.length>35?lastMsg.t.slice(0,35)+"...":lastMsg.t);lm.appendChild(lmUser);lm.appendChild(lmTxt);card.appendChild(lm);}
-      wrap.appendChild(card);
-    });
+    var rooms2=ROOMS_SAMPLE.filter(function(r){return r.cat!=="悩み相談"&&(S.marketCat==="すべて"||r.cat===S.marketCat);});
+    rooms2.forEach(function(room){wrap.appendChild(roomCard(room));});
   }
 
   if(S.marketTab==="qa"){
@@ -2472,36 +2429,116 @@ function renderMarket(){
     });
   }
 
-  if(S.marketTab==="report"){
-    var rpAddBtn=d({style:{display:"flex",justifyContent:"flex-end",marginBottom:"12px"}});
-    var rpab=document.createElement("button");rpab.className="obtn";rpab.style.cssText="font-size:13px;padding:8px 16px";rpab.textContent="📊 レポートを書く";
-    rpab.addEventListener("click",function(){S.showReport=true;render();});rpAddBtn.appendChild(rpab);wrap.appendChild(rpAddBtn);
-    var allRP=REPORT_SAMPLE.concat(S.reports||[]);
-    if(!allRP.length){var rpEmpty=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"13px",padding:"24px 0"}});rpEmpty.textContent="まだレポートはありません";wrap.appendChild(rpEmpty);}
-    allRP.forEach(function(rp){
-      var card=d({class:"card",style:{marginBottom:"12px"}});
-      var tr=d({style:{display:"flex",gap:"10px",alignItems:"center",marginBottom:"10px"}});
-      var ico=d({style:{fontSize:"22px"}});ico.textContent=rp.icon;
-      var info=d({style:{flex:"1"}});var resort2=d({style:{fontWeight:"800",fontSize:"15px",color:"#1A1A2E"}});resort2.textContent=rp.resort;var uinfo=d({style:{fontSize:"12px",color:"#9CA3AF"}});uinfo.textContent=rp.user+" · "+rp.date;
-      info.appendChild(resort2);info.appendChild(uinfo);tr.appendChild(ico);tr.appendChild(info);card.appendChild(tr);
-      var scores=d({style:{display:"flex",gap:"16px",background:"#F5F7FA",borderRadius:"12px",padding:"10px 14px",marginBottom:"10px"}});
-      var sc1=d({style:{textAlign:"center"}});var sl1=d({style:{fontSize:"11px",color:"#6B7280",marginBottom:"2px"}});sl1.textContent="雪質";var sv1=d({style:{fontSize:"13px"}});sv1.textContent=rp.snow;sc1.appendChild(sl1);sc1.appendChild(sv1);
-      var sc2=d({style:{textAlign:"center"}});var sl2=d({style:{fontSize:"11px",color:"#6B7280",marginBottom:"2px"}});sl2.textContent="混雑度";var sv2=d({style:{fontSize:"13px"}});sv2.textContent=rp.crowd;sc2.appendChild(sl2);sc2.appendChild(sv2);
-      scores.appendChild(sc1);scores.appendChild(sc2);card.appendChild(scores);
-      var comment2=d({style:{fontSize:"13px",color:"#374151",lineHeight:"1.7",marginBottom:"10px"}});comment2.textContent=rp.comment;card.appendChild(comment2);
-      var lkRow=d({style:{display:"flex",alignItems:"center",gap:"6px"}});var lkBtn=document.createElement("button");lkBtn.style.cssText="font-size:16px;background:none;border:none;cursor:pointer;padding:0";lkBtn.textContent="❤️";var lkCnt=d({style:{fontSize:"12px",color:"#6B7280",fontWeight:"700"}});lkCnt.textContent=String(rp.likes)+" 参考になった";lkRow.appendChild(lkBtn);lkRow.appendChild(lkCnt);card.appendChild(lkRow);wrap.appendChild(card);
-    });
-  }
   return wrap;
 }
 
+// ===== ラウンジの部屋チャット（Supabase: lounge_messages） =====
+function roomOpenNow(){return S.tab==="market"&&!!S.openRoom&&(S.marketTab==="room"||S.marketTab==="nayami")&&!!(S.myProfile&&S.myProfile.ok);}
+function findRoom(id){for(var i=0;i<ROOMS_SAMPLE.length;i++){if(ROOMS_SAMPLE[i].id===id)return ROOMS_SAMPLE[i];}return null;}
+function roomCard(room){
+  var card=d({class:"card",style:{cursor:"pointer",marginBottom:"12px"},onClick:function(){S.openRoom=room.id;S.roomInput="";render();}});
+  var tr=d({style:{display:"flex",gap:"12px",alignItems:"center"}});
+  var ico=d({style:{width:"48px",height:"48px",borderRadius:"16px",background:"linear-gradient(135deg,#FFF0E8,#FFE4D6)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"24px",flexShrink:"0"}});ico.textContent=room.icon;
+  var info=d({style:{flex:"1",minWidth:"0"}});
+  var rt=d({style:{fontWeight:"800",fontSize:"14px",color:"#1A1A2E",marginBottom:"3px"}});rt.textContent=room.title;info.appendChild(rt);
+  if(room.desc){var ds=d({style:{fontSize:"12px",color:"#6B7280",marginBottom:"4px",lineHeight:"1.5"}});ds.textContent=room.desc;info.appendChild(ds);}
+  var catBdg=d({style:{display:"inline-block",background:"#EEF6FF",color:"#2196F3",borderRadius:"8px",padding:"2px 8px",fontSize:"10px",fontWeight:"700"}});catBdg.textContent=room.cat;info.appendChild(catBdg);
+  var arr=d({style:{color:"#D1D5DB",fontSize:"20px",flexShrink:"0"}});arr.textContent="›";
+  tr.appendChild(ico);tr.appendChild(info);tr.appendChild(arr);card.appendChild(tr);
+  return card;
+}
+function loadRoomMsgs(roomId,initial){
+  if(typeof sb==="undefined"||!sb||!currentUser)return;
+  if(!S.roomMsgs)S.roomMsgs={};
+  var list=S.roomMsgs[roomId];
+  var q=sb.from("lounge_messages").select("*").eq("room_id",roomId);
+  if(initial||!list||!list.length){q=q.order("created_at",{ascending:false}).limit(200);}
+  else{q=q.gt("created_at",list[list.length-1].created_at).order("created_at",{ascending:true}).limit(100);}
+  q.then(function(r){
+    if(r.error){console.error("lounge load",r.error.message||r.error);if(initial){S.roomMsgs[roomId]=S.roomMsgs[roomId]||[];S.roomErr=r.error.message;if(S.openRoom===roomId)render();}return;}
+    S.roomErr=null;
+    var rows=r.data||[];
+    if(initial||!list||!list.length){S.roomMsgs[roomId]=rows.reverse();if(S.openRoom===roomId)render();return;}
+    var added=[];rows.forEach(function(x){if(!roomHasMsg(roomId,x.id)){S.roomMsgs[roomId].push(x);added.push(x);}});
+    if(added.length&&S.openRoom===roomId)appendRoomRows(added);
+  });
+}
+function roomHasMsg(roomId,id){var l=S.roomMsgs[roomId]||[];for(var i=0;i<l.length;i++){if(l[i].id===id)return true;}return false;}
+function roomDayLbl(iso){var t=new Date(iso);var w=["日","月","火","水","木","金","土"][t.getDay()];return (t.getMonth()+1)+"/"+t.getDate()+"（"+w+"）";}
+function roomMsgRow(m){
+  var isMe=!!(currentUser&&m.user_id===currentUser.id);
+  var u=findRealUser(m.user_id);
+  var nm=(u&&(u.name||u.nick))||m.nick||"会員";
+  var row=d({style:{display:"flex",justifyContent:isMe?"flex-end":"flex-start",marginBottom:"10px",gap:"8px",alignItems:"flex-start"}});
+  if(!isMe){var avw=d({style:{cursor:u?"pointer":"default",flexShrink:"0"}});avw.appendChild(avU(34,18,u||{profileImg:m.profile_img,icon:m.icon||"🏂"}));if(u)avw.addEventListener("click",function(){R({selUser:u});});row.appendChild(avw);}
+  var box=d({style:{maxWidth:"74%",display:"flex",flexDirection:"column",alignItems:isMe?"flex-end":"flex-start"}});
+  if(!isMe){var n=d({style:{fontSize:"11px",color:"#6B7280",marginBottom:"3px",fontWeight:"700"}});n.textContent=nm;box.appendChild(n);}
+  var line=d({style:{display:"flex",alignItems:"flex-end",gap:"6px",flexDirection:isMe?"row-reverse":"row"}});
+  var bub=d({style:{background:isMe?"linear-gradient(135deg,#FF6B2B,#FF8C55)":"#fff",color:isMe?"#fff":"#1A1A2E",padding:"9px 13px",borderRadius:isMe?"18px 18px 4px 18px":"4px 18px 18px 18px",fontSize:"14px",lineHeight:"1.6",boxShadow:"0 1px 4px rgba(0,0,0,0.07)",whiteSpace:"pre-wrap",wordBreak:"break-word"}});bub.textContent=m.body;
+  var tm=d({style:{fontSize:"10px",color:"#9CA3AF",flexShrink:"0"}});tm.textContent=hmOf(m.created_at);
+  line.appendChild(bub);line.appendChild(tm);box.appendChild(line);row.appendChild(box);
+  return row;
+}
+function roomDaySep(iso){var w=d({style:{textAlign:"center",margin:"6px 0 12px"}});var t=d({style:{display:"inline-block",background:"rgba(0,0,0,0.08)",color:"#4B5563",fontSize:"11px",fontWeight:"700",padding:"3px 10px",borderRadius:"10px"}});t.textContent=roomDayLbl(iso);w.appendChild(t);return w;}
+function appendRoomRows(rows){
+  var ma=document.getElementById("chatmsgs");if(!ma){render();return;}
+  var near=ma.scrollHeight-ma.scrollTop-ma.clientHeight<120;
+  var em=document.getElementById("roomempty");if(em)em.parentNode.removeChild(em);
+  rows.forEach(function(m){
+    var day=new Date(m.created_at).toDateString();
+    if(ma.getAttribute("data-day")!==day){ma.appendChild(roomDaySep(m.created_at));ma.setAttribute("data-day",day);}
+    ma.appendChild(roomMsgRow(m));
+  });
+  if(near)ma.scrollTop=ma.scrollHeight;
+}
+function renderRoomChat(){
+  var room=findRoom(S.openRoom);if(!room){S.openRoom=null;return null;}
+  var vv=window.visualViewport;
+  var cw=d({id:"chatwin",style:{display:"flex",flexDirection:"column",position:"fixed",left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:"430px",top:(vv?vv.offsetTop:0)+"px",height:(vv?vv.height+"px":"100%"),zIndex:"150",background:"#F5F7FA",paddingTop:"env(safe-area-inset-top,0px)",boxSizing:"border-box"}});
+  var hdr=d({class:"hdr",style:{flexShrink:"0"}});
+  var bb=document.createElement("button");bb.style.cssText="color:#fff;font-size:14px;font-weight:800;padding:8px 12px;min-height:40px;background:rgba(255,255,255,.22);border:none;border-radius:20px;cursor:pointer;font-family:inherit;flex-shrink:0;white-space:nowrap";bb.textContent="← 戻る";
+  bb.addEventListener("click",function(){S.openRoom=null;render();});
+  hdr.appendChild(bb);
+  var ic=d({style:{fontSize:"24px",flexShrink:"0"}});ic.textContent=room.icon;hdr.appendChild(ic);
+  var ti=d({style:{flex:"1",minWidth:"0"}});
+  var tt=d({style:{fontWeight:"800",color:"#fff",fontSize:"15px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}});tt.textContent=room.title;
+  var ts=d({style:{color:"rgba(255,255,255,.8)",fontSize:"11px"}});ts.textContent="会員限定 · "+room.cat;
+  ti.appendChild(tt);ti.appendChild(ts);hdr.appendChild(ti);cw.appendChild(hdr);
+  var ma=d({id:"chatmsgs",style:{flex:"1",minHeight:"0",overflowY:"auto",WebkitOverflowScrolling:"touch",padding:"14px 14px 6px",background:"#F5F7FA"}});
+  var note=d({style:{textAlign:"center",fontSize:"10.5px",color:"#9CA3AF",marginBottom:"12px",lineHeight:"1.6"}});note.textContent=room.cat==="悩み相談"?"※誹謗中傷・個人情報の書き込みは禁止です。やさしく相談に乗ってあげてください。":"※誹謗中傷・個人情報・宣伝は禁止です。";ma.appendChild(note);
+  var list=(S.roomMsgs&&S.roomMsgs[room.id]);
+  if(list===undefined){var ld=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"13px",padding:"30px 0"}});ld.textContent="読み込み中...";ma.appendChild(ld);}
+  else if(S.roomErr&&!list.length){var er=d({style:{textAlign:"center",color:"#EF4444",fontSize:"12px",padding:"30px 10px"}});er.textContent="読み込めませんでした: "+S.roomErr;ma.appendChild(er);}
+  else if(!list.length){var em=d({id:"roomempty",style:{textAlign:"center",color:"#9CA3AF",fontSize:"13px",padding:"30px 0",lineHeight:"1.8"}});em.textContent=room.cat==="悩み相談"?"まだ相談はありません。\n気軽に書き込んでみてください。":"まだメッセージはありません。\n最初のひとことをどうぞ！";em.style.whiteSpace="pre-line";ma.appendChild(em);}
+  else{var lastDay="";list.forEach(function(m){var day=new Date(m.created_at).toDateString();if(day!==lastDay){ma.appendChild(roomDaySep(m.created_at));lastDay=day;}ma.appendChild(roomMsgRow(m));});ma.setAttribute("data-day",lastDay);}
+  cw.appendChild(ma);
+  var ir=d({style:{padding:"10px 12px calc(10px + env(safe-area-inset-bottom,0px))",background:"#fff",display:"flex",alignItems:"center",gap:"8px",borderTop:"1px solid #F0F0F0",flexShrink:"0"}});
+  var inp=document.createElement("input");inp.type="text";inp.className="inp";inp.id="roominput";inp.style.cssText="flex:1;border-radius:20px;font-size:16px";inp.maxLength=1000;
+  inp.placeholder=room.cat==="悩み相談"?"相談を書き込む...":"メッセージを入力...";inp.value=S.roomInput||"";
+  inp.addEventListener("input",function(e){S.roomInput=e.target.value;});
+  inp.addEventListener("keydown",function(e){if(e.key==="Enter"&&!e.isComposing&&e.keyCode!==229){e.preventDefault();sendRoomMsg(room.id);}});
+  var sbt=obtn("送信",function(){sendRoomMsg(room.id);},"");sbt.style.padding="10px 18px";
+  ir.appendChild(inp);ir.appendChild(sbt);cw.appendChild(ir);
+  setTimeout(function(){var m=document.getElementById("chatmsgs");if(m)m.scrollTop=m.scrollHeight;},0);
+  if(list===undefined&&!S._roomLoading){S._roomLoading=true;setTimeout(function(){S._roomLoading=false;},1500);loadRoomMsgs(room.id,true);}
+  return cw;
+}
 function sendRoomMsg(roomId){
   var t=(S.roomInput||"").trim();if(!t)return;
-  if(!S.rooms)S.rooms={};if(!S.rooms[roomId])S.rooms[roomId]=[];
-  var now=new Date();var hm=now.getHours()+":"+String(now.getMinutes()).padStart(2,"0");
-  S.rooms[roomId].push({user:(S.myProfile&&(S.myProfile.nick||S.myProfile.name))||"あなた",icon:(S.myProfile&&S.myProfile.icon)||"🏂",t:t,time:hm});
-  S.roomInput="";render();
+  if(typeof sb==="undefined"||!sb||!currentUser){alert("書き込むにはログインが必要です");return;}
+  if(S._roomSending)return;S._roomSending=true;
+  var inp=document.getElementById("roominput");
+  S.roomInput="";if(inp)inp.value="";
+  var me=S.myProfile||{};
+  sb.from("lounge_messages").insert({room_id:roomId,user_id:currentUser.id,nick:me.nick||me.name||"会員",icon:me.icon||"🏂",profile_img:me.profileImg||null,body:t}).select().single().then(function(r){
+    S._roomSending=false;
+    if(r.error){S.roomInput=t;var i2=document.getElementById("roominput");if(i2)i2.value=t;alert("送れませんでした: "+r.error.message);return;}
+    if(!S.roomMsgs)S.roomMsgs={};if(!S.roomMsgs[roomId])S.roomMsgs[roomId]=[];
+    if(!roomHasMsg(roomId,r.data.id)){S.roomMsgs[roomId].push(r.data);if(S.openRoom===roomId)appendRoomRows([r.data]);}
+    var m=document.getElementById("chatmsgs");if(m)m.scrollTop=m.scrollHeight;
+  });
 }
+setInterval(function(){if(!document.hidden&&roomOpenNow()&&S.roomMsgs&&S.roomMsgs[S.openRoom])loadRoomMsgs(S.openRoom,false);},4000);
 
 function loadReservations(){
   if(typeof sb==="undefined"||!sb||!currentUser)return;
@@ -4277,11 +4314,11 @@ function WelcomeModal(){
 }
 
 
-function viewKey(){return [S.pg,S.tab,S.selUser?S.selUser.id:"",S.chatUser?S.chatUser.id:"",S.bookUser?1:0,S.showEditProfile?1:0].join("|");}
+function viewKey(){return [S.pg,S.tab,S.openRoom||"",S.selUser?S.selUser.id:"",S.chatUser?S.chatUser.id:"",S.bookUser?1:0,S.showEditProfile?1:0].join("|");}
 var _lastViewKey="";
 function render(){
   var app=document.getElementById("app");
-  var _chatOpen=(S.tab==="chat"&&!!S.chatUser&&S.pg==="main");
+  var _chatOpen=(S.tab==="chat"&&!!S.chatUser&&S.pg==="main")||(roomOpenNow()&&S.pg==="main");
   if(app)app.style.overflowY=_chatOpen?"hidden":"";
   document.documentElement.style.overflow=_chatOpen?"hidden":"";document.body.style.overflow=_chatOpen?"hidden":"";
   var key=viewKey();var same=(key===_lastViewKey);_lastViewKey=key;
@@ -4299,7 +4336,7 @@ function _renderInner(){
   if(S.pg==="onboard"){app.appendChild(renderOnboard());return;}
   if(S.pg==="terms"){app.appendChild(renderTerms());return;}
   if(S.pg==="kyc"){app.appendChild(renderKyc());return;}
-  var cf=S.tab==="chat"&&S.chatUser;
+  var cf=(S.tab==="chat"&&S.chatUser)||roomOpenNow();
   if(!cf){
     var hdr=d({class:"hdr"});
     hdr.appendChild(sp({style:{fontSize:"20px",fontWeight:"900",color:"#fff",letterSpacing:"-.5px"}},"SnowMatch"));
