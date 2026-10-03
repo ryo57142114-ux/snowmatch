@@ -726,9 +726,43 @@ function loadOpenPosts(){
     S.openPosts=r.data||[];S.openLoadedAt=Date.now();render();
   });
 }
-setInterval(function(){if(!document.hidden&&S.tab==="market"&&(S.marketTab||"open")==="open")loadOpenPosts();},60000);
+setInterval(function(){if(document.hidden)return;if((S.tab==="market"&&(S.marketTab||"open")==="open")||(S.tab==="explore"&&S.exTab!=="board"))loadOpenPosts();},30000);
+document.addEventListener("visibilitychange",function(){if(!document.hidden&&(S.tab==="explore"||S.tab==="market"))loadOpenPosts();});
 function checkAdmin(){if(!sb||!currentUser)return;sb.rpc("is_admin").then(function(r){S.isAdmin=!!(r&&r.data);});}
+// ホーム（探す）に出す「みんなのつぶやき」の最新3件
+function openSeenAt(){try{return localStorage.getItem("sm_open_seen")||"";}catch(e){return "";}}
+function markOpenSeen(){try{localStorage.setItem("sm_open_seen",new Date().toISOString());}catch(e){}}
+function OpenPreviewCard(){
+  if(S.openPosts===undefined){S.openPosts=null;loadOpenPosts();}
+  var list=(S.openPosts||[]).slice(0,3);
+  var seen=openSeenAt(),me=currentUser&&currentUser.id;
+  var newCnt=(S.openPosts||[]).filter(function(p){return p.user_id!==me&&(!seen||String(p.created_at)>seen);}).length;
+  var c=d({class:"card",style:{marginBottom:"16px",padding:"14px",cursor:"pointer",border:"1.5px solid #FFE1CF"}});
+  c.addEventListener("click",function(){loadOpenPosts();R({tab:"market",marketTab:"open"});});
+  var hr=d({style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"8px"}});
+  var tt=d({style:{fontWeight:"900",fontSize:"15px",color:"#1A1A2E",display:"flex",alignItems:"center",gap:"6px"}});
+  tt.appendChild(sp({},"📣 みんなのつぶやき"));
+  if(newCnt>0)tt.appendChild(sp({style:{background:"#EF4444",color:"#fff",fontSize:"10px",fontWeight:"900",padding:"2px 7px",borderRadius:"10px"}},"NEW "+newCnt));
+  hr.appendChild(tt);
+  hr.appendChild(sp({style:{fontSize:"12px",fontWeight:"800",color:"#FF6B2B"}},"書き込む・もっと見る ›"));
+  c.appendChild(hr);
+  if(S.openPosts===null){var ld=d({style:{fontSize:"12px",color:"#9CA3AF"}});ld.textContent="読み込み中…";c.appendChild(ld);return c;}
+  if(!list.length){var em=d({style:{fontSize:"12px",color:"#9CA3AF",lineHeight:"1.6"}});em.textContent="まだ書き込みがありません。「今日ルスツいる人いる？」など、最初のひとことをどうぞ！（登録なしでも書けます）";c.appendChild(em);return c;}
+  list.forEach(function(p,i){
+    var u=p.user_id?findRealUser(p.user_id):null;
+    var row=d({style:{padding:"8px 0",borderTop:i?"1px solid #F3F4F6":"none"}});
+    var top=d({style:{display:"flex",alignItems:"center",gap:"6px",fontSize:"12px",marginBottom:"2px"}});
+    top.appendChild(sp({style:{fontWeight:"800",color:"#1A1A2E"}},u?u.name:(p.guest_name||"ゲスト")));
+    top.appendChild(sp({style:{fontSize:"10px",fontWeight:"800",padding:"1px 6px",borderRadius:"8px",background:u?"#FFF0E8":"#F3F4F6",color:u?"#FF6B2B":"#6B7280"}},u?"✔ 登録":"ゲスト"));
+    top.appendChild(sp({style:{color:"#9CA3AF",marginLeft:"auto",fontSize:"11px"}},timeAgo(p.created_at)));
+    row.appendChild(top);
+    var bd=d({style:{fontSize:"13px",color:"#374151",lineHeight:"1.6",display:"-webkit-box",WebkitLineClamp:"2",WebkitBoxOrient:"vertical",overflow:"hidden",wordBreak:"break-word"}});bd.textContent=p.body;row.appendChild(bd);
+    c.appendChild(row);
+  });
+  return c;
+}
 function renderOpenBoard(wrap){
+  markOpenSeen();
   if(S.openPosts===undefined){S.openPosts=null;loadOpenPosts();}
   var logged=!!(sb&&currentUser&&!S.isGuest);
   var intro=d({style:{fontSize:"12px",color:"#6B7280",lineHeight:"1.6",marginBottom:"12px"}});
@@ -1754,6 +1788,7 @@ function renderExplore(){
   [["people","👥 仲間を探す"],["board","📅 募集掲示板"]].forEach(function(o){var on=(S.exTab||"people")===o[0];var x=document.createElement("button");x.textContent=o[1];x.style.position="relative";if(o[0]==="board"&&_nb>0){x.appendChild(unreadBadge(_nb,"position:absolute;top:-6px;right:6px;"));}x.style.cssText="flex:1;padding:10px 6px;border-radius:11px;border:none;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;background:"+(on?"#fff":"transparent")+";color:"+(on?"#FF6B2B":"#6B7280")+";box-shadow:"+(on?"0 1px 4px rgba(0,0,0,.08)":"none");x.addEventListener("click",function(){if(o[0]==="board")loadPosts();R({exTab:o[0]});});exT.appendChild(x);});
   wrap.appendChild(exT);
   if(S.exTab==="board"){markBoardSeen();return renderBoard(wrap);}
+  var opc=OpenPreviewCard();if(opc)wrap.appendChild(opc);
   var ht=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"4px"}});ht.textContent="🔍 仲間を探す";wrap.appendChild(ht);
   var sub=d({style:{color:"#6B7280",fontSize:"13px",marginBottom:"12px"}});sub.textContent="エリア・種目で絞り込もう";wrap.appendChild(sub);
 
