@@ -474,7 +474,9 @@ function renderBoard(wrap){
       b("削除する",false,function(){if(!confirm("この投稿を削除しますか？"))return;sb.from("ride_posts").delete().eq("id",p.id).then(function(r){if(r.error){alert("できませんでした: "+r.error.message);return;}loadPosts();});});
     }else{
       b("👤 プロフィール",false,function(){R({selUser:u});});
-      b(reqPaid?"💬 質問":"💬 話しかける",!(isOffer&&paid&&u.ok)&&!reqPaid,function(){talkTo(u);});
+      var isFree=!paid;
+      b((reqPaid||isFree)?"💬 質問":"💬 話しかける",!(isOffer&&paid&&u.ok)&&!reqPaid&&!isFree,function(){talkTo(u);});
+      if(isFree){var jd=freeJoined(p.id);b(jd?"✅ 参加希望済み":"🙋 参加します",!jd,function(){if(jd){talkTo(u);return;}joinFreePost(p,u);});}
       if(reqPaid){var myAp=myApplication(p.id);if(myAp)b(myAp.status==="approved"?"✅ お願いされました":"⏳ 応募済み",false,function(){R({tab:"bookings"});});else b("🙋 参加します",true,function(){applyToRequest(p,u);});}
       if(isOffer&&paid&&u.ok&&isPaidUser(u))b("📅 この枠で予約",true,function(){if(S.isGuest){guestPrompt();return;}S.bkSlotId=p.id;R({bookUser:u});});
     }
@@ -483,6 +485,28 @@ function renderBoard(wrap){
   return wrap;
 }
 // ===== 有料の「同行してくれる人募集」への応募 =====
+// ===== 無料の募集への「参加します」（相手にメッセージで伝える） =====
+function freeJoinedList(){try{return JSON.parse(localStorage.getItem("sm_free_joined")||"[]");}catch(e){return [];}}
+function freeJoined(id){return freeJoinedList().indexOf(id)>=0;}
+function joinFreePost(p,u){
+  if(S.isGuest){guestPrompt();return;}
+  if(!sb||!currentUser){alert("参加するにはログインが必要です");return;}
+  if(u.uid===currentUser.id)return;
+  var when=dateLbl(p.ride_date)+" "+hm5(p.start_time)+"〜"+hm5(p.end_time);
+  if(!confirm(u.name+"さんに「参加したいです！」とメッセージを送りますか？\n\n📆 "+when+"\n⛰️ "+(p.resort||"")+"\n\nお金のやり取りはありません。"))return;
+  if(S.joinSending)return;S.joinSending=true;
+  var body=["🙋 参加したいです！","📆 "+when,"⛰️ "+(p.resort||"スキー場は相談して決めたいです"),"（募集掲示板の投稿を見ました）"].join("\n");
+  var fl=(S.following||[]).indexOf(u.id)>=0?Promise.resolve():sb.from("user_follows").insert({follower:currentUser.id,followee:u.uid}).then(function(){if(!S.following)S.following=[];if(S.following.indexOf(u.id)<0)S.following.push(u.id);});
+  fl.then(function(){return sb.from("dm_messages").insert({from_user:currentUser.id,to_user:u.uid,body:body}).select().single();})
+    .then(function(r){
+      S.joinSending=false;
+      if(r&&r.error){alert("送れませんでした: "+r.error.message);return;}
+      var l=freeJoinedList();if(l.indexOf(p.id)<0){l.push(p.id);try{localStorage.setItem("sm_free_joined",JSON.stringify(l.slice(-200)));}catch(e){}}
+      if(r&&r.data&&typeof addDmRow==="function")addDmRow(r.data,true);
+      alert("参加希望を送りました！返事はチャットに届きます");
+      R({tab:"chat",chatUser:u,selUser:null});
+    }).catch(function(e){S.joinSending=false;alert("送れませんでした: "+(e&&e.message?e.message:e));});
+}
 function myApplication(postId){if(!currentUser)return null;var l=S.resv||[];for(var i=0;i<l.length;i++){var x=l[i];if(x.post_id===postId&&x.provider===currentUser.id&&(x.status==="pending"||x.status==="approved"))return x;}return null;}
 function applyToRequest(p,owner){
   if(S.isGuest){guestPrompt();return;}
