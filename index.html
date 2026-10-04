@@ -541,7 +541,7 @@ function renderBoard(wrap){
     hr.appendChild(avU(40,20,u));
     var hi=d({style:{flex:"1",minWidth:"0"}});
     var nm=d({style:{fontWeight:"800",fontSize:"14px",color:"#1A1A2E"}});nm.textContent=(u.name||"")+(mine?"（あなた）":"");hi.appendChild(nm);
-    var tm=d({style:{fontSize:"13px",color:"#374151",fontWeight:"700"}});tm.textContent="🕘 "+hm5(p.start_time)+"〜"+hm5(p.end_time)+(p.resort?"　⛰️ "+p.resort:"");hi.appendChild(tm);
+    var tm=d({style:{fontSize:"13px",color:"#374151",fontWeight:"700"}});tm.textContent=hm5(p.start_time)+"〜"+hm5(p.end_time)+(p.resort?"　"+p.resort:"");hi.appendChild(tm);
     hr.appendChild(hi);card.appendChild(hr);
     var bg=d({style:{display:"flex",flexWrap:"wrap",gap:"6px",marginBottom:p.note?"8px":"10px"}});
     var isOffer=p.kind==="offer";
@@ -550,7 +550,7 @@ function renderBoard(wrap){
     var reqPaid=paid&&!isOffer&&(parseInt(p.price,10)||0)>0;
     bg.appendChild(sp({style:{background:paid?"#FFF0E8":"#F0FDF4",color:paid?"#FF6B2B":"#15803D",padding:"3px 10px",borderRadius:"20px",fontSize:"11px",fontWeight:"800"}},reqPaid?("💴 ¥"+(parseInt(p.price,10)).toLocaleString()+" お支払い"):(paid?("💴 有料"+(mp?" ¥"+mp.toLocaleString()+"〜":"")):"🤝 無料")));
     card.appendChild(bg);
-    if(p.note){var nt=d({style:{fontSize:"13px",color:"#4B5563",lineHeight:"1.6",whiteSpace:"pre-wrap",marginBottom:"10px"}});nt.textContent=p.note;card.appendChild(nt);}
+    if(p.note){var nt=d({style:{fontSize:"13px",color:"#4B5563",lineHeight:"1.6",whiteSpace:"pre-wrap",marginBottom:"10px"}});nt.textContent=p.note;nt.setAttribute("data-keep-emoji","1");card.appendChild(nt);}
     var br=d({style:{display:"flex",gap:"8px"}});
     function b(lbl,primary,fn){var x=document.createElement("button");x.textContent=lbl;x.style.cssText="flex:1;padding:9px 6px;border-radius:12px;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit;"+(primary?"background:#FF6B2B;color:#fff;border:none":"background:#fff;color:#FF6B2B;border:1.5px solid #FF6B2B");x.addEventListener("click",fn);br.appendChild(x);}
     if(mine){
@@ -2452,9 +2452,9 @@ function renderExplore(){
   var wrap=d({class:"pg"});
   var exT=d({style:{display:"flex",background:"#EEF0F3",borderRadius:"14px",padding:"4px",marginBottom:"14px"}});
   var _nb=(S.exTab==="board")?0:newBoardCount();
-  [["people","👥 仲間を探す"],["cam","🎥 撮影カメラマン"],["board","📅 募集掲示板"]].forEach(function(o){var on=(S.exTab||"people")===o[0];var x=document.createElement("button");x.textContent=o[1];x.style.position="relative";if(o[0]==="board"&&_nb>0){x.appendChild(unreadBadge(_nb,"position:absolute;top:-6px;right:6px;"));}x.style.cssText="flex:1;padding:10px 3px;border-radius:11px;border:none;font-weight:800;font-size:12px;white-space:nowrap;cursor:pointer;font-family:inherit;background:"+(on?"#fff":"transparent")+";color:"+(on?"#FF6B2B":"#6B7280")+";box-shadow:"+(on?"0 1px 4px rgba(0,0,0,.08)":"none");x.addEventListener("click",function(){if(o[0]==="board")loadPosts();R({exTab:o[0]});});exT.appendChild(x);});
+  [["people","仲間を探す"],["cam","撮影カメラマン"],["board","募集掲示板"]].forEach(function(o){var on=(S.exTab||"people")===o[0];var x=document.createElement("button");x.textContent=o[1];x.style.position="relative";if(o[0]==="board"&&_nb>0){x.appendChild(unreadBadge(_nb,"position:absolute;top:-6px;right:6px;"));}x.style.cssText="flex:1;padding:10px 3px;border-radius:11px;border:none;font-weight:800;font-size:12px;white-space:nowrap;cursor:pointer;font-family:inherit;background:"+(on?"#fff":"transparent")+";color:"+(on?"#FF6B2B":"#6B7280")+";box-shadow:"+(on?"0 1px 4px rgba(0,0,0,.08)":"none");x.addEventListener("click",function(){if(o[0]==="board")loadPosts();R({exTab:o[0]});});exT.appendChild(x);});
   wrap.appendChild(exT);
-  if(S.exTab==="board"){markBoardSeen();return renderBoard(wrap);}
+  if(S.exTab==="board"){markBoardSeen();return stripLabelEmoji(renderBoard(wrap));}
   // 「仲間を探す」と「撮影カメラマン」はタブで分ける
   var camTabOn=S.exTab==="cam";
   S.camOnly=camTabOn;if(!camTabOn||!S.camSel)S.camSel=camTabOn&&S.camSel?S.camSel:[];
