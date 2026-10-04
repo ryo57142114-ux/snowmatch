@@ -693,6 +693,34 @@ function loadMyOpenPosts(){
     S.myOpenErr=null;var _me=currentUser&&currentUser.id;S.myOpenPosts=(r.data||[]).filter(function(x){return x.user_id===_me;});render();
   });
 }
+function loadUserOpenPosts(uid){
+  if(typeof sb==="undefined"||!sb||!uid)return;
+  if(!S.userOpen)S.userOpen={};if(!S._uoLoading)S._uoLoading={};
+  if(S._uoLoading[uid])return;S._uoLoading[uid]=true;
+  sb.from("open_posts_public").select("*").eq("user_id",uid).order("created_at",{ascending:false}).limit(50).then(function(r){
+    S._uoLoading[uid]=false;
+    S.userOpen[uid]=r.error?[]:(r.data||[]).filter(function(x){return x.user_id===uid;});
+    render();
+  });
+}
+function UserOpenHistory(u){
+  var c=d({class:"card",style:{marginBottom:"14px"}});
+  var t=d({style:{fontWeight:"800",color:"#1A1A2E",marginBottom:"8px",fontSize:"14px"}});t.textContent="📣 つぶやき";c.appendChild(t);
+  var uid=u&&u.uid;
+  if(!uid){var n0=d({style:{fontSize:"12px",color:"#9CA3AF"}});n0.textContent="まだつぶやきはありません";c.appendChild(n0);return c;}
+  var list=S.userOpen&&S.userOpen[uid];
+  if(list===undefined){loadUserOpenPosts(uid);var ld=d({style:{fontSize:"12px",color:"#9CA3AF",padding:"6px 0"}});ld.textContent="読み込み中…";c.appendChild(ld);return c;}
+  if(!list.length){var em=d({style:{fontSize:"12px",color:"#9CA3AF",padding:"4px 0"}});em.textContent="まだつぶやきはありません";c.appendChild(em);return c;}
+  var key="uo_"+uid;var lim=S.openMoreKey===key?list.length:3;
+  list.slice(0,lim).forEach(function(p,i){
+    var row=d({style:{padding:"9px 0",borderTop:i?"1px solid #F3F4F6":"none"}});
+    var dt=d({style:{fontSize:"11px",fontWeight:"800",color:"#FF6B2B",marginBottom:"3px"}});dt.textContent="🗓 "+fmtDateTime(p.created_at);row.appendChild(dt);
+    var bd=d({style:{fontSize:"13.5px",color:"#1A1A2E",lineHeight:"1.7",whiteSpace:"pre-wrap",wordBreak:"break-word"}});bd.textContent=p.body;row.appendChild(bd);
+    c.appendChild(row);
+  });
+  if(list.length>3){var mb=document.createElement("button");mb.textContent=S.openMoreKey===key?"閉じる":"もっと見る（全"+list.length+"件）";mb.style.cssText="display:block;width:100%;margin-top:6px;padding:9px;border-radius:12px;border:1.5px solid #E5E7EB;background:#fff;color:#4B5563;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit";mb.addEventListener("click",function(){S.openMoreKey=S.openMoreKey===key?null:key;render();});c.appendChild(mb);}
+  return c;
+}
 function MyOpenHistory(){
   var c=d({class:"card",style:{marginBottom:"14px"}});
   var hd=d({style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"10px"}});
@@ -1669,6 +1697,7 @@ function CamModal(u){
     // 活動エリア
     var rc=d({class:"card",style:{marginBottom:"14px"}});var rt=d({style:{fontWeight:"800",color:"#1A1A2E",marginBottom:"8px",fontSize:"14px"}});rt.textContent="🗻 活動エリア";rc.appendChild(rt);
     for(var rsi=0;rsi<u.resorts.length;rsi++)rc.appendChild(sp({class:"tag"},"⛰️ "+u.resorts[rsi]));body.appendChild(rc);
+    body.appendChild(UserOpenHistory(u));
 
     // 投稿サンプル
     if(u.posts&&u.posts.length){
@@ -1754,6 +1783,7 @@ function InsModal(u){
 
     var rc=d({class:"card",style:{marginBottom:"14px"}});var rt=d({style:{fontWeight:"800",color:"#1A1A2E",marginBottom:"8px",fontSize:"14px"}});rt.textContent="🗻 活動エリア";rc.appendChild(rt);
     for(var rsi=0;rsi<u.resorts.length;rsi++)rc.appendChild(sp({class:"tag"},"⛰️ "+u.resorts[rsi]));body.appendChild(rc);
+    body.appendChild(UserOpenHistory(u));
     var bc=d({class:"card",style:{marginBottom:"14px"}});var bt2=d({style:{fontWeight:"800",color:"#1A1A2E",marginBottom:"8px",fontSize:"14px"}});bt2.textContent="📝 自己紹介";bc.appendChild(bt2);bc.appendChild(p2({style:{margin:"0",color:"#6B7280",fontSize:"13.5px",lineHeight:"1.75"}},u.bio));body.appendChild(bc);
     if(u.posts&&u.posts.length){var pth=d({style:{fontWeight:"900",fontSize:"16px",color:"#1A1A2E",marginBottom:"12px"}});pth.textContent="🎥 投稿";body.appendChild(pth);for(var pi=0;pi<u.posts.length;pi++)body.appendChild(PostCard(u.posts[pi]));}
     var isLk=S.liked.indexOf(u.id)>=0;
