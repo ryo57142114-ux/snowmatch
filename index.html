@@ -2540,8 +2540,8 @@ function renderExplore(){
   wrap.appendChild(recSec);
 
   // 無料の仲間探し／有料の同行 の切り替え
-  var pm=d({style:{display:"flex",gap:"8px",marginBottom:"8px"}});
-  [[null,"すべて"],["free","🤝 一緒に滑る"],["paid","💴 有料の同行・撮影"]].forEach(function(o){
+  var pm=d({style:{display:"flex",flexWrap:"wrap",gap:"8px",marginBottom:"8px"}});
+  [[null,"すべて"],["free","ゲレンデ仲間を探す"],["paid","有料の同行・撮影"]].forEach(function(o){
     var on=(S.payMode||null)===o[0];
     var x=document.createElement("button");x.textContent=o[1];
     x.style.cssText="flex:"+(o[0]?"1":"0 0 auto")+";padding:10px 12px;border-radius:14px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;white-space:nowrap;border:1.5px solid "+(on?(o[0]==="free"?"#22C55E":"#FF6B2B"):"#E5E7EB")+";background:"+(on?(o[0]==="free"?"#F0FDF4":"#FFF0E8"):"#fff")+";color:"+(on?(o[0]==="free"?"#15803D":"#FF6B2B"):"#4B5563");
@@ -2550,7 +2550,7 @@ function renderExplore(){
   });
   if(!camTabOn)wrap.appendChild(pm);
   var pmHint=d({style:{fontSize:"11px",color:"#9CA3AF",margin:"0 2px 12px",lineHeight:"1.6"}});
-  pmHint.textContent=S.payMode==="free"?"お金のやり取りなしで、一緒に滑る仲間を探せます。気になる人にはメッセージを送ってみよう。":(S.payMode==="paid"?"料金を払って、同行や撮影をお願いできる人です。料金は全部込みの金額で表示されます。":"「一緒に滑る」は友達探し、「有料の同行・撮影」はお願いして来てもらう人です。");
+  pmHint.textContent=S.payMode==="free"?"お金のやり取りなしで、一緒に滑る仲間を探せます。気になる人にはメッセージを送ってみよう。":(S.payMode==="paid"?"料金を払って、同行や撮影をお願いできる人です。料金は全部込みの金額で表示されます。":"「ゲレンデ仲間を探す」は友達探し、「有料の同行・撮影」はお願いして来てもらう人です。");
   if(!camTabOn)wrap.appendChild(pmHint);
 
   // フィルター
