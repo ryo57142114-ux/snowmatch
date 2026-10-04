@@ -61,7 +61,8 @@ var SUPABASE_URL = "https://qehaqosvytflojakyssx.supabase.co";
 var SUPABASE_KEY = "sb_publishable_yS2k2GRPTRzcfUGd9hdslQ_zbfloUFB";
 var sb = null;
 try{
-  sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  // iPhoneのホーム画面アプリで、ログイン情報の「ロック待ち」で通信が長く止まるのを防ぐ
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,lock:function(name,acquireTimeout,fn){return fn();}}});
 }catch(e){
   console.error("Supabase init failed:", e);
 }
@@ -184,7 +185,7 @@ var TERMS=[{id:"a",icon:"🩹",title:"怪我・事故は自己責任",body:"Snow
 
 var S={pg:"splash",blockedUsers:[],reportedUsers:[],showContact:false,showDeleteAccount:false,unreadChat:0,unreadBook:0,showWelcome:false,showNotif:false,following:[],followers:[],showFollowList:false,followListType:"following",notifs:[],rooms:{},checkins:[],reports:[],marketTab:"room",rankCat:"総合",openQA:null,openQAItem:null,showCheckin:false,showReport:false,openRoom:null,roomInput:"",splashIdx:0,onStep:0,kycStep:0,tab:"explore",selArea:null,selResort:null,openArea:null,openAreaReg:null,selAct:null,insOnly:false,camOnly:false,selCert:null,selUser:null,chatUser:null,chatMsgs:{},chatIn:"",liked:[],matches:[],bookUser:null,confirmed:null,postLikes:{},addPost:false,postDetail:null,reviewTarget:null,reviewRating:5,reviewComment:"",selPayment:"card",npType:"video",npCap:"",npImgSrc:null,npVideoSrc:null,npUrlInput:"",termChecks:{},myProfile:null,reg:{role:"user",nick:"",real:"",age:"",email:"",pw:"",act:"スノーボード",lv:"中級",resorts:[],bio:"",isIns:false,isCam:false,price:5000,unit:"1時間",camPrice:3000,camUnit:"30分",camMenu:[],icon:"🏂"}};
 
-function saveD(){if(S.isGuest)return;try{localStorage.setItem("sm2",JSON.stringify({myProfile:S.myProfile,reg:S.reg,liked:S.liked,postLikes:S.postLikes,matches:S.matches,chatMsgs:S.chatMsgs}));}catch(e){}syncProfileToSupabase();}
+function saveD(){if(S.isGuest)return;try{var _cm={};for(var _k in S.chatMsgs){if(S.chatMsgs.hasOwnProperty(_k)&&_k.indexOf("sb_")!==0)_cm[_k]=S.chatMsgs[_k];}localStorage.setItem("sm2",JSON.stringify({myProfile:S.myProfile,reg:S.reg,liked:S.liked,postLikes:S.postLikes,matches:S.matches,chatMsgs:_cm}));}catch(e){}syncProfileToSupabase();}
 // プロフィール変更をSupabaseへ同期（1秒まとめて送信）
 var _syncTimer=null;
 var EXTRA_KEYS=["board","styles","stanceW2","frontAngle","backAngle","bindingName","camGear","costBreakdown","certText","cover"];
@@ -3632,6 +3633,7 @@ function saveDmCache(){
 }
 function restoreDmCache(){
   if(!currentUser)return false;
+  if(window._dmRestoredFor!==currentUser.id){window._dmRestoredFor=currentUser.id;for(var kx in S.chatMsgs){if(kx.indexOf("sb_")===0)delete S.chatMsgs[kx];}}
   for(var k0 in S.chatMsgs){if(k0.indexOf("sb_")===0&&S.chatMsgs[k0].length)return false;}
   try{var c=JSON.parse(localStorage.getItem(dmCacheKey())||"null");if(!c)return false;
     for(var k in c){if(c.hasOwnProperty(k))S.chatMsgs[k]=c[k];}return true;}catch(e){return false;}
@@ -3642,10 +3644,13 @@ function loadMessagesFromSupabase(force,tries){
   if(!force&&window._dmLoadedAt&&now-window._dmLoadedAt<20000)return;
   if(window._dmLoading&&now-(window._dmLoadingAt||0)<12000)return; // 応答がない読み込みで止まり続けないようにする
   window._dmLoading=true;window._dmLoadingAt=now;
-  function retry(){window._dmLoading=false;if(tries<4)setTimeout(function(){loadMessagesFromSupabase(true,tries+1);},1200*(tries+1));}
+  var att=(window._dmAtt=(window._dmAtt||0)+1);
+  function retry(){if(window._dmAtt!==att)return;window._dmLoading=false;if(tries<4)setTimeout(function(){loadMessagesFromSupabase(true,tries+1);},1200*(tries+1));}
+  setTimeout(function(){if(window._dmLoading&&window._dmAtt===att){console.warn("messages load slow, retrying");window._dmLoading=false;loadMessagesFromSupabase(true,tries+1);}},7000);
   if(restoreDmCache())render();
   // 新しい順に取ってから並べ直す（古い順だと件数が多いときに最新のメッセージが漏れるため）
   sb.from("dm_messages").select("id,from_user,to_user,body,image_path,created_at,read_at").or("from_user.eq."+currentUser.id+",to_user.eq."+currentUser.id).order("created_at",{ascending:false}).limit(2000).then(function(r){
+    if(window._dmAtt!==att&&window._dmLoadedAt&&window._dmLoadedAt>now)return;
     window._dmLoading=false;
     if(r.error){console.error("messages load error",r.error);retry();return;}
     window._dmLoadedAt=Date.now();
