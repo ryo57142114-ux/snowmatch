@@ -1489,7 +1489,7 @@ var FAQ=[
   ["プロフィールで大事なところは？","アイコン写真・自己紹介・活動スキー場・レベルを入れておくと、相手が安心して声をかけやすくなります。有料で同行する人は、料金と、滑りや撮影の動画（投稿・実績）を載せるのがおすすめです。"]
  ]},
  {sec:"🏂 アプリの使い方",items:[
-  ["仲間はどうやって探すの？","「探す」→「仲間を探す」で、エリア・種目・レベルなどで絞り込めます。気になる人がいたらプロフィールを見て、フォローやメッセージをしてみましょう。\n撮影してくれる人を探すときは「探す」→「🎥 撮影カメラマン」から、使っている機材やエリアで絞り込めます。"],
+  ["仲間はどうやって探すの？","「ホーム」→「仲間を探す」で、エリア・種目・レベルなどで絞り込めます。気になる人がいたらプロフィールを見て、フォローやメッセージをしてみましょう。\n撮影してくれる人を探すときは「ホーム」→「撮影カメラマン」から、使っている機材やエリアで絞り込めます。"],
   ["募集掲示板って何？","日付つきで投稿できる掲示板です。\n・「同行・撮影します」：この日空いているので一緒に滑れる・撮影できます、という投稿\n・「同行・撮影お願いします」：この日一緒に滑る人・撮影してくれる人を探しています、という投稿\nそれぞれ「無料」か「有料」を選べます。"],
   ["「参加します」を押すとどうなる？","【無料の投稿】相手に「参加したいです！」というメッセージが自動で届き、チャットで日時や集合場所を決めます。\n\n【有料の募集】応募として相手に届きます。募集した人が応募者の中から1人を選ぶと予約が確定します。確定するまでは何人でも応募でき、選ばれなかった人には自動でお知らせが届きます。"],
   ["メッセージは誰にでも送れる？","フォローした相手にメッセージを送れます。プロフィールの「メッセージ」や、募集の「参加します」「質問」から送ると、自動でフォローされます。"],
@@ -1512,7 +1512,7 @@ var FAQ=[
  ]},
  {sec:"❓ 困ったとき",items:[
   ["画面が古いまま・うまく動かない","ホーム画面のアプリを一度完全に閉じて（下から上にスワイプして終了）、もう一度開いてください。それでも直らないときは、Safariで直接開き直してみてください。"],
-  ["通知のバッジが消えない","「探す」のバッジは募集掲示板の新しい投稿のお知らせです。「探す」画面の上にある「募集掲示板」タブを開くと消えます。"],
+  ["通知のバッジが消えない","「ホーム」のバッジは募集掲示板の新しい投稿のお知らせです。「ホーム」画面の上にある「募集掲示板」タブを開くと消えます。"],
   ["問い合わせ先は？","マイページの「お問い合わせ」から送ってください。運営より順次お返事します。"]
  ]}
 ];
@@ -5397,7 +5397,7 @@ function _renderInner(){
   else if(S.tab==="bookings")app.appendChild(renderBookings());
   else if(S.tab==="profile")app.appendChild(stripLabelEmoji(renderProfile()));
   if(!cf){
-    var nav=d({class:"nav"});var navItems=[{id:"explore",ic:"🔍",lbl:"探す"},{id:"chat",ic:"💬",lbl:"チャット"},{id:"market",ic:"🛖",lbl:"ラウンジ"},{id:"bookings",ic:"🎿",lbl:"予約"},{id:"profile",ic:"👤",lbl:"マイページ"}];
+    var nav=d({class:"nav"});var navItems=[{id:"explore",ic:"🏠",lbl:"ホーム"},{id:"chat",ic:"💬",lbl:"チャット"},{id:"market",ic:"🛖",lbl:"ラウンジ"},{id:"bookings",ic:"🎿",lbl:"予約"},{id:"profile",ic:"👤",lbl:"マイページ"}];
     for(var ni=0;ni<navItems.length;ni++){
       (function(item){var ne=b2({class:"ni"+(S.tab===item.id?" on":"")});var nic=d({style:{fontSize:"22px",marginBottom:"2px",position:"relative"}});nic.textContent=item.ic;if(item.id==="explore"&&!(S.tab==="explore"&&S.exTab==="board")){var bn=newBoardCount();if(bn>0)nic.appendChild(unreadBadge(bn,"position:absolute;top:-4px;left:50%;margin-left:6px;"));}if(item.id==="chat"){var tu=totalUnreadChat();if(tu>0)nic.appendChild(unreadBadge(tu,"position:absolute;top:-4px;left:50%;margin-left:6px;"));}if(item.id==="market"&&!(S.tab==="market"&&S.openRoom)){var lu2=roomUnread();if(lu2>0)nic.appendChild(unreadBadge(lu2,"position:absolute;top:-4px;left:50%;margin-left:6px;"));}if(item.id==="bookings"){var tb=bookBadgeCount();if(tb>0)nic.appendChild(unreadBadge(tb,"position:absolute;top:-4px;left:50%;margin-left:6px;"));}ne.appendChild(nic);ne.appendChild(document.createTextNode(item.lbl));ne.addEventListener("click",function(){if(item.id!=="chat")S.chatUser=null;R({tab:item.id});});nav.appendChild(ne);})(navItems[ni]);
     }
