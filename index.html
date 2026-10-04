@@ -4759,6 +4759,7 @@ function _renderInner(){
             }
             box.appendChild(sr);
           }
+          var uoh=UserOpenHistory(u);uoh.style.margin="4px 0 14px";box.appendChild(uoh);
           var isFw=(S.following||[]).indexOf(u.id)>=0;
           var fwb=b2({style:{width:"100%",padding:"10px",marginTop:"6px",borderRadius:"14px",border:"1.5px solid "+(isFw?"#E8E8E8":"#FF6B2B"),background:isFw?"#F5F7FA":"#fff",color:isFw?"#6B7280":"#FF6B2B",fontSize:"14px",fontWeight:"800",cursor:"pointer",fontFamily:"inherit"}},isFw?"✅ フォロー中":"＋ フォローする");
           fwb.addEventListener("click",function(){toggleFollow(u);});box.appendChild(fwb);
