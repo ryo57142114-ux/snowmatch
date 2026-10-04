@@ -690,7 +690,7 @@ function loadMyOpenPosts(){
   sb.from("open_posts_public").select("*").eq("user_id",currentUser.id).order("created_at",{ascending:false}).limit(100).then(function(r){
     S._myOpenLoading=false;
     if(r.error){console.error("my open posts",r.error.message||r.error);S.myOpenPosts=S.myOpenPosts||[];S.myOpenErr=r.error.message;render();return;}
-    S.myOpenErr=null;S.myOpenPosts=r.data||[];render();
+    S.myOpenErr=null;var _me=currentUser&&currentUser.id;S.myOpenPosts=(r.data||[]).filter(function(x){return x.user_id===_me;});render();
   });
 }
 function MyOpenHistory(){
