@@ -2678,7 +2678,6 @@ function dmKey(m){if(!m._k){window._dmK=(window._dmK||0)+1;m._k="k"+window._dmK;
 function dmRow(m,cu){
   var isMe=m.f==="m";
     var mRow=d({style:{display:"flex",justifyContent:isMe?"flex-end":"flex-start",marginBottom:"10px",gap:"8px",alignItems:"flex-end"}});
-    if(!isMe){var mIco=d({style:{fontSize:"20px",flexShrink:"0"}});mIco.textContent=cu.icon;mRow.appendChild(mIco);}
     var mBox=d({style:{maxWidth:"72%"}});
     if(!isMe){var mName=d({style:{fontSize:"11px",color:"#9CA3AF",marginBottom:"2px",fontWeight:"700"}});mName.textContent=cu.name;mBox.appendChild(mName);}
     var mBub=d({style:{background:isMe?"linear-gradient(135deg,#FF6B2B,#FF8C55)":"#fff",color:isMe?"#fff":"#1A1A2E",padding:"10px 16px",borderRadius:isMe?"18px 18px 4px 18px":"18px 18px 18px 4px",fontSize:"14px",lineHeight:"1.6",boxShadow:"0 2px 8px rgba(0,0,0,.08)"}});
