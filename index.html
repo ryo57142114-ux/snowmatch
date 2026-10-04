@@ -427,7 +427,7 @@ function sendPhoto(file){
       return sb.from("dm_messages").insert({from_user:currentUser.id,to_user:u.uid,body:"📷 写真",image_path:path}).select().single();
     }).then(function(r){
       if(r&&r.error)throw new Error(r.error.message);
-      tmp.pending=false;if(r&&r.data)tmp.id=r.data.id;if(chatOpenFor(cid))refreshDmRow(tmp);else render();
+      tmp.pending=false;if(r&&r.data)tmp.id=r.data.id;clearTimeout(window._dmCacheT);window._dmCacheT=setTimeout(saveDmCache,800);if(chatOpenFor(cid))refreshDmRow(tmp);else render();
     }).catch(function(e){tmp.t="📷 写真（送信失敗）";tmp.failed=true;tmp.pending=false;if(chatOpenFor(cid))refreshDmRow(tmp);else render();alert("写真を送れませんでした: "+(e&&e.message?e.message:e));});
   });
 }
@@ -2725,6 +2725,7 @@ function renderChat(){
   var ci=d({style:{flex:"1"}});
   var cnm=d({style:{fontWeight:"800",color:"#fff",fontSize:"15px"}});cnm.textContent=S.chatUser.name;
   var cdet=d({style:{color:"rgba(255,255,255,.8)",fontSize:"11px"}});cdet.textContent=(S.chatUser.lv||"")+((S.chatUser.lv&&S.chatUser.act)?"・":"")+(S.chatUser.act||"");
+  if(window._dmLoading&&S.chatUser.isReal){cdet.textContent+="　更新中…";}
   ci.appendChild(cnm);ci.appendChild(cdet);hdr.appendChild(ci);
   if(S.chatUser&&S.chatUser.price&&S.chatUser.price>0){
     var chatBookBtn=document.createElement("button");chatBookBtn.style.cssText="background:rgba(255,255,255,0.25);border:1.5px solid rgba(255,255,255,0.5);border-radius:12px;padding:6px 12px;color:#fff;font-size:11px;font-weight:800;font-family:inherit;cursor:pointer;flex-shrink:0";chatBookBtn.textContent="予約する";
@@ -3614,7 +3615,7 @@ function sendMsg(text){if(S.isGuest){guestPrompt();return;}
     if(chatOpenFor(cid)){appendDmRow(tmp);if(_ci){_ci.value="";_ci.focus();}}else{render();}
     sb.from("dm_messages").insert({from_user:currentUser.id,to_user:u.uid,body:body}).select().single().then(function(r){
       if(r.error){tmp.t=body+"（送信失敗）";tmp.pending=false;if(chatOpenFor(cid))refreshDmRow(tmp);else render();alert("送信に失敗しました: "+r.error.message);return;}
-      tmp.pending=false;tmp.id=r.data.id;
+      tmp.pending=false;tmp.id=r.data.id;clearTimeout(window._dmCacheT);window._dmCacheT=setTimeout(saveDmCache,800);
     });
     return;
   }
@@ -3633,7 +3634,12 @@ function saveDmCache(){
 }
 function restoreDmCache(){
   if(!currentUser)return false;
-  if(window._dmRestoredFor!==currentUser.id){window._dmRestoredFor=currentUser.id;for(var kx in S.chatMsgs){if(kx.indexOf("sb_")===0)delete S.chatMsgs[kx];}}
+  if(window._dmRestoredFor!==currentUser.id){
+    window._dmRestoredFor=currentUser.id;
+    var c0=null;try{c0=JSON.parse(localStorage.getItem(dmCacheKey())||"null");}catch(e){}
+    if(c0){for(var kx in S.chatMsgs){if(kx.indexOf("sb_")===0)delete S.chatMsgs[kx];}for(var ky in c0){if(c0.hasOwnProperty(ky))S.chatMsgs[ky]=c0[ky];}return true;}
+    return false;
+  }
   for(var k0 in S.chatMsgs){if(k0.indexOf("sb_")===0&&S.chatMsgs[k0].length)return false;}
   try{var c=JSON.parse(localStorage.getItem(dmCacheKey())||"null");if(!c)return false;
     for(var k in c){if(c.hasOwnProperty(k))S.chatMsgs[k]=c[k];}return true;}catch(e){return false;}
@@ -3644,6 +3650,7 @@ function loadMessagesFromSupabase(force,tries){
   if(!force&&window._dmLoadedAt&&now-window._dmLoadedAt<20000)return;
   if(window._dmLoading&&now-(window._dmLoadingAt||0)<12000)return; // 応答がない読み込みで止まり続けないようにする
   window._dmLoading=true;window._dmLoadingAt=now;
+  try{localStorage.setItem("sm_last_uid",currentUser.id);}catch(e){}
   var att=(window._dmAtt=(window._dmAtt||0)+1);
   function retry(){if(window._dmAtt!==att)return;window._dmLoading=false;if(tries<4)setTimeout(function(){loadMessagesFromSupabase(true,tries+1);},1200*(tries+1));}
   setTimeout(function(){if(window._dmLoading&&window._dmAtt===att){console.warn("messages load slow, retrying");window._dmLoading=false;loadMessagesFromSupabase(true,tries+1);}},7000);
@@ -5345,6 +5352,11 @@ function _renderInner(){
 }
 
 try{window._hs=!!localStorage.getItem("sm2");}catch(e){window._hs=false;}
+// 起動直後：ログイン確認を待たずに、前回保存したメッセージをすぐ表示する
+try{(function(){var lu=localStorage.getItem("sm_last_uid");if(!lu)return;var c=JSON.parse(localStorage.getItem("sm_dmc_"+lu)||"null");if(!c)return;
+  for(var kx in S.chatMsgs){if(kx.indexOf("sb_")===0)delete S.chatMsgs[kx];}
+  for(var k in c){if(c.hasOwnProperty(k))S.chatMsgs[k]=c[k];}
+  window._dmRestoredFor=lu;})();}catch(e){}
 if(/[?&]stripe=(return|refresh)/.test(location.search)){S.tab="profile";S.stripeSt=undefined;try{history.replaceState(null,"",location.pathname);}catch(e){}}
 if(sb){sb.auth.getSession().then(function(r){S.sessionChecked=true;if(r&&r.data&&r.data.session){currentUser=r.data.session.user;S.isGuest=false;loadMessagesFromSupabase(true);loadUsersFromSupabase();}render();}).catch(function(){S.sessionChecked=true;render();});}
 render();
