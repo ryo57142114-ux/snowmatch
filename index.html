@@ -647,7 +647,7 @@ function PostModal(){
     var mine=(S.myProfile&&S.myProfile.resorts)||[];
     if(mine.length){var og0=document.createElement("optgroup");og0.label="よく滑るスキー場";mine.forEach(function(r){var o=document.createElement("option");o.value=r;o.textContent=r;og0.appendChild(o);});rs.appendChild(og0);}
     AREAS.forEach(function(a){var og=document.createElement("optgroup");og.label=a.area;a.resorts.forEach(function(r){var o=document.createElement("option");o.value=r;o.textContent=r;og.appendChild(o);});rs.appendChild(og);});
-    rs.value=f.resort||"";rs.addEventListener("change",function(e){f.resort=e.target.value;});box.appendChild(rs);
+    rs.value=f.resort||"";rs.addEventListener("change",function(e){f.resort=e.target.value;render();});rs.style.marginBottom="8px";box.appendChild(rs);box.appendChild(resortRuleBox(f.resort));
     lbl("料金");seg([["free","🤝 無料"],["paid","💴 有料"]],"pay");
     if(f.pay==="paid"&&f.kind==="request"){
       lbl("お支払いする金額（全部込み）");
@@ -1356,12 +1356,13 @@ var FAQ=[
   ["有料の同行をお願いする流れは？","【相手のプロフィールから予約する場合】\n① 相手の料金（1時間／半日／1日）を見て「予約する」\n② 日付・時間・プランを選んで申し込み、支払う\n③ 相手が承認すると予約確定\n\n【募集掲示板で募集する場合】\n① 「同行・撮影お願いします」＋「有料」で、払う金額を決めて投稿\n② 「参加します」と応募してくれた人から1人を選ぶ\n③ 支払い画面で支払うと予約確定"],
   ["表示の料金に何が含まれる？","表示の料金は「全部込み」の金額です。同行謝礼・食事代・交通費・リフト券代が含まれます。宿泊費・撮影機材費は各自負担です。予約時に支払うのは表示の金額だけで、追加の手数料はかかりません。"],
   ["払ったお金はいつ相手に渡るの？","支払ったお金は、いったんStripe（決済会社）が安全に預かります。\n① 支払い → ② 当日一緒に滑る → ③ 滑走日のあと、トラブルがなければ同行した人へ送金\nという流れなので、滑る前にお金だけ相手に渡ってしまう心配はありません。"],
-  ["お金をもらうこともできる？","できます。自分のプロフィールに同行・撮影の料金を設定しておくと、予約が入ったときに受け取れます。また「同行・撮影してくれる人募集」の投稿に応募して参加した場合も、募集者が出した金額を受け取れます（受け取るには本人確認が必要です）。"],
+  ["お金をもらうこともできる？","できます。自分のプロフィールに同行・撮影の料金を設定しておくと、予約が入ったときに受け取れます。また「同行・撮影お願いします」の投稿に応募して参加した場合も、募集者が出した金額を受け取れます（受け取るには本人確認が必要です）。"],
   ["キャンセルしたらどうなる？","・前日までのキャンセル：全額返金\n・当日のキャンセル：料金の100%\n・悪天候・リフト運休・相手側の都合の場合：全額返金"],
   ["当日なにかトラブルがあったら？","マイページの「お問い合わせ」から、できるだけ早く運営に知らせてください。相手への送金前であれば、運営が双方に確認して対応します。"],
   ["今はお金がかかる？","現在、決済はテスト（デモ）中のため、実際の請求は行われません。本番の決済が始まるときは、アプリ内でお知らせします。"]
  ]},
  {sec:"🛡 安全に使うために",items:[
+  ["スキー場で撮影してもいいの？","スキー場ごとに撮影や営利活動のルールがあります。必ず各スキー場のルールをご確認のうえご利用ください。\n\n【許可のない有償の撮影・営利活動を公式に禁止しているスキー場】\nサッポロテイネ、ルスツリゾート、サホロリゾート、たんばらスキーパーク、ハンターマウンテン塩原、タングラムスキーサーカス、スキージャム勝山、グランデコスノーリゾート、ホワイトワールド尾瀬岩鞍\n→ これらのスキー場では、お金を受け取る撮影の依頼・引き受けはしないでください。\n\n【撮影に事前の登録・申請が必要なスキー場】\nニセコ（グラン・ヒラフ、アンヌプリ、ビレッジ、HANAZONO）、戸隠スキー場\n→ 撮影する前に、公式サイトで手続きを確認してください。\n\nここに載っていないスキー場も、ルールが変わることがあります。撮影する前に公式サイトで確認しましょう。"],
   ["初めて会う人と滑るときの注意は？","・集合場所はゲレンデのセンターハウスなど、人の多い場所にしましょう\n・本人確認済みの「確認済」マークやプロフィール、つぶやきも参考にしましょう\n・アプリの外での直接のお金のやり取りはしないでください（トラブルのとき運営が対応できません）"],
   ["嫌な思いをしたときは？","つぶやきの「通報」や、マイページの「お問い合わせ」から運営に知らせてください。悪質な場合は、運営が投稿の非表示や利用停止などの対応をします。"]
  ]},
@@ -1573,6 +1574,7 @@ function BookModal(u){
       slots.forEach(function(x){var on=x.id===S.bkSlotId;var c=document.createElement("button");c.style.cssText="text-align:left;padding:11px 14px;border-radius:14px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;border:2px solid "+(on?"#FF6B2B":"#E5E7EB")+";background:"+(on?"#FFF0E8":"#fff")+";color:"+(on?"#FF6B2B":"#1A1A2E");c.textContent=dateLbl(x.ride_date)+"　"+hm5(x.start_time)+"〜"+hm5(x.end_time)+(x.resort?"　⛰️ "+x.resort:"");c.addEventListener("click",function(){S.bkSlotId=x.id;render();});sr.appendChild(c);});
       box.appendChild(sr);
       var dtNote=d({style:{fontSize:"11px",color:"#9CA3AF",marginBottom:"14px"}});dtNote.textContent="細かい集合時間・場所は、予約後にメッセージで決めましょう";box.appendChild(dtNote);
+      box.appendChild(resortRuleBox(curSlot&&curSlot.resort));
     }
     // ひとこと
     lbl("③ ひとこと（任意）");
@@ -1741,7 +1743,7 @@ function CamModal(u){
     }
     // 注意書き
     var camNote=d({style:{background:"#FFF9E6",border:"1px solid #F59E0B",borderRadius:"10px",padding:"10px 12px",fontSize:"11px",color:"#92400E",lineHeight:"1.7"}});
-    camNote.textContent="⚠️ 撮影は必ずコース内で行ってください。バックカントリー・コース外への立入は重大事故の危険があります。ドローン使用は事前許可が必要な場合があります。他のスキーヤーへの配慮をお願いします。";
+    camNote.textContent="⚠️ 撮影は必ずコース内で行ってください。バックカントリー・コース外への立入は重大事故の危険があります。ドローン使用は事前許可が必要な場合があります。他のスキーヤーへの配慮をお願いします。\nまた、スキー場によっては許可のない有償の撮影を禁止しています。必ず各スキー場のルールをご確認のうえご利用ください。";camNote.style.whiteSpace="pre-line";
     pr.appendChild(camNote);
     pr.appendChild(obtn("撮影を依頼する",function(){R({selUser:null,bookUser:u});},""));
     body.appendChild(pr);
@@ -3778,6 +3780,33 @@ function syncAppBadge(n){
 }
 document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible"){window._lastBadge=null;if(S&&S.pg==="main")render();}});
 
+
+// ===== スキー場ごとの撮影ルール =====
+// ban: 公式に「許可のない有償の撮影・営利活動」を禁止 / permit: 撮影に事前の登録・申請が必要
+var FILM_RULES={
+  "サッポロテイネ":"ban","ルスツリゾート":"ban","サホロリゾート":"ban","たんばらスキーパーク":"ban",
+  "ハンターマウンテン塩原":"ban","タングラムスキーサーカス":"ban","スキージャム勝山":"ban",
+  "グランデコスノーリゾート":"ban","ホワイトワールド尾瀬岩鞍":"ban",
+  "ニセコ東急 グラン・ヒラフ":"permit","ニセコアンヌプリ国際スキー場":"permit","ニセコビレッジスキーリゾート":"permit",
+  "ニセコHANAZONOリゾート":"permit","戸隠スキー場":"permit"
+};
+var RULE_NOTICE="スキー場ごとに、撮影や営利活動（お金を受け取る活動）についてのルールがあります。必ず各スキー場のルールをご確認のうえご利用ください。";
+function resortRuleBox(resort){
+  var wrap=document.createElement("div");wrap.style.cssText="margin:0 0 14px";
+  var r=resort?FILM_RULES[fixResort(resort)]:null;
+  if(r==="ban"){
+    var b=document.createElement("div");b.style.cssText="background:#FEF2F2;border:1.5px solid #FCA5A5;border-radius:12px;padding:10px 12px;font-size:12px;color:#991B1B;line-height:1.7;margin-bottom:6px";
+    b.textContent="🚫 "+resort+"は、許可のない有償の撮影・営利活動を公式に禁止しています。このスキー場では、お金を受け取る撮影の依頼・引き受けはしないでください。";
+    wrap.appendChild(b);
+  }else if(r==="permit"){
+    var b2=document.createElement("div");b2.style.cssText="background:#FFFBEB;border:1.5px solid #FCD34D;border-radius:12px;padding:10px 12px;font-size:12px;color:#92400E;line-height:1.7;margin-bottom:6px";
+    b2.textContent="📝 "+resort+"では、撮影に事前の登録・申請が必要です。撮影する前に、スキー場の公式サイトで手続きを確認してください。";
+    wrap.appendChild(b2);
+  }
+  var n=document.createElement("div");n.style.cssText="font-size:11px;color:#6B7280;line-height:1.6";n.textContent="※ "+RULE_NOTICE;
+  wrap.appendChild(n);
+  return wrap;
+}
 // ===== ヘッダー写真（X風のカバー画像） =====
 function coverHero(hero,u){
   if(!u||!u.cover)return;
