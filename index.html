@@ -385,15 +385,37 @@ if(!window._chatImgUrl)window._chatImgUrl={};
 function chatImgUrl(path,cb){
   var c=window._chatImgUrl[path];
   if(c&&c.exp>Date.now())return c.url;
+  // 読み込み中でも、あとから描かれた吹き出しが取り残されないよう、写真のパスで画面を直接更新する
   if(c&&c.loading)return null;
   window._chatImgUrl[path]={loading:true};
+  function done(){fillChatImg(path);if(cb)try{cb();}catch(e){}}
   sb.storage.from("chat").createSignedUrl(path,3600).then(function(r){
-    if(r.error||!r.data){console.error("chat image",path,r.error&&r.error.message);window._chatImgUrl[path]={url:"",err:(r.error&&r.error.message)||"not found",exp:Date.now()+15000};if(cb)cb();return;}
+    if(r.error||!r.data){console.error("chat image",path,r.error&&r.error.message);window._chatImgUrl[path]={url:"",err:(r.error&&r.error.message)||"not found",exp:Date.now()+15000};done();return;}
     window._chatImgUrl[path]={url:r.data.signedUrl,exp:Date.now()+3300*1000};
-    if(cb)cb();
-  },function(e){window._chatImgUrl[path]={url:"",err:(e&&e.message)||"network",exp:Date.now()+15000};if(cb)cb();});
-  setTimeout(function(){var c2=window._chatImgUrl[path];if(c2&&c2.loading){window._chatImgUrl[path]={url:"",err:"timeout",exp:Date.now()+15000};if(cb)cb();}},12000);
+    done();
+  },function(e){window._chatImgUrl[path]={url:"",err:(e&&e.message)||"network",exp:Date.now()+15000};done();});
+  setTimeout(function(){var c2=window._chatImgUrl[path];if(c2&&c2.loading){window._chatImgUrl[path]={url:"",err:"timeout",exp:Date.now()+15000};done();}},12000);
   return null;
+}
+// 画面上にある「読み込み中」の写真枠を、パスで探して中身だけ入れ替える
+function fillChatImg(path){
+  var ma=document.getElementById("chatmsgs");if(!ma)return;
+  var nodes=ma.querySelectorAll("[data-imgph]");
+  for(var i=0;i<nodes.length;i++){
+    var ph=nodes[i];if(ph.getAttribute("data-imgph")!==path)continue;
+    var c=window._chatImgUrl[path]||{};
+    var nearBottom=ma.scrollHeight-ma.scrollTop-ma.clientHeight<160;
+    if(c.url){
+      var im=document.createElement("img");im.src=c.url;im.alt="写真";
+      im.style.cssText="display:block;max-width:220px;max-height:280px;width:100%;border-radius:14px;object-fit:cover;cursor:pointer;background:#eee";
+      im.addEventListener("click",function(){var u=(window._chatImgUrl[path]&&window._chatImgUrl[path].url)||this.src;var w=window.open(u,"_blank");if(!w)location.href=u;});
+      if(nearBottom)im.addEventListener("load",function(){ma.scrollTop=ma.scrollHeight;});
+      ph.parentNode.replaceChild(im,ph);
+    }else if(c.err){
+      ph.textContent="写真を表示できませんでした\nタップで再読み込み";ph.style.cursor="pointer";
+      ph.onclick=function(){delete window._chatImgUrl[path];this.textContent="📷 読み込み中…";this.style.cursor="default";this.onclick=null;chatImgUrl(path);};
+    }
+  }
 }
 function shrinkImage(file,maxSide,cb){
   var fr=new FileReader();
@@ -2659,13 +2681,13 @@ function dmRow(m,cu){
     var mBub=d({style:{background:isMe?"linear-gradient(135deg,#FF6B2B,#FF8C55)":"#fff",color:isMe?"#fff":"#1A1A2E",padding:"10px 16px",borderRadius:isMe?"18px 18px 4px 18px":"18px 18px 18px 4px",fontSize:"14px",lineHeight:"1.6",boxShadow:"0 2px 8px rgba(0,0,0,.08)"}});
     if(m.img){
       mBub.style.padding="6px";
-      var src=m.preview||(sb?chatImgUrl(m.img,function(){refreshDmRow(m);}):null);
+      var src=m.preview||(sb?chatImgUrl(m.img):null);
       if(src){
         var im=document.createElement("img");im.src=src;im.alt="写真";
         im.style.cssText="display:block;max-width:220px;max-height:280px;width:100%;border-radius:14px;object-fit:cover;cursor:pointer;background:#eee";
         im.setAttribute("data-p",m.img);im.addEventListener("click",function(){var pth=this.getAttribute("data-p");var full=(window._chatImgUrl[pth]&&window._chatImgUrl[pth].url)||this.src;var w=window.open(full,"_blank");if(!w)location.href=full;});
         mBub.appendChild(im);
-      }else{var _ce=window._chatImgUrl&&window._chatImgUrl[m.img];var _err=!m.failed&&_ce&&_ce.err;var ld=d({style:{width:"180px",height:"140px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontSize:"12px",opacity:".75",textAlign:"center",lineHeight:"1.6",cursor:_err?"pointer":"default"}});ld.textContent=m.failed?"送信できませんでした":(_err?"写真を表示できませんでした\nタップで再読み込み":"📷 読み込み中…");ld.style.whiteSpace="pre-line";if(_err){(function(pth){ld.addEventListener("click",function(){delete window._chatImgUrl[pth];refreshDmRow(m);});})(m.img);}mBub.appendChild(ld);}
+      }else{var _ce=window._chatImgUrl&&window._chatImgUrl[m.img];var _err=!m.failed&&_ce&&_ce.err;var ld=d({style:{width:"180px",height:"140px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontSize:"12px",opacity:".75",textAlign:"center",lineHeight:"1.6",cursor:_err?"pointer":"default"}});ld.textContent=m.failed?"送信できませんでした":(_err?"写真を表示できませんでした\nタップで再読み込み":"📷 読み込み中…");ld.style.whiteSpace="pre-line";if(!m.failed)ld.setAttribute("data-imgph",m.img);if(_err){(function(pth){ld.addEventListener("click",function(){delete window._chatImgUrl[pth];ld.textContent="📷 読み込み中…";chatImgUrl(pth);});})(m.img);}mBub.appendChild(ld);}
       if(m.pending){var pd=d({style:{fontSize:"10px",opacity:".8",padding:"2px 6px 0"}});pd.textContent="送信中…";mBub.appendChild(pd);}
     }else mBub.textContent=m.t;
     var mTime=d({style:{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:"4px",marginTop:"3px"}});
