@@ -2818,15 +2818,19 @@ function renderMarket(){
     (function(id,lbl){
       var tb=document.createElement("button");
       tb.style.cssText="flex:1 0 auto;white-space:nowrap;padding:8px 10px;border-radius:12px;border:none;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;background:"+(S.marketTab===id?"#fff":"transparent")+";color:"+(S.marketTab===id?"#FF6B2B":"#6B7280")+";box-shadow:"+(S.marketTab===id?"0 2px 8px rgba(0,0,0,0.1)":"none");
-      tb.textContent=lbl;tb.addEventListener("click",function(){S.marketTab=id;S.openRoom=null;render();});tabs.appendChild(tb);
+      tb.textContent=lbl;
+      var _tu=id==="room"?roomUnread(function(r){return r.cat!=="悩み相談";}):(id==="nayami"?roomUnread(function(r){return r.cat==="悩み相談";}):0);
+      if(_tu>0){tb.style.position="relative";tb.appendChild(unreadBadge(_tu,"position:absolute;top:-4px;right:2px;"));}
+      tb.addEventListener("click",function(){S.marketTab=id;S.openRoom=null;render();});tabs.appendChild(tb);
     })(tabDefs[ti][0],tabDefs[ti][1]);
   }
   wrap.appendChild(tabs);
 
-  if(S.openRoom&&(S.marketTab==="room"||S.marketTab==="nayami")){var _rc=renderRoomChat();if(_rc)return _rc;}
+  loadRoomSummary(false);
+  if(S.openRoom&&(S.marketTab==="room"||S.marketTab==="nayami")){markRoomSeen(S.openRoom);var _rc=renderRoomChat();if(_rc)return _rc;}
   if(S.marketTab==="nayami"){
     var nyNote=d({style:{color:"#6B7280",fontSize:"12.5px",lineHeight:"1.7",marginBottom:"12px"}});nyNote.textContent="滑りの悩み、道具選び、仲間づくりのことなど、気軽に相談できる部屋です。";wrap.appendChild(nyNote);
-    ROOMS_SAMPLE.filter(function(r){return r.cat==="悩み相談";}).forEach(function(room){wrap.appendChild(roomCard(room));});
+    sortRoomsByActivity(ROOMS_SAMPLE.filter(function(r){return r.cat==="悩み相談";})).forEach(function(room){wrap.appendChild(roomCard(room));});
   }
   if(S.marketTab==="room"){
     var cats2=["すべて","スノーボード","スキー","初心者","情報共有","動画"];
@@ -2838,7 +2842,7 @@ function renderMarket(){
     });
     wrap.appendChild(catRow);
     var rooms2=ROOMS_SAMPLE.filter(function(r){return r.cat!=="悩み相談"&&(S.marketCat==="すべて"||r.cat===S.marketCat);});
-    rooms2.forEach(function(room){wrap.appendChild(roomCard(room));});
+    sortRoomsByActivity(rooms2).forEach(function(room){wrap.appendChild(roomCard(room));});
   }
 
   if(S.marketTab==="qa"){
@@ -2910,15 +2914,67 @@ function renderMarket(){
 function roomOpenNow(){return S.tab==="market"&&!!S.openRoom&&(S.marketTab==="room"||S.marketTab==="nayami")&&!!(S.myProfile&&S.myProfile.ok);}
 function findRoom(id){for(var i=0;i<ROOMS_SAMPLE.length;i++){if(ROOMS_SAMPLE[i].id===id)return ROOMS_SAMPLE[i];}return null;}
 function qaCatLabel(c){var p=String(c).split(" ");return (p.length>1&&!/[A-Za-z0-9ぁ-んァ-ヶ一-龠]/.test(p[0]))?p.slice(1).join(" "):String(c);}
+// ===== ラウンジの部屋：新着の数・最新メッセージ =====
+function roomSeenKey(){return "sm_room_seen_"+(currentUser?currentUser.id:"");}
+function roomSeenMap(){try{return JSON.parse(localStorage.getItem(roomSeenKey())||"{}");}catch(e){return {};}}
+function markRoomSeen(roomId){
+  if(!currentUser||!roomId)return;var m=roomSeenMap();m[roomId]=new Date().toISOString();
+  try{localStorage.setItem(roomSeenKey(),JSON.stringify(m));}catch(e){}
+  if(S.roomSum&&S.roomSum[roomId])S.roomSum[roomId].unread=0;
+}
+function isLoungeMember(){return !!(S.myProfile&&S.myProfile.ok&&currentUser&&typeof sb!=="undefined"&&sb);}
+function loadRoomSummary(force){
+  if(!isLoungeMember())return;
+  var now=Date.now();if(!force&&window._roomSumAt&&now-window._roomSumAt<45000)return;
+  if(window._roomSumLoading)return;window._roomSumLoading=true;window._roomSumAt=now;
+  sb.from("lounge_messages").select("*").order("created_at",{ascending:false}).limit(400).then(function(r){
+    window._roomSumLoading=false;
+    if(r.error){console.error("room summary",r.error.message);return;}
+    var seen=roomSeenMap(),changedSeen=false,sum={},nowIso=new Date().toISOString();
+    ROOMS_SAMPLE.forEach(function(room){if(!seen[room.id]){seen[room.id]=nowIso;changedSeen=true;}});
+    if(changedSeen){try{localStorage.setItem(roomSeenKey(),JSON.stringify(seen));}catch(e){}}
+    (r.data||[]).forEach(function(m){
+      var e=sum[m.room_id]||(sum[m.room_id]={last:null,unread:0});
+      if(!e.last)e.last=m;
+      if(m.user_id!==currentUser.id&&seen[m.room_id]&&String(m.created_at)>seen[m.room_id]&&S.openRoom!==m.room_id)e.unread++;
+    });
+    var key=JSON.stringify(sum);if(key===window._roomSumKey)return;window._roomSumKey=key;
+    S.roomSum=sum;render();
+  },function(){window._roomSumLoading=false;});
+}
+function sortRoomsByActivity(list){
+  var sm=S.roomSum||{};
+  return list.map(function(r,i){return {r:r,i:i};}).sort(function(a,b){
+    var ea=sm[a.r.id]||{},eb=sm[b.r.id]||{};
+    var ua=ea.unread>0?1:0,ub=eb.unread>0?1:0;if(ua!==ub)return ub-ua;
+    var ta=ea.last?String(ea.last.created_at):"",tb=eb.last?String(eb.last.created_at):"";
+    if(ta!==tb)return ta<tb?1:-1;
+    return a.i-b.i;
+  }).map(function(x){return x.r;});
+}
+function roomUnread(filterFn){var t=0;if(!S.roomSum)return 0;ROOMS_SAMPLE.forEach(function(room){if(filterFn&&!filterFn(room))return;var e=S.roomSum[room.id];if(e)t+=e.unread||0;});return t;}
+setInterval(function(){if(!document.hidden)loadRoomSummary(false);},60000);
+document.addEventListener("visibilitychange",function(){if(!document.hidden)setTimeout(function(){loadRoomSummary(true);},1500);});
 function roomCard(room){
-  var card=d({class:"card",style:{cursor:"pointer",marginBottom:"12px"},onClick:function(){S.openRoom=room.id;S.roomInput="";S.roomReply=null;render();}});
+  var card=d({class:"card",style:{cursor:"pointer",marginBottom:"12px"},onClick:function(){markRoomSeen(room.id);S.openRoom=room.id;S.roomInput="";S.roomReply=null;render();}});
+  var _sum=(S.roomSum&&S.roomSum[room.id])||null;
   var tr=d({style:{display:"flex",gap:"12px",alignItems:"center"}});
   var ico=d({style:{width:"48px",height:"48px",borderRadius:"16px",background:"linear-gradient(135deg,#FFF0E8,#FFE4D6)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"24px",flexShrink:"0"}});ico.textContent=room.icon;
   var info=d({style:{flex:"1",minWidth:"0"}});
   var rt=d({style:{fontWeight:"800",fontSize:"14px",color:"#1A1A2E",marginBottom:"3px"}});rt.textContent=room.title;info.appendChild(rt);
   if(room.desc){var ds=d({style:{fontSize:"12px",color:"#6B7280",marginBottom:"4px",lineHeight:"1.5"}});ds.textContent=room.desc;info.appendChild(ds);}
   var catBdg=d({style:{display:"inline-block",background:"#EEF6FF",color:"#2196F3",borderRadius:"8px",padding:"2px 8px",fontSize:"10px",fontWeight:"700"}});catBdg.textContent=room.cat;info.appendChild(catBdg);
-  var arr=d({style:{color:"#D1D5DB",fontSize:"20px",flexShrink:"0"}});arr.textContent="›";
+  if(_sum&&_sum.last){
+    var lm=_sum.last;var lu=findRealUser(lm.user_id);var lnm=(currentUser&&lm.user_id===currentUser.id)?"あなた":((lu&&(lu.name||lu.nick))||lm.nick||"会員");
+    var lb=String(lm.body||"").replace(/\s+/g," ").trim()||"写真・動画";
+    var lrow=d({style:{display:"flex",gap:"6px",alignItems:"baseline",marginTop:"6px",fontSize:"12px",color:(_sum.unread?"#1A1A2E":"#6B7280"),fontWeight:(_sum.unread?"700":"400")}});
+    var ltx=sp({style:{flex:"1",minWidth:"0",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},lnm+"："+lb);
+    var ltm=sp({style:{flexShrink:"0",fontSize:"11px",color:"#9CA3AF",fontWeight:"400"}},timeAgo(lm.created_at));
+    lrow.appendChild(ltx);lrow.appendChild(ltm);info.appendChild(lrow);
+  }
+  var arr;
+  if(_sum&&_sum.unread>0){arr=unreadBadge(_sum.unread,"flex-shrink:0;");}
+  else{arr=d({style:{color:"#D1D5DB",fontSize:"20px",flexShrink:"0"}});arr.textContent="›";}
   tr.appendChild(info);tr.appendChild(arr);card.appendChild(tr);
   return card;
 }
@@ -5343,7 +5399,7 @@ function _renderInner(){
   if(!cf){
     var nav=d({class:"nav"});var navItems=[{id:"explore",ic:"🔍",lbl:"探す"},{id:"chat",ic:"💬",lbl:"チャット"},{id:"market",ic:"🛖",lbl:"ラウンジ"},{id:"bookings",ic:"🎿",lbl:"予約"},{id:"profile",ic:"👤",lbl:"マイページ"}];
     for(var ni=0;ni<navItems.length;ni++){
-      (function(item){var ne=b2({class:"ni"+(S.tab===item.id?" on":"")});var nic=d({style:{fontSize:"22px",marginBottom:"2px",position:"relative"}});nic.textContent=item.ic;if(item.id==="explore"&&!(S.tab==="explore"&&S.exTab==="board")){var bn=newBoardCount();if(bn>0)nic.appendChild(unreadBadge(bn,"position:absolute;top:-4px;left:50%;margin-left:6px;"));}if(item.id==="chat"){var tu=totalUnreadChat();if(tu>0)nic.appendChild(unreadBadge(tu,"position:absolute;top:-4px;left:50%;margin-left:6px;"));}if(item.id==="bookings"){var tb=bookBadgeCount();if(tb>0)nic.appendChild(unreadBadge(tb,"position:absolute;top:-4px;left:50%;margin-left:6px;"));}ne.appendChild(nic);ne.appendChild(document.createTextNode(item.lbl));ne.addEventListener("click",function(){if(item.id!=="chat")S.chatUser=null;R({tab:item.id});});nav.appendChild(ne);})(navItems[ni]);
+      (function(item){var ne=b2({class:"ni"+(S.tab===item.id?" on":"")});var nic=d({style:{fontSize:"22px",marginBottom:"2px",position:"relative"}});nic.textContent=item.ic;if(item.id==="explore"&&!(S.tab==="explore"&&S.exTab==="board")){var bn=newBoardCount();if(bn>0)nic.appendChild(unreadBadge(bn,"position:absolute;top:-4px;left:50%;margin-left:6px;"));}if(item.id==="chat"){var tu=totalUnreadChat();if(tu>0)nic.appendChild(unreadBadge(tu,"position:absolute;top:-4px;left:50%;margin-left:6px;"));}if(item.id==="market"&&!(S.tab==="market"&&S.openRoom)){var lu2=roomUnread();if(lu2>0)nic.appendChild(unreadBadge(lu2,"position:absolute;top:-4px;left:50%;margin-left:6px;"));}if(item.id==="bookings"){var tb=bookBadgeCount();if(tb>0)nic.appendChild(unreadBadge(tb,"position:absolute;top:-4px;left:50%;margin-left:6px;"));}ne.appendChild(nic);ne.appendChild(document.createTextNode(item.lbl));ne.addEventListener("click",function(){if(item.id!=="chat")S.chatUser=null;R({tab:item.id});});nav.appendChild(ne);})(navItems[ni]);
     }
     app.appendChild(nav);
   }
