@@ -3288,6 +3288,7 @@ function loadUsersFromSupabase(){
     refreshMyVerification();
     loadMessagesFromSupabase();
     startRealtime();
+    refreshPushState();
     if(S.pg==="main")render();
   }).catch(function(e){console.error("Users load error:",e);});
 }
@@ -3713,6 +3714,64 @@ function renderKyc(){
   }
   return wrap;
 }
+
+// ===== プッシュ通知（LINEのような通知・アイコンの未読バッジ） =====
+var VAPID_PUBLIC_KEY="BJCfbZ0_mstGorfXK-cCwNBW6CK_C27aRW6ZRuztr2lmtVO4owh6iYONRfFCPdu9Gm24bwbt8hVJp0PH5IVtjYY";
+function pushSupported(){return ("serviceWorker" in navigator)&&("PushManager" in window)&&("Notification" in window);}
+function isStandaloneApp(){try{return window.navigator.standalone===true||window.matchMedia("(display-mode: standalone)").matches;}catch(e){return false;}}
+function isIOS(){return /iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);}
+function b64ToU8(b64){var pad="=".repeat((4-b64.length%4)%4);var raw=atob((b64+pad).replace(/-/g,"+").replace(/_/g,"/"));var out=new Uint8Array(raw.length);for(var i=0;i<raw.length;i++)out[i]=raw.charCodeAt(i);return out;}
+function savePushSub(sub){
+  var j=sub.toJSON();
+  return sb.rpc("save_push_subscription",{p_endpoint:j.endpoint,p_p256dh:j.keys.p256dh,p_auth:j.keys.auth}).then(function(r){if(r.error)throw new Error(r.error.message);});
+}
+function askNotifPermission(){
+  return new Promise(function(res){
+    try{var pr=Notification.requestPermission(function(x){res(x);});if(pr&&pr.then)pr.then(res);}catch(e){res(Notification.permission);}
+  });
+}
+function enablePush(){
+  if(typeof sb==="undefined"||!sb||!currentUser){alert("通知をオンにするにはログインが必要です");return;}
+  if(!pushSupported()||(isIOS()&&!isStandaloneApp())){
+    if(isIOS()&&!isStandaloneApp())alert("iPhoneで通知を受け取るには、SnowMatchを「ホーム画面に追加」して、ホーム画面のアイコンから開いてください。\n（やり方はマイページの「使い方・よくある質問」にあります）");
+    else alert("このブラウザでは通知が使えません。iPhoneはiOS 16.4以上が必要です。");
+    return;
+  }
+  S.pushBusy=true;render();
+  askNotifPermission().then(function(perm){
+    if(perm!=="granted"){S.pushBusy=false;render();alert("通知が許可されませんでした。\niPhoneの「設定」→「通知」→「SnowMatch（スノマ）」から許可できます。");return;}
+    return navigator.serviceWorker.ready.then(function(reg){
+      return reg.pushManager.getSubscription().then(function(sub){return sub||reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToU8(VAPID_PUBLIC_KEY)});});
+    }).then(function(sub){return savePushSub(sub);}).then(function(){
+      S.pushBusy=false;S.pushOn=true;render();alert("🔔 通知をオンにしました！\nメッセージや予約が届くとお知らせします。");
+    });
+  }).catch(function(e){S.pushBusy=false;render();alert("通知をオンにできませんでした: "+(e&&e.message?e.message:e));});
+}
+function disablePush(){
+  if(!pushSupported())return;
+  S.pushBusy=true;render();
+  navigator.serviceWorker.ready.then(function(reg){return reg.pushManager.getSubscription();}).then(function(sub){
+    if(!sub)return;
+    var ep=sub.endpoint;
+    return sub.unsubscribe().then(function(){if(sb&&currentUser)return sb.rpc("delete_push_subscription",{p_endpoint:ep});});
+  }).then(function(){S.pushBusy=false;S.pushOn=false;render();},function(e){S.pushBusy=false;render();alert("通知をオフにできませんでした: "+(e&&e.message?e.message:e));});
+}
+function refreshPushState(){
+  if(!pushSupported()||typeof sb==="undefined"||!sb||!currentUser)return;
+  if(window._pushSyncedFor===currentUser.id)return;window._pushSyncedFor=currentUser.id;
+  if(Notification.permission!=="granted"){if(S.pushOn){S.pushOn=false;render();}return;}
+  navigator.serviceWorker.ready.then(function(reg){return reg.pushManager.getSubscription();}).then(function(sub){
+    var on=!!sub;if(S.pushOn!==on){S.pushOn=on;render();}
+    if(sub)savePushSub(sub).catch(function(e){console.error("push sync",e);});
+  }).catch(function(){});
+}
+function syncAppBadge(n){
+  if(document.visibilityState!=="visible")return;
+  if(window._lastBadge===n)return;window._lastBadge=n;
+  try{if(window.caches)caches.open("sm-badge").then(function(c){c.put("/__badge",new Response(String(n)));}).catch(function(){});}catch(e){}
+  try{if(navigator.setAppBadge){if(n>0)navigator.setAppBadge(n).catch(function(){});else if(navigator.clearAppBadge)navigator.clearAppBadge().catch(function(){});}}catch(e){}
+}
+document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible"){window._lastBadge=null;if(S&&S.pg==="main")render();}});
 
 // ===== ヘッダー写真（X風のカバー画像） =====
 function coverHero(hero,u){
@@ -4349,6 +4408,11 @@ function renderProfile(){
   var payoutCard=PayoutCard();if(payoutCard)body.appendChild(payoutCard);
   // お問い合わせ・退会
   var supportDiv=d({style:{padding:"16px 20px 4px",display:"flex",flexDirection:"column",gap:"8px"}});
+  var pushBtn=document.createElement("button");
+  pushBtn.style.cssText="padding:12px;border-radius:14px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;"+(S.pushOn?"background:#F0FDF4;border:1.5px solid #BBF7D0;color:#15803D":"background:#FF6B2B;border:1.5px solid #FF6B2B;color:#fff");
+  pushBtn.innerHTML=S.pushBusy?"<span>⏳</span><span>設定中...</span>":S.pushOn?"<span>🔔</span><span>通知オン（タップでオフ）</span>":"<span>🔔</span><span>通知をオンにする</span>";
+  pushBtn.addEventListener("click",function(){if(S.pushBusy)return;if(S.pushOn){if(confirm("通知をオフにしますか？"))disablePush();}else enablePush();});
+  supportDiv.appendChild(pushBtn);
 
   var contactBtn2=document.createElement("button");contactBtn2.style.cssText="padding:12px;background:#F9FAFB;border:1.5px solid #E8E8E8;border-radius:14px;font-size:13px;font-weight:700;color:#374151;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px";
   var faqBtn=document.createElement("button");faqBtn.style.cssText="padding:12px;background:#FFF7ED;border:1.5px solid #FED7AA;border-radius:14px;font-size:13px;font-weight:800;color:#C2410C;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px";
@@ -4822,7 +4886,7 @@ function _renderInner(){
     hdr.appendChild(sp({style:{fontSize:"11px",color:champ?"#8A6A2E":"rgba(255,255,255,.85)",marginLeft:"4px",flex:"1"}},"スキー・スノボ仲間を見つけよう"));
     // 通知ベルボタン
     var unreadNotifs = 0;
-    var vn2=visibleNotifs();for(var ni=0;ni<vn2.length;ni++){if(!vn2[ni].read)unreadNotifs++;}unreadNotifs+=unreadChatItems().length;
+    var vn2=visibleNotifs();for(var ni=0;ni<vn2.length;ni++){if(!vn2[ni].read)unreadNotifs++;}unreadNotifs+=unreadChatItems().length;syncAppBadge(unreadNotifs);
     var bellWrap=document.createElement("div");bellWrap.style.cssText="position:relative;flex-shrink:0;margin-left:auto";
     var bellBtn=document.createElement("button");bellBtn.style.cssText="font-size:22px;background:rgba(255,255,255,0.2);border:none;border-radius:12px;width:38px;height:38px;cursor:pointer;display:flex;align-items:center;justify-content:center";
     bellBtn.textContent="🔔";if(champ){bellBtn.style.background="rgba(255,255,255,.75)";bellBtn.style.boxShadow="0 0 0 1px #E8D9B8";}
