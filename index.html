@@ -90,7 +90,9 @@ var AREAS=[
 ];
 var LEVELS=["初心者","初中級","中級","上級","エキスパート"];
 var CERTS=["JSBA会員","JSBA会員","スキー歴20年","スキー歴15年","スノースポーツ愛好家"];
-var ACTS=["スキー","スノーボード","両方","🎥 追い撮り・撮影"];
+var ACTS=["スキー","スノーボード","両方","🎥 撮影"];
+// 旧表記「🎥 追い撮り・撮影」を新表記「🎥 撮影」に読み替える（保存済みデータ対策）
+function fixCam(v){if(typeof v==="string")return v.split("🎥 追い撮り・撮影").join("🎥 撮影");if(v&&v.map)return v.map(fixCam);return v;}
 var FEE=0.15;
 // 地方ごとのまとまり（活動エリアの選択をコンパクトにするため）
 var REGIONS=[
@@ -161,11 +163,11 @@ var QA_DATA=[
     {q:"ストックの長さはどう選ぶ？",a:"ストックを逆さに持って（先端を上に）グリップを握ったとき、肘が90°になる長さが目安。身長×0.68が簡易計算式です。例：身長170cmなら約115cm。"},
     {q:"スキーブーツが痛い時の対処法",a:"①インナーの慣らし期間は2〜3日かかることも　②バックルは締めすぎない（足首→甲→ふくらはぎの順）　③インソール交換で大幅改善する場合あり　④ショップでカスタムインナーを成形してもらうのが一番効果的。"}
   ]},
-  {cat:"🎥 追い撮り・カメラ",items:[
-    {q:"GoProでゲレンデ撮影するおすすめ設定",a:"【基本設定】モード:動画 解像度:4K/60fps（なければ1080p/60fps） FOV:ワイド SuperView ON　【追い撮り】手ぶれ補正HyperSmoothをON　【逆光対策】露出補正を+0.5〜1.0EV上げる。バッテリーは必ずフル充電＋予備を持参！"},
+  {cat:"🎥 撮影・カメラ",items:[
+    {q:"GoProでゲレンデ撮影するおすすめ設定",a:"【基本設定】モード:動画 解像度:4K/60fps（なければ1080p/60fps） FOV:ワイド SuperView ON　【滑りながら撮影】手ぶれ補正HyperSmoothをON　【逆光対策】露出補正を+0.5〜1.0EV上げる。バッテリーは必ずフル充電＋予備を持参！"},
     {q:"Insta360で綺麗に撮るコツ",a:"①Insta360は自撮り棒が映らない魔法の機能あり。専用の見えない自撮り棒を使うと映像がかっこよくなる。②アプリのAI編集機能で自動ハイライト動画が作れる。③転倒など激しい動きはFlowStateを使うと滑らかに。"},
-    {q:"iPhoneで追い撮りするコツ",a:"①アクションモード（iPhone14以降）をONにする　②4K/60fpsで撮影　③ジンバルと組み合わせると更に滑らか　④晴天のゲレンデは白飛びしやすいのでHDRモードがおすすめ　⑤バッテリーは寒さで急減するのでモバイルバッテリー必携。"},
-    {q:"追い撮りの距離とポジションは？",a:"【距離】3〜5mが基本。近すぎると転倒時に危険、遠すぎると迫力が出ない。【ポジション】斜め後方45°から撮ると立体感が出る。真後ろより少し横から。【スピード】被写体より少し速く滑れることが前提。ゆっくり滑る被写体なら初心者でも対応可能。"}
+    {q:"iPhoneで滑りながら撮影するコツ",a:"①アクションモード（iPhone14以降）をONにする　②4K/60fpsで撮影　③ジンバルと組み合わせると更に滑らか　④晴天のゲレンデは白飛びしやすいのでHDRモードがおすすめ　⑤バッテリーは寒さで急減するのでモバイルバッテリー必携。"},
+    {q:"滑りながら撮影するときの距離とポジションは？",a:"【距離】3〜5mが基本。近すぎると転倒時に危険、遠すぎると迫力が出ない。【ポジション】斜め後方45°から撮ると立体感が出る。真後ろより少し横から。【スピード】被写体より少し速く滑れることが前提。ゆっくり滑る被写体なら初心者でも対応可能。"}
   ]},
   {cat:"🔰 初心者向け",items:[
     {q:"スキー・スノボ、どちらから始めるべき？",a:"【スキー】最初の3日間が早く上達しやすい。足が別々なので直感的。でも上級者への道は長い。【スノーボード】最初の2〜3日が特にきつい（転倒が多い）。でもある程度慣れると上達が速い。どちらも楽しいので好みで選んでOK！仲間がいる方を選ぶのも◎"},
@@ -439,7 +441,7 @@ function livePosts(){
   var now=new Date(),td=todayStr(),nowHM=String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0");
   return (S.posts||[]).filter(function(p){return p.status==="open"&&(p.ride_date>td||(p.ride_date===td&&String(p.end_time).slice(0,5)>nowHM));});
 }
-// 予約できる空き枠（有料の「同行します」投稿）
+// 予約できる空き枠（有料の「同行・撮影します」投稿）
 function openSlotsOf(u){if(!u||!u.uid)return [];return livePosts().filter(function(p){return p.user_id===u.uid&&p.kind==="offer"&&p.pay==="paid";});}
 function talkTo(u){
   if(S.isGuest){guestPrompt();return;}
@@ -480,7 +482,7 @@ function renderBoard(wrap){
     opts.forEach(function(o){var on=(cur||null)===o[0];var c=document.createElement("button");c.className="chip"+(on?" on":"");c.style.cssText="flex-shrink:0;font-size:12px;padding:7px 12px";c.textContent=o[1];c.addEventListener("click",function(){var u={};u[key]=o[0];R(u);});row.appendChild(c);});
     wrap.appendChild(row);
   }
-  chipRow([[null,"すべて"],["offer","🙋 同行します"],["request","🔍 同行してくれる人募集"]],S.bdKind,"bdKind");
+  chipRow([[null,"すべて"],["offer","🙋 同行・撮影します"],["request","🔍 同行・撮影お願いします"]],S.bdKind,"bdKind");
   chipRow([[null,"無料・有料"],["free","🤝 無料"],["paid","💴 有料"]],S.bdPay,"bdPay");
   chipRow([[null,"全エリア"]].concat(AREAS.map(function(a){return [a.area,a.area];})),S.bdArea,"bdArea");
   if(S.posts===undefined){S.posts=[];loadPosts();}
@@ -506,7 +508,7 @@ function renderBoard(wrap){
     hr.appendChild(hi);card.appendChild(hr);
     var bg=d({style:{display:"flex",flexWrap:"wrap",gap:"6px",marginBottom:p.note?"8px":"10px"}});
     var isOffer=p.kind==="offer";
-    bg.appendChild(sp({style:{background:isOffer?"#EEF2FF":"#FEF3C7",color:isOffer?"#4338CA":"#92400E",padding:"3px 10px",borderRadius:"20px",fontSize:"11px",fontWeight:"800"}},isOffer?"🙋 同行します":"🔍 同行してくれる人募集"));
+    bg.appendChild(sp({style:{background:isOffer?"#EEF2FF":"#FEF3C7",color:isOffer?"#4338CA":"#92400E",padding:"3px 10px",borderRadius:"20px",fontSize:"11px",fontWeight:"800"}},isOffer?"🙋 同行・撮影します":"🔍 同行・撮影お願いします"));
     var paid=p.pay==="paid";var mp=(!mine&&paid&&isOffer&&u.ok)?minPlanPrice(u):0;
     var reqPaid=paid&&!isOffer&&(parseInt(p.price,10)||0)>0;
     bg.appendChild(sp({style:{background:paid?"#FFF0E8":"#F0FDF4",color:paid?"#FF6B2B":"#15803D",padding:"3px 10px",borderRadius:"20px",fontSize:"11px",fontWeight:"800"}},reqPaid?("💴 ¥"+(parseInt(p.price,10)).toLocaleString()+" お支払い"):(paid?("💴 有料"+(mp?" ¥"+mp.toLocaleString()+"〜":"")):"🤝 無料")));
@@ -530,7 +532,7 @@ function renderBoard(wrap){
   });
   return wrap;
 }
-// ===== 有料の「同行してくれる人募集」への応募 =====
+// ===== 有料の「同行・撮影お願いします」への応募 =====
 // ===== 無料の募集への「参加します」（相手にメッセージで伝える） =====
 function freeJoinedList(){try{return JSON.parse(localStorage.getItem("sm_free_joined")||"[]");}catch(e){return [];}}
 function freeJoined(id){return freeJoinedList().indexOf(id)>=0;}
@@ -628,7 +630,7 @@ function PostModal(){
     var t=d({style:{fontWeight:"900",fontSize:"18px",color:"#1A1A2E",marginBottom:"14px"}});t.textContent="📅 募集を投稿する";box.appendChild(t);
     function lbl(x){var l=d({style:{fontSize:"12px",fontWeight:"800",color:"#6B7280",margin:"0 0 6px"}});l.textContent=x;box.appendChild(l);}
     function seg(opts,key){var r=d({style:{display:"flex",gap:"8px",marginBottom:"14px"}});opts.forEach(function(o){var on=f[key]===o[0];var c=document.createElement("button");c.textContent=o[1];c.style.cssText="flex:1;padding:11px 6px;border-radius:14px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;border:2px solid "+(on?"#FF6B2B":"#E5E7EB")+";background:"+(on?"#FFF0E8":"#fff")+";color:"+(on?"#FF6B2B":"#4B5563");c.addEventListener("click",function(){f[key]=o[0];render();});r.appendChild(c);});box.appendChild(r);}
-    lbl("投稿の種類");seg([["offer","🙋 同行します"],["request","🔍 同行してくれる人募集"]],"kind");
+    lbl("投稿の種類");seg([["offer","🙋 同行・撮影します"],["request","🔍 同行・撮影お願いします"]],"kind");
     var hint=d({style:{fontSize:"11px",color:"#9CA3AF",margin:"-8px 0 14px",lineHeight:"1.6"}});hint.textContent=f.kind==="offer"?"この日・この時間なら一緒に滑れる／撮影できる、という空き日程の投稿です。有料にすると、この枠から予約を受けられます。":"この日に一緒に滑る人・撮影してくれる人を探す投稿です。";box.appendChild(hint);
     lbl("日付");
     var di=document.createElement("input");di.type="date";di.className="inp";di.style.marginBottom="14px";di.min=todayStr();di.value=f.date||"";di.addEventListener("change",function(e){f.date=e.target.value;});box.appendChild(di);
@@ -755,7 +757,7 @@ function MyAvailCard(){
   var c=document.createElement("div");c.className="card";c.style.marginBottom="12px";
   var t=d({style:{fontWeight:"800",color:"#1A1A2E",fontSize:"14px",marginBottom:"4px"}});t.textContent="📅 空き日程（一緒に滑れる日）";c.appendChild(t);
   var sb0=d({style:{fontSize:"11px",color:"#9CA3AF",marginBottom:"12px",lineHeight:"1.6"}});
-  sb0.textContent="「この期間の、この曜日の、この時間は空いてます」をまとめて登録できます。登録した日は募集掲示板に「🙋 同行します」として表示され、有料ならその枠から予約を受けられます。";c.appendChild(sb0);
+  sb0.textContent="「この期間の、この曜日の、この時間は空いてます」をまとめて登録できます。登録した日は募集掲示板に「🙋 同行・撮影します」として表示され、有料ならその枠から予約を受けられます。";c.appendChild(sb0);
   function lbl(x){var l=d({style:{fontSize:"12px",fontWeight:"800",color:"#6B7280",margin:"0 0 6px"}});l.textContent=x;c.appendChild(l);}
   lbl("期間");
   var pr=d({style:{display:"flex",alignItems:"center",gap:"6px",marginBottom:"12px"}});
@@ -1327,7 +1329,7 @@ function svc(url){
 // ===== 使い方・よくある質問 =====
 var FAQ=[
  {sec:"📱 はじめに",items:[
-  ["SnowMatchってどんなアプリ？","スキー・スノーボードの仲間を見つけるアプリです。\n・無料で一緒に滑る友達を探す\n・お金を払って、一緒に滑ってくれる人や追い撮り（撮影）してくれる人にお願いする\n・逆に、自分が同行・撮影してお金を受け取る\nといった使い方ができます。"],
+  ["SnowMatchってどんなアプリ？","スキー・スノーボードの仲間を見つけるアプリです。\n・無料で一緒に滑る友達を探す\n・お金を払って、一緒に滑ってくれる人や撮影してくれる人にお願いする\n・逆に、自分が同行・撮影してお金を受け取る\nといった使い方ができます。"],
   ["アプリストアからダウンロードするの？","いいえ。SnowMatchはWebアプリなので、ダウンロードは不要です。SafariやChromeで開いて「ホーム画面に追加」すると、普通のアプリと同じようにアイコンから開けます（次の質問を見てください）。"],
   ["ホーム画面に追加する方法（iPhone）","① Safariで SnowMatch を開く（Chromeなど他のアプリからではなく、Safariで開いてください）\n② 画面下の共有ボタン（□に↑のマーク）をタップ\n③ メニューを下にスクロールして「ホーム画面に追加」をタップ\n④ 右上の「追加」をタップ\n\nホーム画面に「スノマ」のアイコンができます。次からはそのアイコンから開くと、上下のバーがない全画面で、アプリと同じように使えます。"],
   ["ホーム画面に追加する方法（Android）","① Chromeで SnowMatch を開く\n② 右上の「︙」をタップ\n③「ホーム画面に追加」または「アプリをインストール」をタップ\n④「追加」または「インストール」をタップ\n\nホーム画面にアイコンができます。"],
@@ -1341,14 +1343,14 @@ var FAQ=[
  ]},
  {sec:"🏂 アプリの使い方",items:[
   ["仲間はどうやって探すの？","「探す」→「仲間を探す」で、エリア・種目・レベルなどで絞り込めます。気になる人がいたらプロフィールを見て、フォローやメッセージをしてみましょう。"],
-  ["募集掲示板って何？","日付つきで投稿できる掲示板です。\n・「同行します」：この日空いているので一緒に滑れます、という投稿\n・「同行してくれる人募集」：この日一緒に滑る人を探しています、という投稿\nそれぞれ「無料」か「有料」を選べます。"],
+  ["募集掲示板って何？","日付つきで投稿できる掲示板です。\n・「同行・撮影します」：この日空いているので一緒に滑れる・撮影できます、という投稿\n・「同行・撮影お願いします」：この日一緒に滑る人・撮影してくれる人を探しています、という投稿\nそれぞれ「無料」か「有料」を選べます。"],
   ["「参加します」を押すとどうなる？","【無料の投稿】相手に「参加したいです！」というメッセージが自動で届き、チャットで日時や集合場所を決めます。\n\n【有料の募集】応募として相手に届きます。募集した人が応募者の中から1人を選ぶと予約が確定します。確定するまでは何人でも応募でき、選ばれなかった人には自動でお知らせが届きます。"],
   ["メッセージは誰にでも送れる？","フォローした相手にメッセージを送れます。プロフィールの「メッセージ」や、募集の「参加します」「質問」から送ると、自動でフォローされます。"],
   ["ラウンジでは何ができる？","・つぶやき：誰でも見られるひとこと投稿（自分のつぶやきはマイページに日付つきで残ります）\n・ゲレンデ速報：今日の雪質・天気・混み具合を写真つきで共有（毎日0時にリセット）\n・会員：本人確認済みの人だけの部屋（雑談部屋・悩み相談・Q&A・チェックイン）。メッセージを長押しすると返信でき、写真や動画も送れます。"]
  ]},
  {sec:"💴 料金とお支払いの流れ",items:[
   ["アプリの利用料は？","登録・仲間探し・メッセージ・無料の募集などは、すべて無料です。お金がかかるのは、有料の同行・撮影をお願いするときだけです。"],
-  ["有料の同行をお願いする流れは？","【相手のプロフィールから予約する場合】\n① 相手の料金（1時間／半日／1日）を見て「予約する」\n② 日付・時間・プランを選んで申し込み、支払う\n③ 相手が承認すると予約確定\n\n【募集掲示板で募集する場合】\n① 「同行してくれる人募集」＋「有料」で、払う金額を決めて投稿\n② 「参加します」と応募してくれた人から1人を選ぶ\n③ 支払い画面で支払うと予約確定"],
+  ["有料の同行をお願いする流れは？","【相手のプロフィールから予約する場合】\n① 相手の料金（1時間／半日／1日）を見て「予約する」\n② 日付・時間・プランを選んで申し込み、支払う\n③ 相手が承認すると予約確定\n\n【募集掲示板で募集する場合】\n① 「同行・撮影お願いします」＋「有料」で、払う金額を決めて投稿\n② 「参加します」と応募してくれた人から1人を選ぶ\n③ 支払い画面で支払うと予約確定"],
   ["表示の料金に何が含まれる？","表示の料金は「全部込み」の金額です。同行謝礼・食事代・交通費・リフト券代が含まれます。宿泊費・撮影機材費は各自負担です。予約時に支払うのは表示の金額だけで、追加の手数料はかかりません。"],
   ["払ったお金はいつ相手に渡るの？","支払ったお金は、いったんStripe（決済会社）が安全に預かります。\n① 支払い → ② 当日一緒に滑る → ③ 滑走日のあと、トラブルがなければ同行した人へ送金\nという流れなので、滑る前にお金だけ相手に渡ってしまう心配はありません。"],
   ["お金をもらうこともできる？","できます。自分のプロフィールに同行・撮影の料金を設定しておくと、予約が入ったときに受け取れます。また「同行・撮影してくれる人募集」の投稿に応募して参加した場合も、募集者が出した金額を受け取れます（受け取るには本人確認が必要です）。"],
@@ -1550,7 +1552,7 @@ function BookModal(u){
       [1,2,3].forEach(function(h){hrRow.appendChild(chip(h+"時間",h===hrs,function(){S.bkHours=h;render();}));});
       box.appendChild(hrRow);
     }
-    // 日時は「同行します」の空き枠から選ぶ
+    // 日時は「同行・撮影します」の空き枠から選ぶ
     lbl("② 日時（空いている枠から選ぶ）");
     var slots=openSlotsOf(u);
     if(S.bkSlotId&&!slots.some(function(x){return x.id===S.bkSlotId;}))S.bkSlotId=null;
@@ -2309,7 +2311,7 @@ function renderExplore(){
   var ht=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"4px"}});ht.textContent="🔍 仲間を探す";wrap.appendChild(ht);
   var sub=d({style:{color:"#6B7280",fontSize:"13px",marginBottom:"12px"}});sub.textContent="エリア・種目で絞り込もう";wrap.appendChild(sub);
 
-  // 追い撮りバナー
+  // 撮影カメラマンバナー
   var camBanner=document.createElement("div");
   camBanner.style.cssText="background:linear-gradient(135deg,#0f3460,#16213e,#1a1a2e);border-radius:20px;padding:16px;margin-bottom:16px;cursor:pointer;position:relative;overflow:hidden";
   camBanner.addEventListener("click",function(){S.camOnly=!S.camOnly;if(!S.camOnly)S.camSel=[];render();});
@@ -2319,7 +2321,7 @@ function renderExplore(){
   var cbIconWrap=document.createElement("div");cbIconWrap.style.cssText="width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,#22C55E,#16A34A);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;box-shadow:0 4px 14px rgba(34,197,94,0.4)";
   cbIconWrap.textContent="🎥";
   var cbInfo=document.createElement("div");cbInfo.style.cssText="flex:1";
-  var cbTitle=document.createElement("div");cbTitle.style.cssText="font-weight:900;color:#fff;font-size:16px;margin-bottom:3px";cbTitle.textContent="追い撮り・撮影カメラマン";
+  var cbTitle=document.createElement("div");cbTitle.style.cssText="font-weight:900;color:#fff;font-size:16px;margin-bottom:3px";cbTitle.textContent="撮影カメラマン";
   var cbSub2=document.createElement("div");cbSub2.style.cssText="font-size:12px;color:rgba(255,255,255,0.7);margin-bottom:8px";cbSub2.textContent="スノー仲間が一緒に滑りながら撮影します";
   var camTagRow=document.createElement("div");camTagRow.style.cssText="display:flex;gap:5px;flex-wrap:wrap";
   if(!S.camSel)S.camSel=[];
@@ -2342,7 +2344,7 @@ function renderExplore(){
   var cbArrow=document.createElement("div");cbArrow.style.cssText="color:rgba(255,255,255,0.4);font-size:22px;flex-shrink:0";cbArrow.textContent=S.camOnly?"✅":"›";
   cbRow.appendChild(cbIconWrap);cbRow.appendChild(cbInfo);cbRow.appendChild(cbArrow);
   camBanner.appendChild(cbRow);
-  if(S.camOnly){var cbActive=document.createElement("div");cbActive.style.cssText="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.1);font-size:12px;color:#86EFAC;font-weight:700;text-align:center";cbActive.textContent=(S.camSel&&S.camSel.length?"🎥 "+S.camSel.join("・")+" で撮れる人を表示中":"🎥 追い撮り・カメラマンのみ表示中")+"　ここをタップで解除";camBanner.appendChild(cbActive);}
+  if(S.camOnly){var cbActive=document.createElement("div");cbActive.style.cssText="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.1);font-size:12px;color:#86EFAC;font-weight:700;text-align:center";cbActive.textContent=(S.camSel&&S.camSel.length?"🎥 "+S.camSel.join("・")+" で撮れる人を表示中":"🎥 撮影カメラマンのみ表示中")+"　ここをタップで解除";camBanner.appendChild(cbActive);}
   wrap.appendChild(camBanner);
 
   // おすすめ（写真カバー型）
@@ -2407,7 +2409,7 @@ function renderExplore(){
   at.appendChild(chip2("すべて",!S.selAct&&!S.camOnly,function(){R({selAct:null,camOnly:false,camSel:[]});}));
   for(var ai3=0;ai3<ACTS.length;ai3++){
     (function(a){
-      var isCamTab=(a==="🎥 追い撮り・撮影");
+      var isCamTab=(a==="🎥 撮影");
       var isActive=isCamTab?S.camOnly:(S.selAct===a&&!S.camOnly);
       at.appendChild(chip2(a,isActive,function(){
         if(isCamTab){R({selAct:null,camOnly:!S.camOnly});}
@@ -2490,7 +2492,7 @@ function renderExplore(){
       if(isPaidUser(u)){var mp=minPlanPrice(u);bd.appendChild(sp({style:{background:"#FFF0E8",color:"#FF6B2B",display:"inline-block",padding:"3px 10px",borderRadius:"20px",fontSize:"11px",fontWeight:"800",marginRight:"6px"}},"💴 有料の同行"+(u.ok&&mp?" ¥"+mp.toLocaleString()+"〜":"")));}
       else{bd.appendChild(sp({style:{background:"#F0FDF4",color:"#15803D",display:"inline-block",padding:"3px 10px",borderRadius:"20px",fontSize:"11px",fontWeight:"800",marginRight:"6px"}},"🤝 無料で仲間募集"));}
       if(u.isCam){
-        var cb2=sp({style:{background:"#E8F5E9",color:"#2E7D32",display:"inline-block",padding:"3px 10px",borderRadius:"20px",fontSize:"11px",fontWeight:"700",marginRight:"6px"}},"🎥 追い撮り");bd.appendChild(cb2);
+        var cb2=sp({style:{background:"#E8F5E9",color:"#2E7D32",display:"inline-block",padding:"3px 10px",borderRadius:"20px",fontSize:"11px",fontWeight:"700",marginRight:"6px"}},"🎥 撮影");bd.appendChild(cb2);
         if(u.gear&&u.gear.length){
           var gearRow=d({style:{display:"flex",gap:"4px",flexWrap:"wrap",marginTop:"4px"}});
           u.gear.forEach(function(g){var gtag=d({style:{background:"#1a1a2e",color:"#fff",borderRadius:"8px",padding:"2px 8px",fontSize:"10px",fontWeight:"700"}});gtag.textContent=g;gearRow.appendChild(gtag);});
@@ -3127,7 +3129,7 @@ function loadProfileFromSupabase(){
     var p=res.data;
     S.myProfile={
       uid:p.id,nick:p.nick,name:p.real_name,age:p.age,gender:p.gender||"",email:p.email,
-      act:p.act,acts:p.acts||[],lv:p.lv,resorts:p.resorts||[],bio:p.bio,
+      act:fixCam(p.act),acts:fixCam(p.acts||[]),lv:p.lv,resorts:p.resorts||[],bio:p.bio,
       icon:p.icon||"🏂",profileImg:p.profile_img,isIns:p.is_ins,isCam:p.is_cam,
       price:p.price,unit:p.unit,gear:p.gear||[],sns:p.sns||{},
       priceHour:pfr(p,"hour"),priceHalf:pfr(p,"half"),priceDay:pfr(p,"day"),
@@ -3272,12 +3274,12 @@ function loadUsersFromSupabase(){
       if(!p.nick)continue; // 名前未設定の人は表示しない
       real.push({
         id:"sb_"+p.id,uid:p.id,isReal:true,
-        name:p.nick,age:p.age||"",gender:p.gender||"",act:p.act||"",lv:p.lv||"",
+        name:p.nick,age:p.age||"",gender:p.gender||"",act:fixCam(p.act||""),lv:p.lv||"",
         resorts:p.resorts||[],icon:p.icon||"🏂",profileImg:p.profile_img||null,
         isIns:!!p.is_ins,isCam:!!p.is_cam,price:p.price||null,unit:p.unit||"",
         priceHour:pfr(p,"hour"),priceHalf:pfr(p,"half"),priceDay:pfr(p,"day"),
         bio:p.bio||"",gear:p.gear||[],sns:p.sns||{},
-        board:(p.extra&&p.extra.board)||"",styles:(p.extra&&p.extra.styles)||[],stanceW2:(p.extra&&p.extra.stanceW2)||"",frontAngle:(p.extra&&p.extra.frontAngle)||"",backAngle:(p.extra&&p.extra.backAngle)||"",bindingName:(p.extra&&p.extra.bindingName)||"",camGear:(p.extra&&p.extra.camGear)||[],costBreakdown:(p.extra&&p.extra.costBreakdown)||[],cover:(p.extra&&p.extra.cover)||null,
+        board:(p.extra&&p.extra.board)||"",styles:fixCam((p.extra&&p.extra.styles)||[]),stanceW2:(p.extra&&p.extra.stanceW2)||"",frontAngle:(p.extra&&p.extra.frontAngle)||"",backAngle:(p.extra&&p.extra.backAngle)||"",bindingName:(p.extra&&p.extra.bindingName)||"",camGear:(p.extra&&p.extra.camGear)||[],costBreakdown:(p.extra&&p.extra.costBreakdown)||[],cover:(p.extra&&p.extra.cover)||null,
         posts:[],likes:0,ok:!!p.is_verified
       });
     }
@@ -4062,7 +4064,7 @@ function renderProfile(){
   styleLabel.textContent = "メインスタイル（複数選択可）";
   gearCard.appendChild(styleLabel);
 
-  var styles = ["🏁 カービング","🌀 グラトリ","🛹 パーク・ジブ","🌨️ パウダー・BC","🌀 ハーフパイプ","🏔️ フリーラン","⛷️ アルペン","🐢 モーグル","🎥 追い撮り・撮影"];
+  var styles = ["🏁 カービング","🌀 グラトリ","🛹 パーク・ジブ","🌨️ パウダー・BC","🌀 ハーフパイプ","🏔️ フリーラン","⛷️ アルペン","🐢 モーグル","🎥 撮影"];
   if(!S.myProfile.styles) S.myProfile.styles = [];
   var styleRow = document.createElement("div");
   styleRow.style.cssText = "display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px";
@@ -4146,10 +4148,10 @@ function renderProfile(){
   gearCard.appendChild(settingBox);
   var setTA = {value:""};
 
-  // カメラ機材（追い撮りをするユーザー向け）
+  // カメラ機材（撮影するユーザー向け）
   var camLabel2 = document.createElement("div");
   camLabel2.style.cssText = "font-size:12px;font-weight:700;color:#6B7280;margin-bottom:8px";
-  camLabel2.textContent = "📷 撮影機材（追い撮りをする方）";
+  camLabel2.textContent = "📷 撮影機材（撮影する方）";
   gearCard.appendChild(camLabel2);
   var camGears = ["GoPro","Insta360","DJI","iPhone","Androidスマホ","ミラーレス一眼","ビデオカメラ","ドローン（許可エリアのみ）","アクションカム"];
   if(!S.myProfile.camGear) S.myProfile.camGear=[];
@@ -4857,6 +4859,8 @@ function WelcomeModal(){
 function viewKey(){return [S.pg,S.tab,S.openRoom||"",S.selUser?S.selUser.id:"",S.chatUser?S.chatUser.id:"",S.bookUser?1:0,S.showEditProfile?1:0].join("|");}
 var _lastViewKey="";
 function render(){
+  if(S.myProfile){S.myProfile.act=fixCam(S.myProfile.act);if(S.myProfile.acts)S.myProfile.acts=fixCam(S.myProfile.acts);if(S.myProfile.styles)S.myProfile.styles=fixCam(S.myProfile.styles);}
+  if(S.reg){if(S.reg.act)S.reg.act=fixCam(S.reg.act);if(S.reg.acts)S.reg.acts=fixCam(S.reg.acts);}
   var app=document.getElementById("app");
   var _chatOpen=(S.tab==="chat"&&!!S.chatUser&&S.pg==="main")||(roomOpenNow()&&S.pg==="main");
   if(app)app.style.overflowY=_chatOpen?"hidden":"";
