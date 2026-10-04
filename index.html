@@ -1233,7 +1233,7 @@ function renderSnowBoard(wrap){
   if(S.snowReports===undefined){S.snowReports=null;loadSnowReports();}
   var now=new Date();
   var top=d({style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"4px"}});
-  var ht=d({style:{fontWeight:"900",fontSize:"19px",color:"#1A1A2E"}});ht.textContent="❄️ 今日のゲレンデ速報";top.appendChild(ht);
+  var ht=d({style:{fontWeight:"900",fontSize:"19px",color:"#1A1A2E"}});ht.textContent="今日のゲレンデ速報";top.appendChild(ht);
   var nb=document.createElement("button");nb.textContent="＋ 速報する";nb.style.cssText="background:linear-gradient(135deg,#0EA5E9,#2563EB);color:#fff;border:none;border-radius:14px;padding:9px 14px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit";
   nb.addEventListener("click",function(){
     if(S.isGuest){guestPrompt();return;}
@@ -1299,7 +1299,7 @@ function renderSnowBoard(wrap){
 function SnowReportModal(){
   var f=S.snowModal;
   return Modal(false,function(){R({snowModal:null});},function(box){
-    var t=d({style:{fontWeight:"900",fontSize:"18px",color:"#1A1A2E",marginBottom:"14px"}});t.textContent="❄️ ゲレンデ速報";box.appendChild(t);
+    var t=d({style:{fontWeight:"900",fontSize:"18px",color:"#1A1A2E",marginBottom:"14px"}});t.textContent="ゲレンデ速報";box.appendChild(t);
     function lbl(x){var l=d({style:{fontSize:"12px",fontWeight:"800",color:"#6B7280",margin:"0 0 6px"}});l.textContent=x;box.appendChild(l);}
     function chips(list,key){var r=d({style:{display:"flex",flexWrap:"wrap",gap:"6px",marginBottom:"14px"}});list.forEach(function(o){var on=f[key]===o[0];var c=document.createElement("button");c.textContent=o[1];c.style.cssText="padding:8px 12px;border-radius:14px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;white-space:nowrap;border:2px solid "+(on?"#0EA5E9":"#E5E7EB")+";background:"+(on?"#E0F2FE":"#fff")+";color:"+(on?"#0369A1":"#4B5563");c.addEventListener("click",function(){f[key]=on?"":o[0];render();});r.appendChild(c);});box.appendChild(r);}
     lbl("スキー場");
@@ -2796,7 +2796,7 @@ function renderMarket(){
   if(!S.marketTab||S.marketTab==="room"&&!S._mtInit){S._mtInit=true;S.marketTab="open";}
   // 上のタブ：つぶやきは誰でも、ほかは本人確認済みの会員だけ
   var mt=d({style:{display:"flex",background:"#EEF0F3",borderRadius:"14px",padding:"4px",marginBottom:"14px"}});
-  [["open","タイムライン"],["snow","❄️ ゲレンデ速報"],["member","🛖 会員"]].forEach(function(o){var on=o[0]==="member"?(S.marketTab!=="open"&&S.marketTab!=="snow"):S.marketTab===o[0];var x=document.createElement("button");x.textContent=o[1];x.style.cssText="flex:1;padding:10px 6px;border-radius:11px;border:none;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;background:"+(on?"#fff":"transparent")+";color:"+(on?"#FF6B2B":"#6B7280")+";box-shadow:"+(on?"0 1px 4px rgba(0,0,0,.08)":"none");x.addEventListener("click",function(){if(o[0]==="open"){loadOpenPosts();R({marketTab:"open",openDetail:null});}else if(o[0]==="snow"){loadSnowReports();R({marketTab:"snow",liveCamView:false});}else R({marketTab:"room",openRoom:null});});mt.appendChild(x);});
+  [["open","タイムライン"],["snow","ゲレンデ速報"],["member","会員ページ"]].forEach(function(o){var on=o[0]==="member"?(S.marketTab!=="open"&&S.marketTab!=="snow"):S.marketTab===o[0];var x=document.createElement("button");x.textContent=o[1];x.style.cssText="flex:1;padding:10px 6px;border-radius:11px;border:none;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;background:"+(on?"#fff":"transparent")+";color:"+(on?"#FF6B2B":"#6B7280")+";box-shadow:"+(on?"0 1px 4px rgba(0,0,0,.08)":"none");x.addEventListener("click",function(){if(o[0]==="open"){loadOpenPosts();R({marketTab:"open",openDetail:null});}else if(o[0]==="snow"){loadSnowReports();R({marketTab:"snow",liveCamView:false});}else R({marketTab:"room",openRoom:null});});mt.appendChild(x);});
   wrap.appendChild(mt);
   if(S.marketTab==="open")return renderOpenBoard(wrap);
   if(S.marketTab==="snow")return renderSnowBoard(wrap);
@@ -5323,8 +5323,8 @@ function _renderInner(){
     var unreadNotifs = 0;
     var vn2=visibleNotifs();for(var ni=0;ni<vn2.length;ni++){if(!vn2[ni].read)unreadNotifs++;}unreadNotifs+=unreadChatItems().length;syncAppBadge(unreadNotifs);
     var bellWrap=document.createElement("div");bellWrap.style.cssText="position:relative;flex-shrink:0;margin-left:auto";
-    var bellBtn=document.createElement("button");bellBtn.style.cssText="font-size:22px;background:rgba(255,255,255,0.2);border:none;border-radius:12px;width:38px;height:38px;cursor:pointer;display:flex;align-items:center;justify-content:center";
-    bellBtn.textContent="🔔";if(champ){bellBtn.style.background="rgba(255,255,255,.75)";bellBtn.style.boxShadow="0 0 0 1px #E8D9B8";}
+    var bellBtn=document.createElement("button");bellBtn.style.cssText="font-size:22px;background:none;border:none;padding:0;width:38px;height:38px;cursor:pointer;display:flex;align-items:center;justify-content:center";
+    bellBtn.textContent="🔔";
     bellBtn.addEventListener("click",function(){S.showNotif=!S.showNotif;for(var i=0;i<S.notifs.length;i++)S.notifs[i].read=true;saveNotifsRead(S.notifs);render();});
     if(unreadNotifs>0){
       var bellBdg=document.createElement("div");bellBdg.style.cssText="position:absolute;top:-4px;right:-4px;background:#FF3B30;color:#fff;border-radius:10px;min-width:16px;height:16px;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center;padding:0 3px";
