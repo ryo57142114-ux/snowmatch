@@ -1228,6 +1228,8 @@ function loadSnowReports(){
 }
 setInterval(function(){if(!document.hidden&&S.tab==="market"&&S.marketTab==="snow")loadSnowReports();},45000);
 function renderSnowBoard(wrap){
+  if(S.liveCamView)return renderLiveCams(wrap);
+  wrap.appendChild(LiveCamHero());
   if(S.snowReports===undefined){S.snowReports=null;loadSnowReports();}
   var now=new Date();
   var top=d({style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"4px"}});
@@ -2795,7 +2797,7 @@ function renderMarket(){
   if(!S.marketTab||S.marketTab==="room"&&!S._mtInit){S._mtInit=true;S.marketTab="open";}
   // 上のタブ：つぶやきは誰でも、ほかは本人確認済みの会員だけ
   var mt=d({style:{display:"flex",background:"#EEF0F3",borderRadius:"14px",padding:"4px",marginBottom:"14px"}});
-  [["open","タイムライン"],["snow","❄️ ゲレンデ速報"],["member","🛖 会員"]].forEach(function(o){var on=o[0]==="member"?(S.marketTab!=="open"&&S.marketTab!=="snow"):S.marketTab===o[0];var x=document.createElement("button");x.textContent=o[1];x.style.cssText="flex:1;padding:10px 6px;border-radius:11px;border:none;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;background:"+(on?"#fff":"transparent")+";color:"+(on?"#FF6B2B":"#6B7280")+";box-shadow:"+(on?"0 1px 4px rgba(0,0,0,.08)":"none");x.addEventListener("click",function(){if(o[0]==="open"){loadOpenPosts();R({marketTab:"open",openDetail:null});}else if(o[0]==="snow"){loadSnowReports();R({marketTab:"snow"});}else R({marketTab:"room",openRoom:null});});mt.appendChild(x);});
+  [["open","タイムライン"],["snow","❄️ ゲレンデ速報"],["member","🛖 会員"]].forEach(function(o){var on=o[0]==="member"?(S.marketTab!=="open"&&S.marketTab!=="snow"):S.marketTab===o[0];var x=document.createElement("button");x.textContent=o[1];x.style.cssText="flex:1;padding:10px 6px;border-radius:11px;border:none;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;background:"+(on?"#fff":"transparent")+";color:"+(on?"#FF6B2B":"#6B7280")+";box-shadow:"+(on?"0 1px 4px rgba(0,0,0,.08)":"none");x.addEventListener("click",function(){if(o[0]==="open"){loadOpenPosts();R({marketTab:"open",openDetail:null});}else if(o[0]==="snow"){loadSnowReports();R({marketTab:"snow",liveCamView:false});}else R({marketTab:"room",openRoom:null});});mt.appendChild(x);});
   wrap.appendChild(mt);
   if(S.marketTab==="open")return renderOpenBoard(wrap);
   if(S.marketTab==="snow")return renderSnowBoard(wrap);
@@ -2810,8 +2812,6 @@ function renderMarket(){
   var ht=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"4px"}});ht.textContent="スノマラウンジ";
   var hs=d({style:{color:"#6B7280",fontSize:"13px"}});hs.textContent="会員限定 · 仲間と語ろう・チェックイン・悩み相談";
   hd.appendChild(ht);hd.appendChild(hs);wrap.appendChild(hd);
-  if(S.marketTab==="livecam")return renderLiveCams(wrap);
-  wrap.appendChild(LiveCamHero());
   var tabs=d({style:{display:"flex",gap:"0",marginBottom:"16px",background:"#F5F7FA",borderRadius:"16px",padding:"4px",overflowX:"auto",webkitOverflowScrolling:"touch"}});
   var tabDefs=[["room","雑談部屋"],["nayami","悩み相談"],["qa","Q&A"],["checkin","チェックイン"]];
   for(var ti=0;ti<tabDefs.length;ti++){
@@ -4105,12 +4105,12 @@ function LiveCamHero(){
   var list=camList();var cnt={};list.forEach(function(c){var g=camGroupOf(c.area);cnt[g]=(cnt[g]||0)+1;});
   var card=document.createElement("div");
   card.style.cssText="background:linear-gradient(135deg,#1E1B4B,#312E81);border-radius:20px;padding:16px;margin-bottom:16px;cursor:pointer;position:relative;overflow:hidden";
-  card.addEventListener("click",function(){S.camGroup=null;S.marketTab="livecam";render();});
+  card.addEventListener("click",function(){S.camGroup=null;S.liveCamView=true;render();});
   var top=document.createElement("div");top.style.cssText="display:flex;align-items:center;gap:12px;margin-bottom:12px";
   var ic=document.createElement("div");ic.style.cssText="width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0";ic.textContent="📹";
   var tx=document.createElement("div");tx.style.cssText="flex:1;min-width:0";
   var t1=document.createElement("div");t1.style.cssText="font-weight:900;font-size:16px;color:#fff";t1.textContent="全国スキー場ライブカメラ";
-  var t2=document.createElement("div");t2.style.cssText="font-size:11.5px;color:#C7D2FE;margin-top:2px";t2.textContent="会員限定・"+list.length+"か所の今の雪をチェック";
+  var t2=document.createElement("div");t2.style.cssText="font-size:11.5px;color:#C7D2FE;margin-top:2px";t2.textContent=list.length+"か所の今の雪をチェック";
   tx.appendChild(t1);tx.appendChild(t2);
   var ar=document.createElement("div");ar.style.cssText="color:rgba(255,255,255,.6);font-size:22px";ar.textContent="›";
   top.appendChild(tx);top.appendChild(ar);card.appendChild(top);
@@ -4121,16 +4121,16 @@ function LiveCamHero(){
     b.style.cssText="border:none;font-family:inherit;cursor:pointer;text-align:left;border-radius:10px;padding:8px 10px;background:rgba(255,255,255,.12);color:#fff;font-size:12px;font-weight:800;display:flex;justify-content:space-between;align-items:center";
     b.innerHTML="<span></span><span style=\"color:#C7D2FE;font-weight:700;font-size:11px\"></span>";
     b.children[0].textContent=g[0];b.children[1].textContent=n+"か所";
-    b.addEventListener("click",function(e){e.stopPropagation();S.camGroup=g[0];S.marketTab="livecam";render();});
+    b.addEventListener("click",function(e){e.stopPropagation();S.camGroup=g[0];S.liveCamView=true;render();});
     grid.appendChild(b);
   });
   card.appendChild(grid);
   return card;
 }
 function renderLiveCams(wrap){
-  var back=document.createElement("button");back.textContent="‹ ラウンジに戻る";
+  var back=document.createElement("button");back.textContent="‹ ゲレンデ速報に戻る";
   back.style.cssText="background:none;border:none;color:#FF6B2B;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;padding:0;margin-bottom:10px";
-  back.addEventListener("click",function(){S.marketTab="room";S.camGroup=null;render();});wrap.appendChild(back);
+  back.addEventListener("click",function(){S.liveCamView=false;S.camGroup=null;render();});wrap.appendChild(back);
   var ht=d({style:{fontWeight:"900",fontSize:"19px",color:"#1A1A2E",marginBottom:"4px"}});ht.textContent="全国スキー場ライブカメラ";wrap.appendChild(ht);
   if(!S.liveCams){loadLiveCams();}
   var list=S.liveCams||LIVECAMS_DEFAULT;
@@ -5249,7 +5249,7 @@ function WelcomeModal(){
 }
 
 
-function viewKey(){return [S.pg,S.tab,S.openDetail||"",S.openRoom||"",S.selUser?S.selUser.id:"",S.chatUser?S.chatUser.id:"",S.bookUser?1:0,S.showEditProfile?1:0].join("|");}
+function viewKey(){return [S.pg,S.tab,S.liveCamView?"lc":"",S.openDetail||"",S.openRoom||"",S.selUser?S.selUser.id:"",S.chatUser?S.chatUser.id:"",S.bookUser?1:0,S.showEditProfile?1:0].join("|");}
 function isTypingEl(t){return !!(t&&t.id&&(t.id==="chatinput"||t.id==="roominput"||t.id.indexOf("cmt_")===0));}
 var _lastViewKey="";
 // 日本語入力（変換中）の最中に画面を描き直すと、文字が勝手に確定したり消えたりするので、変換が終わるまで待つ
