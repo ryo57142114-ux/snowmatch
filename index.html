@@ -2628,13 +2628,13 @@ function renderMarket(){
     locked.appendChild(lico);locked.appendChild(lt);locked.appendChild(ls);wrap.appendChild(locked);return wrap;
   }
   var hd=d({style:{marginBottom:"14px"}});
-  var ht=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"4px"}});ht.textContent="🛖 スノマラウンジ";
+  var ht=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"4px"}});ht.textContent="スノマラウンジ";
   var hs=d({style:{color:"#6B7280",fontSize:"13px"}});hs.textContent="会員限定 · 仲間と語ろう・チェックイン・悩み相談";
   hd.appendChild(ht);hd.appendChild(hs);wrap.appendChild(hd);
   if(S.marketTab==="livecam")return renderLiveCams(wrap);
   wrap.appendChild(LiveCamHero());
   var tabs=d({style:{display:"flex",gap:"0",marginBottom:"16px",background:"#F5F7FA",borderRadius:"16px",padding:"4px",overflowX:"auto",webkitOverflowScrolling:"touch"}});
-  var tabDefs=[["room","💬 雑談部屋"],["nayami","💭 悩み相談"],["qa","📖 Q&A"],["checkin","📍 チェックイン"]];
+  var tabDefs=[["room","雑談部屋"],["nayami","悩み相談"],["qa","Q&A"],["checkin","チェックイン"]];
   for(var ti=0;ti<tabDefs.length;ti++){
     (function(id,lbl){
       var tb=document.createElement("button");
@@ -2664,7 +2664,7 @@ function renderMarket(){
 
   if(S.marketTab==="qa"){
     if(!S.openQA){
-      var qaTitle=d({style:{fontWeight:"900",fontSize:"16px",color:"#1A1A2E",marginBottom:"4px"}});qaTitle.textContent="📖 スノースポーツQ&A";wrap.appendChild(qaTitle);
+      var qaTitle=d({style:{fontWeight:"900",fontSize:"16px",color:"#1A1A2E",marginBottom:"4px"}});qaTitle.textContent="スノースポーツQ&A";wrap.appendChild(qaTitle);
       var qaSub=d({style:{color:"#6B7280",fontSize:"13px",marginBottom:"16px"}});qaSub.textContent="初心者から上級者まで役立つ情報";wrap.appendChild(qaSub);
       for(var qi=0;qi<QA_DATA.length;qi++){
         (function(cat){
@@ -2672,11 +2672,11 @@ function renderMarket(){
           var catRow=d({style:{display:"flex",alignItems:"center",gap:"14px"}});
           var catIco=d({style:{width:"48px",height:"48px",borderRadius:"16px",background:"linear-gradient(135deg,#FFF0E8,#FFE4D6)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"24px",flexShrink:"0"}});catIco.textContent=cat.cat.split(" ")[0];
           var catInfo=d({style:{flex:"1"}});
-          var catName=d({style:{fontWeight:"800",fontSize:"15px",color:"#1A1A2E",marginBottom:"3px"}});catName.textContent=cat.cat;
+          var catName=d({style:{fontWeight:"800",fontSize:"15px",color:"#1A1A2E",marginBottom:"3px"}});catName.textContent=qaCatLabel(cat.cat);
           var catCnt=d({style:{fontSize:"12px",color:"#9CA3AF"}});catCnt.textContent=cat.items.length+"つのQ&A";
           catInfo.appendChild(catName);catInfo.appendChild(catCnt);
           var catArr=d({style:{color:"#D1D5DB",fontSize:"20px"}});catArr.textContent="›";
-          catRow.appendChild(catIco);catRow.appendChild(catInfo);catRow.appendChild(catArr);catCard.appendChild(catRow);wrap.appendChild(catCard);
+          catRow.appendChild(catInfo);catRow.appendChild(catArr);catCard.appendChild(catRow);wrap.appendChild(catCard);
         })(QA_DATA[qi]);
       }
     } else {
@@ -2684,7 +2684,7 @@ function renderMarket(){
       backBtn2.appendChild(document.createElement("span")).textContent="←";backBtn2.appendChild(document.createElement("span")).textContent="カテゴリに戻る";wrap.appendChild(backBtn2);
       var curCat=null;for(var qi2=0;qi2<QA_DATA.length;qi2++){if(QA_DATA[qi2].cat===S.openQA){curCat=QA_DATA[qi2];break;}}
       if(curCat){
-        var catHeader=d({style:{fontWeight:"900",fontSize:"16px",color:"#1A1A2E",marginBottom:"16px"}});catHeader.textContent=curCat.cat;wrap.appendChild(catHeader);
+        var catHeader=d({style:{fontWeight:"900",fontSize:"16px",color:"#1A1A2E",marginBottom:"16px"}});catHeader.textContent=qaCatLabel(curCat.cat);wrap.appendChild(catHeader);
         for(var ii=0;ii<curCat.items.length;ii++){
           (function(item,idx2){
             var isOpen=(S.openQAItem===idx2+"-"+S.openQA);
@@ -2704,7 +2704,7 @@ function renderMarket(){
 
   if(S.marketTab==="checkin"){
     var ciAddBtn=d({style:{display:"flex",justifyContent:"flex-end",marginBottom:"12px"}});
-    var ciab=document.createElement("button");ciab.className="obtn";ciab.style.cssText="font-size:13px;padding:8px 16px";ciab.textContent="📍 チェックインする";
+    var ciab=document.createElement("button");ciab.className="obtn";ciab.style.cssText="font-size:13px;padding:8px 16px";ciab.textContent="チェックインする";
     ciab.addEventListener("click",function(){S.showCheckin=true;render();});ciAddBtn.appendChild(ciab);wrap.appendChild(ciAddBtn);
     var allCI=CHECKIN_SAMPLE.concat(S.checkins||[]);
     if(!allCI.length){var ciEmpty=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"13px",padding:"24px 0"}});ciEmpty.textContent="まだチェックインはありません";wrap.appendChild(ciEmpty);}
@@ -2716,11 +2716,11 @@ function renderMarket(){
       var info=d({style:{flex:"1"}});var name2=d({style:{fontWeight:"800",fontSize:"14px",color:"#1A1A2E"}});name2.textContent=ci.user;
       var resort2=d({style:{display:"flex",alignItems:"center",gap:"4px",marginTop:"2px"}});
       var pin=d({style:{fontSize:"14px"}});pin.textContent="📍";var rname=d({style:{fontWeight:"700",fontSize:"13px",color:"#FF6B2B"}});rname.textContent=ci.resort;
-      resort2.appendChild(pin);resort2.appendChild(rname);info.appendChild(name2);info.appendChild(resort2);
+      resort2.appendChild(rname);info.appendChild(name2);info.appendChild(resort2);
       var time2=d({style:{fontSize:"11px",color:"#9CA3AF",flexShrink:"0"}});time2.textContent=ci.time;
       tr.appendChild(ico);tr.appendChild(info);tr.appendChild(time2);card.appendChild(tr);
-      var snow2=d({style:{background:"#F0F9FF",borderRadius:"10px",padding:"8px 12px",fontSize:"13px",color:"#0369A1",fontWeight:"600",marginBottom:"10px"}});snow2.textContent="❄️ "+ci.snow;card.appendChild(snow2);
-      var lkRow=d({style:{display:"flex",alignItems:"center",gap:"6px"}});var lkBtn=document.createElement("button");lkBtn.style.cssText="font-size:18px;background:none;border:none;cursor:pointer;padding:0";lkBtn.textContent="🤙";var lkCnt=d({style:{fontSize:"12px",color:"#6B7280",fontWeight:"700"}});lkCnt.textContent=ci.likes+" いいね！";lkRow.appendChild(lkBtn);lkRow.appendChild(lkCnt);card.appendChild(lkRow);wrap.appendChild(card);
+      var snow2=d({style:{background:"#F0F9FF",borderRadius:"10px",padding:"8px 12px",fontSize:"13px",color:"#0369A1",fontWeight:"600",marginBottom:"10px"}});snow2.textContent=ci.snow;card.appendChild(snow2);
+      var lkRow=d({style:{display:"flex",alignItems:"center",gap:"6px"}});var lkBtn=document.createElement("button");lkBtn.style.cssText="font-size:12px;font-weight:800;background:#FFF0E8;color:#FF6B2B;border:none;border-radius:12px;cursor:pointer;padding:4px 12px;font-family:inherit";lkBtn.textContent="いいね";var lkCnt=d({style:{fontSize:"12px",color:"#6B7280",fontWeight:"700"}});lkCnt.textContent=ci.likes+"件";lkRow.appendChild(lkBtn);lkRow.appendChild(lkCnt);card.appendChild(lkRow);wrap.appendChild(card);
     });
   }
 
@@ -2730,6 +2730,7 @@ function renderMarket(){
 // ===== ラウンジの部屋チャット（Supabase: lounge_messages） =====
 function roomOpenNow(){return S.tab==="market"&&!!S.openRoom&&(S.marketTab==="room"||S.marketTab==="nayami")&&!!(S.myProfile&&S.myProfile.ok);}
 function findRoom(id){for(var i=0;i<ROOMS_SAMPLE.length;i++){if(ROOMS_SAMPLE[i].id===id)return ROOMS_SAMPLE[i];}return null;}
+function qaCatLabel(c){var p=String(c).split(" ");return (p.length>1&&!/[A-Za-z0-9ぁ-んァ-ヶ一-龠]/.test(p[0]))?p.slice(1).join(" "):String(c);}
 function roomCard(room){
   var card=d({class:"card",style:{cursor:"pointer",marginBottom:"12px"},onClick:function(){S.openRoom=room.id;S.roomInput="";S.roomReply=null;render();}});
   var tr=d({style:{display:"flex",gap:"12px",alignItems:"center"}});
@@ -2739,7 +2740,7 @@ function roomCard(room){
   if(room.desc){var ds=d({style:{fontSize:"12px",color:"#6B7280",marginBottom:"4px",lineHeight:"1.5"}});ds.textContent=room.desc;info.appendChild(ds);}
   var catBdg=d({style:{display:"inline-block",background:"#EEF6FF",color:"#2196F3",borderRadius:"8px",padding:"2px 8px",fontSize:"10px",fontWeight:"700"}});catBdg.textContent=room.cat;info.appendChild(catBdg);
   var arr=d({style:{color:"#D1D5DB",fontSize:"20px",flexShrink:"0"}});arr.textContent="›";
-  tr.appendChild(ico);tr.appendChild(info);tr.appendChild(arr);card.appendChild(tr);
+  tr.appendChild(info);tr.appendChild(arr);card.appendChild(tr);
   return card;
 }
 function loadRoomMsgs(roomId,initial){
@@ -2837,7 +2838,7 @@ function renderRoomChat(){
   var bb=document.createElement("button");bb.style.cssText="color:#fff;font-size:14px;font-weight:800;padding:8px 12px;min-height:40px;background:rgba(255,255,255,.22);border:none;border-radius:20px;cursor:pointer;font-family:inherit;flex-shrink:0;white-space:nowrap";bb.textContent="← 戻る";
   bb.addEventListener("click",function(){S.openRoom=null;S.roomReply=null;render();});
   hdr.appendChild(bb);
-  var ic=d({style:{fontSize:"24px",flexShrink:"0"}});ic.textContent=room.icon;hdr.appendChild(ic);
+  
   var ti=d({style:{flex:"1",minWidth:"0"}});
   var tt=d({style:{fontWeight:"800",color:"#fff",fontSize:"15px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}});tt.textContent=room.title;
   var ts=d({style:{color:"rgba(255,255,255,.8)",fontSize:"11px"}});ts.textContent="会員限定 · "+room.cat;
@@ -3873,7 +3874,7 @@ function LiveCamHero(){
   var t2=document.createElement("div");t2.style.cssText="font-size:11.5px;color:#C7D2FE;margin-top:2px";t2.textContent="会員限定・"+list.length+"か所の今の雪をチェック";
   tx.appendChild(t1);tx.appendChild(t2);
   var ar=document.createElement("div");ar.style.cssText="color:rgba(255,255,255,.6);font-size:22px";ar.textContent="›";
-  top.appendChild(ic);top.appendChild(tx);top.appendChild(ar);card.appendChild(top);
+  top.appendChild(tx);top.appendChild(ar);card.appendChild(top);
   var grid=document.createElement("div");grid.style.cssText="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px";
   CAM_GROUPS.forEach(function(g){
     var n=cnt[g[0]]||0;if(!n)return;
@@ -3891,7 +3892,7 @@ function renderLiveCams(wrap){
   var back=document.createElement("button");back.textContent="‹ ラウンジに戻る";
   back.style.cssText="background:none;border:none;color:#FF6B2B;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;padding:0;margin-bottom:10px";
   back.addEventListener("click",function(){S.marketTab="room";S.camGroup=null;render();});wrap.appendChild(back);
-  var ht=d({style:{fontWeight:"900",fontSize:"19px",color:"#1A1A2E",marginBottom:"4px"}});ht.textContent="📹 全国スキー場ライブカメラ";wrap.appendChild(ht);
+  var ht=d({style:{fontWeight:"900",fontSize:"19px",color:"#1A1A2E",marginBottom:"4px"}});ht.textContent="全国スキー場ライブカメラ";wrap.appendChild(ht);
   if(!S.liveCams){loadLiveCams();}
   var list=S.liveCams||LIVECAMS_DEFAULT;
   var intro=d({style:{color:"#6B7280",fontSize:"12.5px",lineHeight:"1.7",marginBottom:"12px"}});
@@ -3907,7 +3908,7 @@ function renderLiveCams(wrap){
   wrap.appendChild(chips);
   if(!S.camGroup){
     var all=document.createElement("button");all.style.cssText="width:100%;text-align:left;padding:12px 14px;border-radius:14px;border:1.5px solid #BAE6FD;background:#F0F9FF;color:#0369A1;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;margin-bottom:14px";
-    all.textContent="🌐 全国のゲレンデカメラ一覧（ウェザーニュース） ›";all.addEventListener("click",function(){openUrl("https://weathernews.jp/ski/camera/");});wrap.appendChild(all);
+    all.textContent="全国のゲレンデカメラ一覧（ウェザーニュース） ›";all.addEventListener("click",function(){openUrl("https://weathernews.jp/ski/camera/");});wrap.appendChild(all);
   }
   var by={};list.forEach(function(c){if(S.camGroup&&camGroupOf(c.area)!==S.camGroup)return;var a=c.area||"その他";(by[a]=by[a]||[]).push(c);});
   var order=AREAS.map(function(a){return a.area;});Object.keys(by).forEach(function(k){if(order.indexOf(k)<0)order.push(k);});
@@ -3921,7 +3922,7 @@ function renderLiveCams(wrap){
       var nm=document.createElement("div");nm.style.cssText="font-weight:800;font-size:14px;color:#1A1A2E";nm.textContent=c.resort||"";tx.appendChild(nm);
       if(c.note){var nt=document.createElement("div");nt.style.cssText="font-size:11px;color:#9CA3AF;margin-top:2px";nt.textContent=c.note;tx.appendChild(nt);}
       var ar=document.createElement("span");ar.textContent="›";ar.style.cssText="color:#9CA3AF;font-size:18px";
-      b.appendChild(ic);b.appendChild(tx);b.appendChild(ar);b.addEventListener("click",function(){openUrl(c.url);});wrap.appendChild(b);
+      b.appendChild(tx);b.appendChild(ar);b.addEventListener("click",function(){openUrl(c.url);});wrap.appendChild(b);
     });
   });
   var ft=d({style:{fontSize:"11px",color:"#9CA3AF",lineHeight:"1.6",marginTop:"8px"}});
