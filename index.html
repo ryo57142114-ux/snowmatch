@@ -1351,7 +1351,7 @@ var FAQ=[
   ["有料の同行をお願いする流れは？","【相手のプロフィールから予約する場合】\n① 相手の料金（1時間／半日／1日）を見て「予約する」\n② 日付・時間・プランを選んで申し込み、支払う\n③ 相手が承認すると予約確定\n\n【募集掲示板で募集する場合】\n① 「同行してくれる人募集」＋「有料」で、払う金額を決めて投稿\n② 「参加します」と応募してくれた人から1人を選ぶ\n③ 支払い画面で支払うと予約確定"],
   ["表示の料金に何が含まれる？","表示の料金は「全部込み」の金額です。同行謝礼・食事代・交通費・リフト券代が含まれます。宿泊費・撮影機材費は各自負担です。予約時に支払うのは表示の金額だけで、追加の手数料はかかりません。"],
   ["払ったお金はいつ相手に渡るの？","支払ったお金は、いったんStripe（決済会社）が安全に預かります。\n① 支払い → ② 当日一緒に滑る → ③ 滑走日のあと、トラブルがなければ同行した人へ送金\nという流れなので、滑る前にお金だけ相手に渡ってしまう心配はありません。"],
-  ["お金を受け取る側の手数料は？","受け取る金額から、運営手数料15%（カード決済手数料込み）が差し引かれます。たとえば3,000円の同行なら、受け取り額は2,550円です。払う側の追加手数料はありません。"],
+  ["お金をもらうこともできる？","できます。自分のプロフィールに同行・撮影の料金を設定しておくと、予約が入ったときに受け取れます。また「同行・撮影してくれる人募集」の投稿に応募して参加した場合も、募集者が出した金額を受け取れます（受け取るには本人確認が必要です）。"],
   ["キャンセルしたらどうなる？","・前日までのキャンセル：全額返金\n・当日のキャンセル：料金の100%\n・悪天候・リフト運休・相手側の都合の場合：全額返金"],
   ["当日なにかトラブルがあったら？","マイページの「お問い合わせ」から、できるだけ早く運営に知らせてください。相手への送金前であれば、運営が双方に確認して対応します。"],
   ["今はお金がかかる？","現在、決済はテスト（デモ）中のため、実際の請求は行われません。本番の決済が始まるときは、アプリ内でお知らせします。"]
@@ -4563,9 +4563,17 @@ function ContactModal(){
 
     var sendBtn=document.createElement("button");sendBtn.className="obtn obtn-full";sendBtn.textContent="送信する";
     sendBtn.addEventListener("click",function(){
-      if(!contactMsg.trim()){alert("内容を入力してください");return;}
-      sendBtn.textContent="✅ 送信しました！";sendBtn.style.background="#22C55E";
-      setTimeout(function(){S.showContact=false;render();alert("お問い合わせありがとうございます。\n運営より順次ご回答いたします。");},1000);
+      var msg=contactMsg.trim();
+      if(!msg){alert("内容を入力してください");return;}
+      if(msg.length>2000){alert("内容は2000文字以内で入力してください");return;}
+      if(typeof sb==="undefined"||!sb||!currentUser){alert("お問い合わせを送るにはログインが必要です。\nログインできない場合は snowmatch.info@gmail.com までメールでご連絡ください。");return;}
+      if(sendBtn.disabled)return;
+      sendBtn.disabled=true;sendBtn.textContent="送信中...";
+      sb.from("contact_messages").insert({user_id:currentUser.id,category:selectedCat,body:msg}).then(function(r){
+        if(r.error){sendBtn.disabled=false;sendBtn.textContent="送信する";alert("送信できませんでした。時間をおいてもう一度お試しいただくか、snowmatch.info@gmail.com までご連絡ください。\n("+r.error.message+")");return;}
+        sendBtn.textContent="✅ 送信しました！";sendBtn.style.background="#22C55E";
+        setTimeout(function(){S.showContact=false;render();alert("お問い合わせありがとうございます。\n運営より順次ご回答いたします。");},1000);
+      },function(e){sendBtn.disabled=false;sendBtn.textContent="送信する";alert("通信エラーで送信できませんでした: "+(e&&e.message?e.message:e));});
     });
     box.appendChild(sendBtn);
   });
