@@ -388,7 +388,7 @@ function chatImgUrl(path,cb){
   if(c&&c.loading)return null;
   window._chatImgUrl[path]={loading:true};
   sb.storage.from("chat").createSignedUrl(path,3600).then(function(r){
-    if(r.error||!r.data){window._chatImgUrl[path]={url:"",exp:Date.now()+60000};return;}
+    if(r.error||!r.data){console.error("chat image",path,r.error&&r.error.message);window._chatImgUrl[path]={url:"",err:(r.error&&r.error.message)||"not found",exp:Date.now()+15000};if(cb)cb();return;}
     window._chatImgUrl[path]={url:r.data.signedUrl,exp:Date.now()+3300*1000};
     if(cb)cb();
   });
@@ -2586,7 +2586,7 @@ function renderChat(){
         im.style.cssText="display:block;max-width:220px;max-height:280px;width:100%;border-radius:14px;object-fit:cover;cursor:pointer;background:#eee";
         im.setAttribute("data-p",m.img);im.addEventListener("click",function(){var pth=this.getAttribute("data-p");var full=(window._chatImgUrl[pth]&&window._chatImgUrl[pth].url)||this.src;var w=window.open(full,"_blank");if(!w)location.href=full;});
         mBub.appendChild(im);
-      }else{var ld=d({style:{width:"180px",height:"140px",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"12px",opacity:".7"}});ld.textContent=m.failed?"送信できませんでした":"📷 読み込み中…";mBub.appendChild(ld);}
+      }else{var _ce=window._chatImgUrl&&window._chatImgUrl[m.img];var _err=!m.failed&&_ce&&_ce.err;var ld=d({style:{width:"180px",height:"140px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontSize:"12px",opacity:".75",textAlign:"center",lineHeight:"1.6",cursor:_err?"pointer":"default"}});ld.textContent=m.failed?"送信できませんでした":(_err?"写真を表示できませんでした\nタップで再読み込み":"📷 読み込み中…");ld.style.whiteSpace="pre-line";if(_err){(function(pth){ld.addEventListener("click",function(){delete window._chatImgUrl[pth];render();});})(m.img);}mBub.appendChild(ld);}
       if(m.pending){var pd=d({style:{fontSize:"10px",opacity:".8",padding:"2px 6px 0"}});pd.textContent="送信中…";mBub.appendChild(pd);}
     }else mBub.textContent=m.t;
     var mTime=d({style:{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:"4px",marginTop:"3px"}});
@@ -2599,7 +2599,7 @@ function renderChat(){
   var ci2=document.createElement("input");ci2.type="text";ci2.className="inp";ci2.style.cssText="flex:1;border-radius:20px";
   ci2.id="chatinput";ci2.style.fontSize="16px";ci2.placeholder="メッセージを入力...";ci2.value=S.chatIn||"";
   ci2.addEventListener("input",function(ev){S.chatIn=ev.target.value;});
-  ci2.addEventListener("keydown",function(ev){if(ev.key==="Enter"&&!ev.isComposing)sendMsg();});
+  ci2.addEventListener("keydown",function(ev){if(ev.key==="Enter"&&!ev.isComposing&&ev.keyCode!==229){ev.preventDefault();sendMsg();}});
   var sb=obtn("送信",function(){sendMsg();},"");sb.style.padding="10px 18px";
   var phIn=document.createElement("input");phIn.type="file";phIn.accept="image/*";phIn.style.display="none";
   phIn.addEventListener("change",function(e){var f=e.target.files&&e.target.files[0];e.target.value="";if(f)sendPhoto(f);});
@@ -3561,7 +3561,7 @@ function startRealtime(){
     .on("postgres_changes",{event:"INSERT",schema:"public",table:"user_follows",filter:"followee=eq."+currentUser.id},function(){loadFollowsFromSupabase();})
     .on("postgres_changes",{event:"*",schema:"public",table:"reservations",filter:"provider=eq."+currentUser.id},function(){loadReservations();})
     .on("postgres_changes",{event:"*",schema:"public",table:"reservations",filter:"customer=eq."+currentUser.id},function(){loadReservations();})
-    .on("postgres_changes",{event:"*",schema:"public",table:"profiles"},function(){loadUsersFromSupabase();})
+    .on("postgres_changes",{event:"*",schema:"public",table:"profiles"},function(){clearTimeout(window._profT);window._profT=setTimeout(function(){loadUsersFromSupabase();},3000);})
     .subscribe();
 }
 
@@ -4982,7 +4982,13 @@ function WelcomeModal(){
 
 function viewKey(){return [S.pg,S.tab,S.openRoom||"",S.selUser?S.selUser.id:"",S.chatUser?S.chatUser.id:"",S.bookUser?1:0,S.showEditProfile?1:0].join("|");}
 var _lastViewKey="";
+// 日本語入力（変換中）の最中に画面を描き直すと、文字が勝手に確定したり消えたりするので、変換が終わるまで待つ
+window._imeOn=false;window._renderPending=false;
+document.addEventListener("compositionstart",function(e){var t=e.target;if(t&&(t.id==="chatinput"||t.id==="roominput"))window._imeOn=true;},true);
+document.addEventListener("compositionend",function(e){var t=e.target;if(t&&(t.id==="chatinput"||t.id==="roominput")){window._imeOn=false;setTimeout(function(){if(window._renderPending&&!window._imeOn){window._renderPending=false;render();}},60);}},true);
+document.addEventListener("focusout",function(e){var t=e.target;if(t&&(t.id==="chatinput"||t.id==="roominput")){window._imeOn=false;if(window._renderPending){window._renderPending=false;setTimeout(render,0);}}},true);
 function render(){
+  if(window._imeOn){var _a0=document.activeElement;if(_a0&&(_a0.id==="chatinput"||_a0.id==="roominput")){window._renderPending=true;return;}window._imeOn=false;}
   if(S.myProfile&&S.myProfile.resorts)S.myProfile.resorts=fixResort(S.myProfile.resorts);
   if(S.myProfile){S.myProfile.act=fixCam(S.myProfile.act);if(S.myProfile.acts)S.myProfile.acts=fixCam(S.myProfile.acts);if(S.myProfile.styles)S.myProfile.styles=fixCam(S.myProfile.styles);}
   if(S.reg){if(S.reg.act)S.reg.act=fixCam(S.reg.act);if(S.reg.acts)S.reg.acts=fixCam(S.reg.acts);}
