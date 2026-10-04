@@ -2761,6 +2761,12 @@ function renderChat(){
     var es=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"12.5px",lineHeight:"1.7",padding:"40px 16px",whiteSpace:"pre-line"}});
     if(window._dmLoading||(!window._dmLoadedAt&&!window._dmLastErr))es.textContent="メッセージを読み込み中…";
     else if(!window._dmLoadedAt&&window._dmLastErr){es.textContent="メッセージを読み込めませんでした\n（"+window._dmLastErr+"）\n\nタップで再読み込み";es.style.cursor="pointer";es.addEventListener("click",function(){window._dmLastErr=null;loadMessagesFromSupabase(true);render();});}
+    else if(((window._dmAuto=window._dmAuto||{})[S.chatUser.id]||0)<5){
+      // 開いたチャットが空なら、タップで読み直したときと同じ処理を自動で数回やる
+      window._dmAuto[S.chatUser.id]=(window._dmAuto[S.chatUser.id]||0)+1;
+      es.textContent="メッセージを読み込み中…";
+      clearTimeout(window._dmAutoT);window._dmAutoT=setTimeout(function(){loadMessagesFromSupabase(true);},window._dmAuto[S.chatUser.id]===1?300:2500);
+    }
     else{es.textContent="まだメッセージはありません\n（表示されない場合はタップで再読み込み）";es.style.cursor="pointer";es.addEventListener("click",function(){es.textContent="メッセージを読み込み中…";loadMessagesFromSupabase(true);});}
     ma.appendChild(es);
   }
