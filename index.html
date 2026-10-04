@@ -61,8 +61,7 @@ var SUPABASE_URL = "https://qehaqosvytflojakyssx.supabase.co";
 var SUPABASE_KEY = "sb_publishable_yS2k2GRPTRzcfUGd9hdslQ_zbfloUFB";
 var sb = null;
 try{
-  // iPhoneのホーム画面アプリで、ログイン情報の「ロック待ち」で通信が長く止まるのを防ぐ
-  sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,lock:function(name,acquireTimeout,fn){return fn();}}});
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 }catch(e){
   console.error("Supabase init failed:", e);
 }
@@ -2736,6 +2735,13 @@ function renderChat(){
   var msgs=S.chatMsgs[String(S.chatUser.id)]||[];
   markChatRead(S.chatUser,msgs);
   for(var mi=0;mi<msgs.length;mi++)ma.appendChild(dmRow(msgs[mi],S.chatUser));
+  if(!msgs.length&&S.chatUser.isReal){
+    var es=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"12.5px",lineHeight:"1.7",padding:"40px 16px",whiteSpace:"pre-line"}});
+    if(window._dmLoading||(!window._dmLoadedAt&&!window._dmLastErr))es.textContent="メッセージを読み込み中…";
+    else if(!window._dmLoadedAt&&window._dmLastErr){es.textContent="メッセージを読み込めませんでした\n（"+window._dmLastErr+"）\n\nタップで再読み込み";es.style.cursor="pointer";es.addEventListener("click",function(){window._dmLastErr=null;loadMessagesFromSupabase(true);render();});}
+    else es.textContent="まだメッセージはありません";
+    ma.appendChild(es);
+  }
   cw.appendChild(ma);
   var ir=d({style:{padding:"10px 16px calc(12px + env(safe-area-inset-bottom,0px))",background:"#fff",display:"flex",alignItems:"center",gap:"8px",borderTop:"1px solid #F0F0F0",flexShrink:"0"}});
   var ci2=document.createElement("input");ci2.type="text";ci2.className="inp";ci2.style.cssText="flex:1;border-radius:20px";
@@ -3624,7 +3630,7 @@ function sendMsg(text){if(S.isGuest){guestPrompt();return;}
 // メッセージは端末にも保存しておき、アプリを開いた瞬間にまず表示 → そのあとサーバーの最新と入れ替える
 function dmCacheKey(){return "sm_dmc_"+(currentUser?currentUser.id:"");}
 function saveDmCache(){
-  if(!currentUser)return;
+  if(!currentUser||!window._dmLoadedAt)return;
   try{
     var out={};
     for(var k in S.chatMsgs){if(!S.chatMsgs.hasOwnProperty(k)||k.indexOf("sb_")!==0)continue;
@@ -3637,7 +3643,7 @@ function restoreDmCache(){
   if(window._dmRestoredFor!==currentUser.id){
     window._dmRestoredFor=currentUser.id;
     var c0=null;try{c0=JSON.parse(localStorage.getItem(dmCacheKey())||"null");}catch(e){}
-    if(c0){for(var kx in S.chatMsgs){if(kx.indexOf("sb_")===0)delete S.chatMsgs[kx];}for(var ky in c0){if(c0.hasOwnProperty(ky))S.chatMsgs[ky]=c0[ky];}return true;}
+    if(c0&&Object.keys(c0).length){for(var kx in S.chatMsgs){if(kx.indexOf("sb_")===0)delete S.chatMsgs[kx];}for(var ky in c0){if(c0.hasOwnProperty(ky))S.chatMsgs[ky]=c0[ky];}return true;}
     return false;
   }
   for(var k0 in S.chatMsgs){if(k0.indexOf("sb_")===0&&S.chatMsgs[k0].length)return false;}
@@ -3645,21 +3651,22 @@ function restoreDmCache(){
     for(var k in c){if(c.hasOwnProperty(k))S.chatMsgs[k]=c[k];}return true;}catch(e){return false;}
 }
 function loadMessagesFromSupabase(force,tries){
-  if(!sb||!currentUser)return;
+  if(!sb||!currentUser){window._dmLastErr=!sb?"サーバーに接続できません":"ログイン情報を確認中です";return;}
   var now=Date.now();tries=tries||0;
   if(!force&&window._dmLoadedAt&&now-window._dmLoadedAt<20000)return;
   if(window._dmLoading&&now-(window._dmLoadingAt||0)<12000)return; // 応答がない読み込みで止まり続けないようにする
   window._dmLoading=true;window._dmLoadingAt=now;
   try{localStorage.setItem("sm_last_uid",currentUser.id);}catch(e){}
   var att=(window._dmAtt=(window._dmAtt||0)+1);
-  function retry(){if(window._dmAtt!==att)return;window._dmLoading=false;if(tries<4)setTimeout(function(){loadMessagesFromSupabase(true,tries+1);},1200*(tries+1));}
-  setTimeout(function(){if(window._dmLoading&&window._dmAtt===att){console.warn("messages load slow, retrying");window._dmLoading=false;loadMessagesFromSupabase(true,tries+1);}},7000);
+  function retry(){if(window._dmAtt!==att)return;window._dmLoading=false;if(tries<6)setTimeout(function(){loadMessagesFromSupabase(true,tries+1);},1500*(tries+1));render();}
+  setTimeout(function(){if(window._dmLoading&&window._dmAtt===att){console.warn("messages load slow, retrying");window._dmLastErr="応答がありません（タイムアウト）";window._dmLoading=false;if(tries<6)loadMessagesFromSupabase(true,tries+1);else render();}},7000);
   if(restoreDmCache())render();
   // 新しい順に取ってから並べ直す（古い順だと件数が多いときに最新のメッセージが漏れるため）
   sb.from("dm_messages").select("id,from_user,to_user,body,image_path,created_at,read_at").or("from_user.eq."+currentUser.id+",to_user.eq."+currentUser.id).order("created_at",{ascending:false}).limit(2000).then(function(r){
     if(window._dmAtt!==att&&window._dmLoadedAt&&window._dmLoadedAt>now)return;
     window._dmLoading=false;
-    if(r.error){console.error("messages load error",r.error);retry();return;}
+    if(r.error){console.error("messages load error",r.error);window._dmLastErr=r.error.message||String(r.error.code||"error");retry();return;}
+    window._dmLastErr=null;
     window._dmLoadedAt=Date.now();
     var keep={};
     for(var k in S.chatMsgs){if(k.indexOf("sb_")!==0)continue;keep[k]=S.chatMsgs[k].filter(function(m){return m.pending||(!m.id&&m.preview);});delete S.chatMsgs[k];}
@@ -3668,7 +3675,7 @@ function loadMessagesFromSupabase(force,tries){
     for(var k2 in keep){if(!keep[k2].length)continue;if(!S.chatMsgs[k2])S.chatMsgs[k2]=[];keep[k2].forEach(function(m){S.chatMsgs[k2].push(m);});}
     saveDmCache();
     render();
-  },function(e){console.error("messages load error",e);retry();});
+  },function(e){console.error("messages load error",e);window._dmLastErr=(e&&e.message)||"通信エラー";retry();});
 }
 function addDmRow(row,live){
   var mine=row.from_user===currentUser.id;
@@ -5353,7 +5360,7 @@ function _renderInner(){
 
 try{window._hs=!!localStorage.getItem("sm2");}catch(e){window._hs=false;}
 // 起動直後：ログイン確認を待たずに、前回保存したメッセージをすぐ表示する
-try{(function(){var lu=localStorage.getItem("sm_last_uid");if(!lu)return;var c=JSON.parse(localStorage.getItem("sm_dmc_"+lu)||"null");if(!c)return;
+try{(function(){var lu=localStorage.getItem("sm_last_uid");if(!lu)return;var c=JSON.parse(localStorage.getItem("sm_dmc_"+lu)||"null");if(!c||!Object.keys(c).length)return;
   for(var kx in S.chatMsgs){if(kx.indexOf("sb_")===0)delete S.chatMsgs[kx];}
   for(var k in c){if(c.hasOwnProperty(k))S.chatMsgs[k]=c[k];}
   window._dmRestoredFor=lu;})();}catch(e){}
