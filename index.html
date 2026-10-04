@@ -2631,17 +2631,18 @@ function renderMarket(){
   var ht=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"4px"}});ht.textContent="🛖 スノマラウンジ";
   var hs=d({style:{color:"#6B7280",fontSize:"13px"}});hs.textContent="会員限定 · 仲間と語ろう・チェックイン・悩み相談";
   hd.appendChild(ht);hd.appendChild(hs);wrap.appendChild(hd);
-  var tabs=d({style:{display:"flex",gap:"0",marginBottom:"16px",background:"#F5F7FA",borderRadius:"16px",padding:"4px"}});
-  var tabDefs=[["room","💬 雑談部屋"],["nayami","💭 悩み相談"],["qa","📖 Q&A"],["checkin","📍 チェックイン"]];
+  var tabs=d({style:{display:"flex",gap:"0",marginBottom:"16px",background:"#F5F7FA",borderRadius:"16px",padding:"4px",overflowX:"auto",webkitOverflowScrolling:"touch"}});
+  var tabDefs=[["room","💬 雑談部屋"],["nayami","💭 悩み相談"],["qa","📖 Q&A"],["checkin","📍 チェックイン"],["livecam","📹 ライブカメラ"]];
   for(var ti=0;ti<tabDefs.length;ti++){
     (function(id,lbl){
       var tb=document.createElement("button");
-      tb.style.cssText="flex:1;padding:8px 4px;border-radius:12px;border:none;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;background:"+(S.marketTab===id?"#fff":"transparent")+";color:"+(S.marketTab===id?"#FF6B2B":"#6B7280")+";box-shadow:"+(S.marketTab===id?"0 2px 8px rgba(0,0,0,0.1)":"none");
+      tb.style.cssText="flex:1 0 auto;white-space:nowrap;padding:8px 10px;border-radius:12px;border:none;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;background:"+(S.marketTab===id?"#fff":"transparent")+";color:"+(S.marketTab===id?"#FF6B2B":"#6B7280")+";box-shadow:"+(S.marketTab===id?"0 2px 8px rgba(0,0,0,0.1)":"none");
       tb.textContent=lbl;tb.addEventListener("click",function(){S.marketTab=id;S.openRoom=null;render();});tabs.appendChild(tb);
     })(tabDefs[ti][0],tabDefs[ti][1]);
   }
   wrap.appendChild(tabs);
 
+  if(S.marketTab==="livecam")return renderLiveCams(wrap);
   if(S.openRoom&&(S.marketTab==="room"||S.marketTab==="nayami")){var _rc=renderRoomChat();if(_rc)return _rc;}
   if(S.marketTab==="nayami"){
     var nyNote=d({style:{color:"#6B7280",fontSize:"12.5px",lineHeight:"1.7",marginBottom:"12px"}});nyNote.textContent="滑りの悩み、道具選び、仲間づくりのことなど、気軽に相談できる部屋です。";wrap.appendChild(nyNote);
@@ -3804,6 +3805,47 @@ function resortRuleBox(resort){
   }
   var n=document.createElement("div");n.style.cssText="font-size:11px;color:#6B7280;line-height:1.6";n.textContent="※ "+RULE_NOTICE;
   wrap.appendChild(n);
+  return wrap;
+}
+
+// ===== 📹 ライブカメラ（会員タブ） =====
+// Supabaseの live_cams 表があればそちらを使い、なければ下の初期リストを表示する
+var LIVECAMS_DEFAULT=[{"area": "北海道・道央", "resort": "ニセコ東急 グラン・ヒラフ", "url": "https://snowstash.com/japan/hokkaido/niseko/snow-cams", "note": "SnowStash（英語）", "sort": 10}, {"area": "北海道・道央", "resort": "ニセコアンヌプリ国際スキー場", "url": "https://camstreamer.com/live/stream/749662862", "note": "ライブ配信", "sort": 20}, {"area": "北海道・道央", "resort": "ニセコビレッジスキーリゾート", "url": "https://weathernews.jp/ski/spot/31604/", "note": "ウェザーニュース", "sort": 30}, {"area": "北海道・道央", "resort": "ニセコHANAZONOリゾート", "url": "https://weathernews.jp/ski/spot/31618/", "note": "ウェザーニュース", "sort": 40}, {"area": "北海道・道央", "resort": "ニセコモイワスキーリゾート", "url": "https://weathernews.jp/ski/spot/31611/", "note": "ウェザーニュース", "sort": 50}, {"area": "北海道・道央", "resort": "ルスツリゾート", "url": "https://rusutsu.com/en/live-mountain-cams/", "note": "公式サイト", "sort": 60}, {"area": "北海道・道央", "resort": "キロロスノーワールド", "url": "https://snowstash.com/japan/hokkaido/kiroro/snow-cams", "note": "SnowStash（英語）", "sort": 70}, {"area": "北海道・道央", "resort": "サッポロテイネ", "url": "https://snowstash.com/japan/hokkaido/sapporo-teine/snow-cams", "note": "SnowStash（英語）", "sort": 80}, {"area": "北海道・道央", "resort": "札幌国際スキー場", "url": "https://snowstash.com/japan/hokkaido/sapporo-kokusai/snow-cams", "note": "SnowStash（英語）", "sort": 90}, {"area": "北海道・道央", "resort": "札幌藻岩山スキー場", "url": "https://weathernews.jp/ski/spot/31406/", "note": "ウェザーニュース", "sort": 100}, {"area": "北海道・道央", "resort": "マウントレースイスキー場", "url": "https://snowstash.com/japan/hokkaido/mount-racey/snow-cams", "note": "SnowStash（英語）", "sort": 110}, {"area": "北海道・道央", "resort": "星野リゾート トマム スキー場", "url": "https://snowstash.com/japan/hokkaido/hoshino-tomamu", "note": "SnowStash（英語）", "sort": 120}, {"area": "北海道・道央", "resort": "富良野スキー場", "url": "https://snowstash.com/japan/hokkaido/furano/snow-cams", "note": "SnowStash（英語）", "sort": 130}, {"area": "北海道・道北", "resort": "カムイスキーリンクス", "url": "https://snowstash.com/japan/hokkaido/kamui-ski-links", "note": "SnowStash（英語）", "sort": 140}, {"area": "北海道・道東", "resort": "国設阿寒湖畔スキー場", "url": "https://weathernews.jp/ski/spot/31901/", "note": "ウェザーニュース", "sort": 150}, {"area": "北海道・道南", "resort": "グリーンピア大沼スキー場", "url": "https://weathernews.jp/ski/spot/31613/", "note": "ウェザーニュース", "sort": 160}, {"area": "東北・青森", "resort": "青森スプリング・スキーリゾート", "url": "https://snowstash.com/japan/tohoku/aomori-spring/snow-cams", "note": "SnowStash（英語）", "sort": 170}, {"area": "東北・青森", "resort": "八甲田スキー場", "url": "https://snowstash.com/japan/tohoku/hakkoda/snow-cams", "note": "SnowStash（英語）", "sort": 180}, {"area": "東北・岩手・秋田", "resort": "安比高原スキー場", "url": "https://weathernews.jp/ski/spot/33301/", "note": "ウェザーニュース", "sort": 190}, {"area": "東北・岩手・秋田", "resort": "八幡平リゾート パノラマスキー場", "url": "https://weathernews.jp/ski/spot/33311/", "note": "ウェザーニュース", "sort": 200}, {"area": "東北・岩手・秋田", "resort": "雫石スキー場", "url": "https://snowstash.com/japan/tohoku/shizukuishi/snow-cams", "note": "SnowStash（英語）", "sort": 210}, {"area": "東北・宮城・山形", "resort": "蔵王温泉スキー場", "url": "https://snowstash.com/japan/tohoku/zao-onsen/snow-cams", "note": "SnowStash（英語）", "sort": 220}, {"area": "東北・福島", "resort": "グランデコスノーリゾート", "url": "https://snowstash.com/japan/tohoku/grandeco/snow-cams", "note": "SnowStash（英語）", "sort": 230}, {"area": "新潟・湯沢エリア", "resort": "苗場スキー場", "url": "https://snowstash.com/japan/chubu/naeba/snow-cams", "note": "SnowStash（英語）", "sort": 240}, {"area": "新潟・湯沢エリア", "resort": "かぐらスキー場", "url": "https://snowstash.com/japan/chubu/kagura/snow-cams", "note": "SnowStash（英語）", "sort": 250}, {"area": "新潟・湯沢エリア", "resort": "ガーラ湯沢スキー場", "url": "https://snowstash.com/japan/chubu/gala-yuzawa/snow-cams", "note": "SnowStash（英語）", "sort": 260}, {"area": "新潟・湯沢エリア", "resort": "湯沢高原スキー場", "url": "https://snowstash.com/japan/chubu/yuzawa-kogen/snow-cams", "note": "SnowStash（英語）", "sort": 270}, {"area": "新潟・湯沢エリア", "resort": "石打丸山スキー場", "url": "https://snowstash.com/japan/chubu/ishiuchi-maruyama/snow-cams", "note": "SnowStash（英語）", "sort": 280}, {"area": "新潟・妙高エリア", "resort": "妙高杉ノ原スキー場", "url": "https://snowstash.com/japan/chubu/myoko-suginohara/snow-cams", "note": "SnowStash（英語）", "sort": 290}, {"area": "新潟・妙高エリア", "resort": "赤倉観光リゾートスキー場", "url": "https://myoko-nagano.com/webcam/", "note": "妙高・長野まとめ（英語）", "sort": 300}, {"area": "新潟・妙高エリア", "resort": "関温泉スキー場", "url": "https://weathernews.jp/ski/spot/35437/", "note": "ウェザーニュース", "sort": 310}, {"area": "新潟・妙高エリア", "resort": "ロッテ アライリゾート", "url": "https://snowstash.com/japan/chubu/lotte-arai/snow-cams", "note": "SnowStash（英語）", "sort": 320}, {"area": "長野・白馬エリア", "resort": "白馬八方尾根スキー場", "url": "https://japanskiexperience.com/hakuba/webcams/", "note": "白馬エリアまとめ（英語）", "sort": 330}, {"area": "長野・白馬エリア", "resort": "白馬岩岳スノーフィールド", "url": "https://japanskiexperience.com/hakuba/webcams/", "note": "白馬エリアまとめ（英語）", "sort": 340}, {"area": "長野・白馬エリア", "resort": "エイブル白馬五竜スキー場", "url": "https://snowstash.com/japan/chubu/hakuba-goryu/snow-cams", "note": "SnowStash（英語）", "sort": 350}, {"area": "長野・白馬エリア", "resort": "Hakuba47", "url": "https://japanskiexperience.com/hakuba/webcams/", "note": "白馬エリアまとめ（英語）", "sort": 360}, {"area": "長野・白馬エリア", "resort": "栂池高原スキー場", "url": "https://snowstash.com/japan/chubu/tsugaike/snow-cams", "note": "SnowStash（英語）", "sort": 370}, {"area": "長野・白馬エリア", "resort": "白馬乗鞍温泉スキー場", "url": "https://japanskiexperience.com/hakuba/webcams/", "note": "白馬エリアまとめ（英語）", "sort": 380}, {"area": "長野・白馬エリア", "resort": "白馬コルチナスキー場", "url": "https://japanskiexperience.com/hakuba/webcams/", "note": "白馬エリアまとめ（英語）", "sort": 390}, {"area": "長野・白馬エリア", "resort": "爺ガ岳スキー場", "url": "https://weathernews.jp/ski/spot/34888/", "note": "ウェザーニュース", "sort": 400}, {"area": "長野・北信エリア", "resort": "野沢温泉スキー場", "url": "https://snowstash.com/japan/chubu/nozawa-onsen/snow-cams", "note": "SnowStash（英語）", "sort": 410}, {"area": "長野・北信エリア", "resort": "志賀高原スキー場", "url": "https://snowstash.com/japan/chubu/shiga-kogen/snow-cams", "note": "SnowStash（英語）", "sort": 420}, {"area": "長野・北信エリア", "resort": "竜王スキーパーク", "url": "https://naganonow.com/nagano-webcams/", "note": "長野エリアまとめ（英語）", "sort": 430}, {"area": "長野・北信エリア", "resort": "木島平スキー場", "url": "https://naganonow.com/nagano-webcams/", "note": "長野エリアまとめ（英語）", "sort": 440}, {"area": "長野・北信エリア", "resort": "北志賀小丸山スキー場", "url": "https://weathernews.jp/ski/spot/34861/", "note": "ウェザーニュース", "sort": 450}, {"area": "長野・北信エリア", "resort": "斑尾高原スキー場", "url": "https://snowstash.com/japan/chubu/madarao/snow-cams", "note": "SnowStash（英語）", "sort": 460}, {"area": "長野・北信エリア", "resort": "タングラムスキーサーカス", "url": "https://snowstash.com/japan/chubu/madarao/snow-cams", "note": "SnowStash（英語）", "sort": 470}, {"area": "長野・中南信エリア", "resort": "湯の丸スキー場", "url": "https://weathernews.jp/ski/spot/34848/", "note": "ウェザーニュース", "sort": 480}, {"area": "群馬・栃木", "resort": "パルコール嬬恋スキーリゾート", "url": "https://weathernews.jp/ski/spot/34213/", "note": "ウェザーニュース", "sort": 490}, {"area": "群馬・栃木", "resort": "川場スキー場", "url": "https://snow-forecast.com/resorts/Kawaba/6day/top", "note": "Snow-Forecast（英語）", "sort": 500}, {"area": "群馬・栃木", "resort": "ホワイトワールド尾瀬岩鞍", "url": "https://weathernews.jp/ski/spot/34207/", "note": "ウェザーニュース", "sort": 510}, {"area": "群馬・栃木", "resort": "ノルン水上スキー場", "url": "https://weathernews.jp/ski/spot/34211/", "note": "ウェザーニュース", "sort": 520}, {"area": "岐阜・福井", "resort": "ホワイトピアたかす", "url": "https://weathernews.jp/ski/spot/35220/", "note": "ウェザーニュース", "sort": 530}, {"area": "富山・石川", "resort": "あわすのスキー場", "url": "https://weathernews.jp/ski/spot/35509/", "note": "ウェザーニュース", "sort": 540}, {"area": "滋賀・京都・兵庫", "resort": "峰山高原リゾート ホワイトピーク", "url": "https://weathernews.jp/ski/spot/36313/", "note": "ウェザーニュース", "sort": 550}, {"area": "中国・四国", "resort": "ひるぜんベアバレースキー場", "url": "https://weathernews.jp/ski/spot/36607/", "note": "ウェザーニュース", "sort": 560}];
+function loadLiveCams(){
+  if(S._camsLoading)return;S._camsLoading=true;
+  if(typeof sb==="undefined"||!sb){S.liveCams=LIVECAMS_DEFAULT;S._camsLoading=false;render();return;}
+  sb.from("live_cams").select("area,resort,url,note,sort").eq("active",true).order("sort",{ascending:true}).then(function(r){
+    S._camsLoading=false;
+    S.liveCams=(!r.error&&r.data&&r.data.length)?r.data:LIVECAMS_DEFAULT;render();
+  },function(){S._camsLoading=false;S.liveCams=LIVECAMS_DEFAULT;render();});
+}
+function renderLiveCams(wrap){
+  if(!S.liveCams){loadLiveCams();var ld=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"13px",padding:"24px 0"}});ld.textContent="読み込み中…";wrap.appendChild(ld);return wrap;}
+  var intro=d({style:{color:"#6B7280",fontSize:"12.5px",lineHeight:"1.7",marginBottom:"12px"}});
+  intro.textContent="各スキー場のライブカメラを見られるページへのリンク集です。タップすると外部サイトが開きます。";wrap.appendChild(intro);
+  function openUrl(u){if(!/^https:\/\//.test(String(u||"")))return;window.open(u,"_blank","noopener");}
+  var all=document.createElement("button");all.style.cssText="width:100%;text-align:left;padding:12px 14px;border-radius:14px;border:1.5px solid #BAE6FD;background:#F0F9FF;color:#0369A1;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;margin-bottom:14px";
+  all.textContent="🌐 全国のゲレンデカメラ一覧（ウェザーニュース） ›";all.addEventListener("click",function(){openUrl("https://weathernews.jp/ski/camera/");});wrap.appendChild(all);
+  var by={};S.liveCams.forEach(function(c){var a=c.area||"その他";(by[a]=by[a]||[]).push(c);});
+  var order=AREAS.map(function(a){return a.area;});Object.keys(by).forEach(function(k){if(order.indexOf(k)<0)order.push(k);});
+  order.forEach(function(a){
+    if(!by[a])return;
+    var h=d({style:{fontSize:"12px",fontWeight:"800",color:"#6B7280",margin:"6px 2px 6px"}});h.textContent=a;wrap.appendChild(h);
+    by[a].forEach(function(c){
+      var b=document.createElement("button");b.style.cssText="width:100%;display:flex;align-items:center;gap:10px;text-align:left;padding:12px 14px;border-radius:14px;border:1px solid #E5E7EB;background:#fff;cursor:pointer;font-family:inherit;margin-bottom:8px";
+      var ic=document.createElement("span");ic.textContent="📹";ic.style.fontSize="18px";
+      var tx=document.createElement("span");tx.style.cssText="flex:1;min-width:0";
+      var nm=document.createElement("div");nm.style.cssText="font-weight:800;font-size:14px;color:#1A1A2E";nm.textContent=c.resort||"";
+      tx.appendChild(nm);
+      if(c.note){var nt=document.createElement("div");nt.style.cssText="font-size:11px;color:#9CA3AF;margin-top:2px";nt.textContent=c.note;tx.appendChild(nt);}
+      var ar=document.createElement("span");ar.textContent="›";ar.style.cssText="color:#9CA3AF;font-size:18px";
+      b.appendChild(ic);b.appendChild(tx);b.appendChild(ar);
+      b.addEventListener("click",function(){openUrl(c.url);});
+      wrap.appendChild(b);
+    });
+  });
+  var ft=d({style:{fontSize:"11px",color:"#9CA3AF",lineHeight:"1.6",marginTop:"8px"}});
+  ft.textContent="※ 映像は各スキー場・配信元が公開しているもので、著作権は各配信元に帰属します。シーズンオフや機器の都合で映らないことがあります。";wrap.appendChild(ft);
   return wrap;
 }
 // ===== ヘッダー写真（X風のカバー画像） =====
