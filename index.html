@@ -182,7 +182,7 @@ var S={pg:"splash",blockedUsers:[],reportedUsers:[],showContact:false,showDelete
 function saveD(){if(S.isGuest)return;try{localStorage.setItem("sm2",JSON.stringify({myProfile:S.myProfile,reg:S.reg,liked:S.liked,postLikes:S.postLikes,matches:S.matches,chatMsgs:S.chatMsgs}));}catch(e){}syncProfileToSupabase();}
 // プロフィール変更をSupabaseへ同期（1秒まとめて送信）
 var _syncTimer=null;
-var EXTRA_KEYS=["board","styles","stanceW2","frontAngle","backAngle","bindingName","camGear","costBreakdown","certText"];
+var EXTRA_KEYS=["board","styles","stanceW2","frontAngle","backAngle","bindingName","camGear","costBreakdown","certText","cover"];
 function buildProfileRow(){
   var p=S.myProfile||{};syncMinPrice(p);var ex={};
   for(var i=0;i<EXTRA_KEYS.length;i++){if(p[EXTRA_KEYS[i]]!==undefined)ex[EXTRA_KEYS[i]]=p[EXTRA_KEYS[i]];}
@@ -1700,7 +1700,7 @@ function ConfirmedModal(bk){
 function CamModal(u){
   return Modal(true,function(){R({selUser:null});},function(box){
     // ヒーロー
-    var hero=d({style:{background:"linear-gradient(160deg,#1a1a2e,#16213e,#0f3460)",padding:"28px 20px 24px",position:"relative"}});
+    var hero=d({style:{background:"linear-gradient(160deg,#1a1a2e,#16213e,#0f3460)",padding:"28px 20px 24px",position:"relative"}});coverHero(hero,u);
     var cb=document.createElement("button");cb.style.cssText="position:absolute;top:16px;left:16px;background:rgba(255,255,255,.2);border-radius:20px;padding:6px 14px;color:#fff;font-size:13px;font-weight:700;border:none;cursor:pointer";cb.textContent="← 戻る";
     cb.addEventListener("click",function(){R({selUser:null});});hero.appendChild(cb);
     var hr=d({style:{display:"flex",gap:"14px",alignItems:"center"}});
@@ -1795,7 +1795,7 @@ function CamModal(u){
 
 function InsModal(u){
   return Modal(true,function(){R({selUser:null});},function(box){
-    var hero=d({style:{background:"linear-gradient(160deg,#FF6B2B,#FF8C55 60%,#FFD580)",padding:"52px 20px 24px",position:"relative"}});
+    var hero=d({style:{background:"linear-gradient(160deg,#FF6B2B,#FF8C55 60%,#FFD580)",padding:"52px 20px 24px",position:"relative"}});coverHero(hero,u);
     var cb=b2({style:{position:"absolute",top:"16px",left:"16px",background:"rgba(255,255,255,.25)",borderRadius:"20px",padding:"6px 14px",color:"#fff",fontSize:"13px",fontWeight:"700",border:"none",cursor:"pointer"}},"← 戻る");
     cb.addEventListener("click",function(){R({selUser:null});});hero.appendChild(cb);
     var hr=d({style:{display:"flex",gap:"14px",alignItems:"center"}});hr.appendChild(avU(72,36,u));
@@ -2360,8 +2360,8 @@ function renderExplore(){
   var recRow=document.createElement("div");recRow.style.cssText="display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory;padding-bottom:4px;scrollbar-width:none";
   recData.forEach(function(rd){
     var u=rd.user;
-    var cover=null;
-    if(u.posts){for(var k=0;k<u.posts.length;k++){if(u.posts[k].type==="image"&&u.posts[k].url){cover=u.posts[k].url;break;}}}
+    var cover=u.cover||null;
+    if(!cover&&u.posts){for(var k=0;k<u.posts.length;k++){if(u.posts[k].type==="image"&&u.posts[k].url){cover=u.posts[k].url;break;}}}
     if(!cover&&u.profileImg)cover=u.profileImg;
     var isSki=String(u.act||"").indexOf("スキー")>=0;
     var baseBg=isSki?"#0F6E56":"#534AB7";
@@ -3277,7 +3277,7 @@ function loadUsersFromSupabase(){
         isIns:!!p.is_ins,isCam:!!p.is_cam,price:p.price||null,unit:p.unit||"",
         priceHour:pfr(p,"hour"),priceHalf:pfr(p,"half"),priceDay:pfr(p,"day"),
         bio:p.bio||"",gear:p.gear||[],sns:p.sns||{},
-        board:(p.extra&&p.extra.board)||"",styles:(p.extra&&p.extra.styles)||[],stanceW2:(p.extra&&p.extra.stanceW2)||"",frontAngle:(p.extra&&p.extra.frontAngle)||"",backAngle:(p.extra&&p.extra.backAngle)||"",bindingName:(p.extra&&p.extra.bindingName)||"",camGear:(p.extra&&p.extra.camGear)||[],costBreakdown:(p.extra&&p.extra.costBreakdown)||[],
+        board:(p.extra&&p.extra.board)||"",styles:(p.extra&&p.extra.styles)||[],stanceW2:(p.extra&&p.extra.stanceW2)||"",frontAngle:(p.extra&&p.extra.frontAngle)||"",backAngle:(p.extra&&p.extra.backAngle)||"",bindingName:(p.extra&&p.extra.bindingName)||"",camGear:(p.extra&&p.extra.camGear)||[],costBreakdown:(p.extra&&p.extra.costBreakdown)||[],cover:(p.extra&&p.extra.cover)||null,
         posts:[],likes:0,ok:!!p.is_verified
       });
     }
@@ -3714,17 +3714,93 @@ function renderKyc(){
   return wrap;
 }
 
+// ===== ヘッダー写真（X風のカバー画像） =====
+function coverHero(hero,u){
+  if(!u||!u.cover)return;
+  var url=String(u.cover).replace(/["\\\n\r]/g,"");
+  hero.style.background='linear-gradient(rgba(0,0,0,.15),rgba(0,0,0,.65)),url("'+url+'") center/cover no-repeat';
+  hero.style.paddingTop="120px";
+}
+function removeOldCover(url){
+  try{if(!url||!sb)return;var m=String(url).split("/object/public/avatars/")[1];if(!m)return;sb.storage.from("avatars").remove([decodeURIComponent(m.split("?")[0])]).then(function(){},function(){});}catch(e){}
+}
+function pickCover(){
+  if(typeof sb==="undefined"||!sb||!currentUser||!S.myProfile){alert("ヘッダー写真を設定するにはログインが必要です");return;}
+  var inp=document.createElement("input");inp.type="file";inp.accept="image/*";inp.style.cssText="position:fixed;left:-1000px;top:0;opacity:0";
+  document.body.appendChild(inp);
+  inp.addEventListener("change",function(e){
+    var f=e.target.files&&e.target.files[0];
+    if(inp.parentNode)inp.parentNode.removeChild(inp);
+    if(!f)return;
+    S.coverUploading=true;render();
+    function fail(msg){S.coverUploading=false;render();alert("ヘッダー写真を保存できませんでした。\n"+msg);}
+    var fr=new FileReader();
+    fr.onload=function(ev){
+      var im=new Image();
+      im.onload=function(){
+        var w=im.width,h=im.height,sc=Math.min(1,1400/Math.max(w,h));
+        var cv=document.createElement("canvas");cv.width=Math.round(w*sc);cv.height=Math.round(h*sc);
+        cv.getContext("2d").drawImage(im,0,0,cv.width,cv.height);
+        cv.toBlob(function(bl){
+          if(!bl){fail("画像を変換できませんでした");return;}
+          var old=S.myProfile.cover;
+          var path=currentUser.id+"/cover_"+Date.now()+".jpg";
+          sb.storage.from("avatars").upload(path,bl,{contentType:"image/jpeg",upsert:true}).then(function(ur){
+            if(ur.error){fail(ur.error.message);return;}
+            S.myProfile.cover=sb.storage.from("avatars").getPublicUrl(path).data.publicUrl;
+            saveProfileNow(function(err){
+              S.coverUploading=false;render();
+              if(err){alert("保存エラー: "+err);return;}
+              removeOldCover(old);
+            });
+          },function(e2){fail(e2&&e2.message?e2.message:String(e2));});
+        },"image/jpeg",0.85);
+      };
+      im.onerror=function(){fail("この画像は読み込めませんでした");};
+      im.src=ev.target.result;
+    };
+    fr.onerror=function(){fail("ファイルを読み込めませんでした");};
+    fr.readAsDataURL(f);
+  });
+  inp.click();
+}
+function removeCover(){
+  if(!S.myProfile||!S.myProfile.cover)return;
+  if(!confirm("ヘッダー写真を削除しますか？"))return;
+  var old=S.myProfile.cover;S.myProfile.cover=null;S.coverUploading=true;render();
+  saveProfileNow(function(err){
+    S.coverUploading=false;
+    if(err){S.myProfile.cover=old;render();alert("削除できませんでした: "+err);return;}
+    render();removeOldCover(old);
+  });
+}
+
 function renderProfile(){
   var wrap=d({style:{paddingBottom:"80px"}});
   var kycOk=!!(S.myProfile&&S.myProfile.ok===true);var postOk=true;
-  var hero=d({style:{background:"linear-gradient(165deg,#FBF6EC 0%,#F4E9D2 55%,#EAD6AC 100%)",padding:"28px 20px 30px",position:"relative",overflow:"hidden",borderBottom:"1px solid #E8D9B8"}});
+  var hero=d({style:{background:"linear-gradient(180deg,#FBF6EC,#F4E9D2)",padding:"0 20px 20px",position:"relative",borderBottom:"1px solid #E8D9B8"}});
+  var myCover=S.myProfile&&S.myProfile.cover;
+  var banner=document.createElement("div");banner.style.cssText="position:relative;height:150px;margin:0 -20px;overflow:hidden;background:linear-gradient(165deg,#FBF6EC 0%,#F4E9D2 55%,#EAD6AC 100%)";
+  if(myCover){var bImg=document.createElement("img");bImg.src=myCover;bImg.alt="";bImg.style.cssText="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block";banner.appendChild(bImg);}
   var heroMt=document.createElement("div");heroMt.style.cssText="position:absolute;left:0;right:0;bottom:0;height:70px;pointer-events:none";
   heroMt.innerHTML='<svg viewBox="0 0 360 70" preserveAspectRatio="none" width="100%" height="70" xmlns="http://www.w3.org/2000/svg"><path d="M0 70 L60 38 L95 52 L165 14 L215 44 L262 26 L320 48 L360 34 L360 70 Z" fill="#E2CB9C" opacity=".45"/><path d="M0 70 L40 54 L110 62 L190 40 L250 58 L310 46 L360 60 L360 70 Z" fill="#D9BF8A" opacity=".35"/><path d="M155 22 L165 14 L176 25 L169 22 L162 27 Z" fill="#fff" opacity=".9"/></svg>';
-  hero.appendChild(heroMt);
-  var eb=b2({style:{position:"absolute",top:"16px",right:"16px",background:"#fff",borderRadius:"20px",padding:"6px 14px",color:"#8A6A2E",fontSize:"12px",fontWeight:"700",border:"1px solid #E8D9B8",cursor:"pointer",zIndex:"1"}},"✏️ 編集");
+  if(!myCover)banner.appendChild(heroMt);
+  var camB=document.createElement("button");camB.setAttribute("aria-label","ヘッダー写真を変更");camB.textContent=S.coverUploading?"⏳":"📷";
+  camB.style.cssText="position:absolute;right:12px;bottom:12px;width:36px;height:36px;border-radius:50%;border:none;background:rgba(0,0,0,.45);color:#fff;font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center";
+  camB.addEventListener("click",function(){if(S.coverUploading)return;if(S.myProfile&&S.myProfile.cover){S.coverMenu=!S.coverMenu;render();}else pickCover();});
+  banner.appendChild(camB);
+  if(S.coverUploading){var upL=document.createElement("div");upL.style.cssText="position:absolute;left:12px;bottom:14px;background:rgba(0,0,0,.5);color:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:10px";upL.textContent="アップロード中…";banner.appendChild(upL);}
+  if(S.coverMenu&&myCover&&!S.coverUploading){
+    var cm=document.createElement("div");cm.style.cssText="position:absolute;right:12px;bottom:54px;background:#fff;border-radius:14px;box-shadow:0 6px 20px rgba(0,0,0,.18);overflow:hidden;min-width:150px;z-index:2";
+    var cmItems=[["🖼 写真を変更",function(){S.coverMenu=false;pickCover();},"#1A1A2E"],["🗑 写真を削除",function(){S.coverMenu=false;removeCover();},"#EF4444"],["キャンセル",function(){S.coverMenu=false;render();},"#6B7280"]];
+    cmItems.forEach(function(it,ix){var bt=document.createElement("button");bt.textContent=it[0];bt.style.cssText="display:block;width:100%;text-align:left;padding:11px 14px;border:none;background:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;color:"+it[2]+(ix?";border-top:1px solid #F0F0F0":"");bt.addEventListener("click",it[1]);cm.appendChild(bt);});
+    banner.appendChild(cm);
+  }
+  hero.appendChild(banner);
+  var eb=b2({style:{position:"absolute",top:"162px",right:"16px",background:"#fff",borderRadius:"20px",padding:"6px 14px",color:"#8A6A2E",fontSize:"12px",fontWeight:"700",border:"1px solid #E8D9B8",cursor:"pointer",zIndex:"1"}},"✏️ 編集");
   eb.addEventListener("click",function(){S.showEditProfile=true;render();});hero.appendChild(eb);
-  var hr=d({style:{display:"flex",gap:"14px",alignItems:"center",position:"relative"}});
-  var aw=d({style:{position:"relative",flexShrink:"0",cursor:"pointer"}});
+  var hr=d({style:{position:"relative"}});
+  var aw=d({style:{position:"relative",display:"inline-block",marginTop:"-40px",cursor:"pointer"}});
   if(S.myProfile&&S.myProfile.profileImg){var ai=mk("img",{src:S.myProfile.profileImg});ai.style.cssText="width:72px;height:72px;border-radius:22px;object-fit:cover;border:3px solid #fff;box-shadow:0 6px 16px rgba(138,106,46,.25)";aw.appendChild(ai);}
   else{
     // スキーヤーシルエットアイコン
@@ -3734,7 +3810,7 @@ function renderProfile(){
     aw.appendChild(silhouette);
   }
   aw.addEventListener("click",function(){S.showEditProfile=true;render();});hr.appendChild(aw);
-  var hi=d({});var hn=d({style:{display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap"}});
+  var hi=d({style:{marginTop:"8px"}});var hn=d({style:{display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap"}});
   hn.appendChild(sp({style:{fontWeight:"900",fontSize:"22px",color:"#2E2414"}},(S.myProfile&&(S.myProfile.nick||S.myProfile.name))||"名前未設定"));
   if(kycOk)hn.appendChild(sp({style:{background:"#fff",border:"1px solid #E8D9B8",borderRadius:"20px",padding:"2px 8px",fontSize:"11px",color:"#8A6A2E",fontWeight:"700"}},"🪪 本人確認済"));
   hi.appendChild(hn);
