@@ -2670,6 +2670,7 @@ function renderExplore(){
   return wrap;
 }
 
+function fitChatInput(el){if(!el)return;el.style.height="auto";var h=Math.min(el.scrollHeight,124);el.style.height=h+"px";el.style.overflowY=el.scrollHeight>124?"auto":"hidden";}
 function dmKey(m){if(!m._k){window._dmK=(window._dmK||0)+1;m._k="k"+window._dmK;}return m._k;}
 // チャットの吹き出し1つ分を作る（画面全体を描き直さずに、追加・差し替えできるようにする）
 function dmRow(m,cu){
@@ -2771,11 +2772,13 @@ function renderChat(){
     ma.appendChild(es);
   }
   cw.appendChild(ma);
-  var ir=d({style:{padding:"10px 16px calc(12px + env(safe-area-inset-bottom,0px))",background:"#fff",display:"flex",alignItems:"center",gap:"8px",borderTop:"1px solid #F0F0F0",flexShrink:"0"}});
-  var ci2=document.createElement("input");ci2.type="text";ci2.className="inp";ci2.style.cssText="flex:1;border-radius:20px";
-  ci2.id="chatinput";ci2.style.fontSize="16px";ci2.placeholder="メッセージを入力...";ci2.value=S.chatIn||"";
-  ci2.addEventListener("input",function(ev){S.chatIn=ev.target.value;});
-  ci2.addEventListener("keydown",function(ev){if(ev.key==="Enter"&&!ev.isComposing&&ev.keyCode!==229){ev.preventDefault();sendMsg();}});
+  var ir=d({style:{padding:"10px 16px calc(12px + env(safe-area-inset-bottom,0px))",background:"#fff",display:"flex",alignItems:"flex-end",gap:"8px",borderTop:"1px solid #F0F0F0",flexShrink:"0"}});
+  // 入力欄はLINEのように、長くなったら下に広がる（最大5行くらい、それ以上は欄の中でスクロール）
+  var ci2=document.createElement("textarea");ci2.rows=1;ci2.className="inp";
+  ci2.style.cssText="flex:1;border-radius:20px;resize:none;font-size:16px;line-height:1.45;padding:10px 14px;max-height:124px;overflow-y:auto;display:block;font-family:inherit";
+  ci2.id="chatinput";ci2.placeholder="メッセージを入力...";ci2.value=S.chatIn||"";
+  ci2.addEventListener("input",function(ev){S.chatIn=ev.target.value;fitChatInput(ci2);});
+  setTimeout(function(){fitChatInput(ci2);},0);
   var sendB2=obtn("送信",function(){sendMsg();},"");sendB2.style.padding="10px 18px";
   var phIn=document.createElement("input");phIn.type="file";phIn.accept="image/*";phIn.style.display="none";
   phIn.addEventListener("change",function(e){var f=e.target.files&&e.target.files[0];e.target.value="";if(f)sendPhoto(f);});
@@ -3646,7 +3649,7 @@ function sendMsg(text){if(S.isGuest){guestPrompt();return;}
     var tmp={f:"m",t:body,time:hmOf(),pending:true};
     S.chatMsgs[cid].push(tmp);S.chatIn="";
     var _ci=document.getElementById("chatinput");
-    if(chatOpenFor(cid)){appendDmRow(tmp);if(_ci){_ci.value="";_ci.focus();}}else{render();}
+    if(chatOpenFor(cid)){appendDmRow(tmp);if(_ci){_ci.value="";fitChatInput(_ci);_ci.focus();}}else{render();}
     sb.from("dm_messages").insert({from_user:currentUser.id,to_user:u.uid,body:body}).select().single().then(function(r){
       if(r.error){tmp.t=body+"（送信失敗）";tmp.pending=false;if(chatOpenFor(cid))refreshDmRow(tmp);else render();alert("送信に失敗しました: "+r.error.message);return;}
       tmp.pending=false;tmp.id=r.data.id;clearTimeout(window._dmCacheT);window._dmCacheT=setTimeout(saveDmCache,800);
