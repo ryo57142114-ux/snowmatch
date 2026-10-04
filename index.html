@@ -22,7 +22,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;-webkit-ap
 input,textarea,select{font-family:inherit;-webkit-appearance:none;font-size:16px;outline:none}
 button:active{opacity:.75}
 img{display:block;width:100%}
-.hdr{background:linear-gradient(135deg,#FF6B2B,#FF8C55);padding:14px 18px 12px;display:flex;align-items:center;gap:8px}
+.hdr{background:linear-gradient(135deg,#FF6B2B,#FF8C55);padding:14px 18px 12px;display:flex;align-items:center;gap:8px}.hdr.champ{background:#FBF6EC}
 .nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:#fff;display:flex;border-top:1px solid #F0F0F0;z-index:100;padding-bottom:env(safe-area-inset-bottom,16px)}
 .ni{flex:1;padding:10px 0 8px;text-align:center;color:#6B7280;font-size:10px;font-weight:500;border:none;background:none;font-family:inherit;cursor:pointer}
 .ni.on{color:#FF6B2B;font-weight:800}
@@ -3717,36 +3717,39 @@ function renderKyc(){
 function renderProfile(){
   var wrap=d({style:{paddingBottom:"80px"}});
   var kycOk=!!(S.myProfile&&S.myProfile.ok===true);var postOk=true;
-  var hero=d({style:{background:"linear-gradient(160deg,#FF6B2B,#FF8C55 60%,#FFD580)",padding:"28px 20px 24px",position:"relative"}});
-  var eb=b2({style:{position:"absolute",top:"16px",right:"16px",background:"rgba(255,255,255,.22)",borderRadius:"20px",padding:"6px 14px",color:"#fff",fontSize:"12px",fontWeight:"700",border:"none",cursor:"pointer"}},"✏️ 編集");
+  var hero=d({style:{background:"linear-gradient(165deg,#FBF6EC 0%,#F4E9D2 55%,#EAD6AC 100%)",padding:"28px 20px 30px",position:"relative",overflow:"hidden",borderBottom:"1px solid #E8D9B8"}});
+  var heroMt=document.createElement("div");heroMt.style.cssText="position:absolute;left:0;right:0;bottom:0;height:70px;pointer-events:none";
+  heroMt.innerHTML='<svg viewBox="0 0 360 70" preserveAspectRatio="none" width="100%" height="70" xmlns="http://www.w3.org/2000/svg"><path d="M0 70 L60 38 L95 52 L165 14 L215 44 L262 26 L320 48 L360 34 L360 70 Z" fill="#E2CB9C" opacity=".45"/><path d="M0 70 L40 54 L110 62 L190 40 L250 58 L310 46 L360 60 L360 70 Z" fill="#D9BF8A" opacity=".35"/><path d="M155 22 L165 14 L176 25 L169 22 L162 27 Z" fill="#fff" opacity=".9"/></svg>';
+  hero.appendChild(heroMt);
+  var eb=b2({style:{position:"absolute",top:"16px",right:"16px",background:"#fff",borderRadius:"20px",padding:"6px 14px",color:"#8A6A2E",fontSize:"12px",fontWeight:"700",border:"1px solid #E8D9B8",cursor:"pointer",zIndex:"1"}},"✏️ 編集");
   eb.addEventListener("click",function(){S.showEditProfile=true;render();});hero.appendChild(eb);
-  var hr=d({style:{display:"flex",gap:"14px",alignItems:"center"}});
+  var hr=d({style:{display:"flex",gap:"14px",alignItems:"center",position:"relative"}});
   var aw=d({style:{position:"relative",flexShrink:"0",cursor:"pointer"}});
-  if(S.myProfile&&S.myProfile.profileImg){var ai=mk("img",{src:S.myProfile.profileImg});ai.style.cssText="width:72px;height:72px;border-radius:22px;object-fit:cover;border:3px solid rgba(255,255,255,.6)";aw.appendChild(ai);}
+  if(S.myProfile&&S.myProfile.profileImg){var ai=mk("img",{src:S.myProfile.profileImg});ai.style.cssText="width:72px;height:72px;border-radius:22px;object-fit:cover;border:3px solid #fff;box-shadow:0 6px 16px rgba(138,106,46,.25)";aw.appendChild(ai);}
   else{
     // スキーヤーシルエットアイコン
     var silhouette=document.createElement("div");
-    silhouette.style.cssText="width:72px;height:72px;border-radius:22px;background:#E8E8E8;display:flex;align-items:center;justify-content:center;border:3px solid rgba(255,255,255,.6);overflow:hidden";
+    silhouette.style.cssText="width:72px;height:72px;border-radius:22px;background:#E8E8E8;display:flex;align-items:center;justify-content:center;border:3px solid #fff;box-shadow:0 6px 16px rgba(138,106,46,.25);overflow:hidden";
     silhouette.innerHTML='<svg viewBox="0 0 72 72" width="72" height="72" xmlns="http://www.w3.org/2000/svg"><rect width="72" height="72" fill="#DCDCDC"/><circle cx="36" cy="24" r="13" fill="#B0B0B0"/><rect x="8" y="42" width="56" height="4" rx="2" fill="#B0B0B0" opacity="0.6"/><ellipse cx="36" cy="58" rx="24" ry="16" fill="#B0B0B0"/><circle cx="36" cy="21" r="10" fill="#C8C8C8"/><ellipse cx="36" cy="19" rx="8" ry="5" fill="#B8B8B8" opacity="0.8"/><rect x="26" y="16" width="20" height="8" rx="4" fill="#A0A0A0" opacity="0.6"/></svg>';
     aw.appendChild(silhouette);
   }
   aw.addEventListener("click",function(){S.showEditProfile=true;render();});hr.appendChild(aw);
   var hi=d({});var hn=d({style:{display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap"}});
-  hn.appendChild(sp({style:{fontWeight:"900",fontSize:"22px",color:"#fff"}},(S.myProfile&&(S.myProfile.nick||S.myProfile.name))||"名前未設定"));
-  if(kycOk)hn.appendChild(sp({style:{background:"rgba(255,255,255,.25)",borderRadius:"20px",padding:"2px 8px",fontSize:"11px",color:"#fff",fontWeight:"700"}},"🪪 本人確認済"));
+  hn.appendChild(sp({style:{fontWeight:"900",fontSize:"22px",color:"#2E2414"}},(S.myProfile&&(S.myProfile.nick||S.myProfile.name))||"名前未設定"));
+  if(kycOk)hn.appendChild(sp({style:{background:"#fff",border:"1px solid #E8D9B8",borderRadius:"20px",padding:"2px 8px",fontSize:"11px",color:"#8A6A2E",fontWeight:"700"}},"🪪 本人確認済"));
   hi.appendChild(hn);
-  var agd=d({style:{color:"rgba(255,255,255,.85)",fontSize:"13px",marginTop:"2px"}});agd.textContent=((S.myProfile&&S.myProfile.act)||"")+"・"+((S.myProfile&&S.myProfile.lv)||"");hi.appendChild(agd);
+  var agd=d({style:{color:"#8A6A2E",fontSize:"13px",marginTop:"2px"}});agd.textContent=((S.myProfile&&S.myProfile.act)||"")+"・"+((S.myProfile&&S.myProfile.lv)||"");hi.appendChild(agd);
 
   // フォロー・フォロワー数
   var followRow=document.createElement("div");followRow.style.cssText="display:flex;gap:24px;margin-top:10px";
   var fwBtn=document.createElement("button");fwBtn.style.cssText="background:none;border:none;cursor:pointer;text-align:left;padding:0";
-  var fwNum=document.createElement("div");fwNum.style.cssText="font-weight:900;color:#fff;font-size:18px;line-height:1";fwNum.textContent=String(S.following.length);
-  var fwLbl=document.createElement("div");fwLbl.style.cssText="font-size:11px;color:rgba(255,255,255,.75);margin-top:2px";fwLbl.textContent="フォロー中";
+  var fwNum=document.createElement("div");fwNum.style.cssText="font-weight:900;color:#2E2414;font-size:18px;line-height:1";fwNum.textContent=String(S.following.length);
+  var fwLbl=document.createElement("div");fwLbl.style.cssText="font-size:11px;color:#8A6A2E;margin-top:2px";fwLbl.textContent="フォロー中";
   fwBtn.appendChild(fwNum);fwBtn.appendChild(fwLbl);
   fwBtn.addEventListener("click",function(){S.showFollowList=true;S.followListType="following";render();});
   var frBtn=document.createElement("button");frBtn.style.cssText="background:none;border:none;cursor:pointer;text-align:left;padding:0";
-  var frNum=document.createElement("div");frNum.style.cssText="font-weight:900;color:#fff;font-size:18px;line-height:1";frNum.textContent=String(S.followers.length);
-  var frLbl=document.createElement("div");frLbl.style.cssText="font-size:11px;color:rgba(255,255,255,.75);margin-top:2px";frLbl.textContent="フォロワー";
+  var frNum=document.createElement("div");frNum.style.cssText="font-weight:900;color:#2E2414;font-size:18px;line-height:1";frNum.textContent=String(S.followers.length);
+  var frLbl=document.createElement("div");frLbl.style.cssText="font-size:11px;color:#8A6A2E;margin-top:2px";frLbl.textContent="フォロワー";
   frBtn.appendChild(frNum);frBtn.appendChild(frLbl);
   frBtn.addEventListener("click",function(){S.showFollowList=true;S.followListType="followers";render();});
   followRow.appendChild(fwBtn);followRow.appendChild(frBtn);hi.appendChild(followRow);
@@ -4737,15 +4740,16 @@ function _renderInner(){
   if(S.pg==="kyc"){app.appendChild(renderKyc());return;}
   var cf=(S.tab==="chat"&&S.chatUser)||roomOpenNow();
   if(!cf){
-    var hdr=d({class:"hdr"});
-    hdr.appendChild(sp({style:{fontSize:"20px",fontWeight:"900",color:"#fff",letterSpacing:"-.5px"}},"SnowMatch"));
-    hdr.appendChild(sp({style:{fontSize:"11px",color:"rgba(255,255,255,.85)",marginLeft:"4px",flex:"1"}},"スキー・スノボ仲間を見つけよう"));
+    var champ=S.tab==="profile";
+    var hdr=d({class:"hdr"+(champ?" champ":"")});
+    hdr.appendChild(sp({style:{fontSize:"20px",fontWeight:"900",color:champ?"#5A4521":"#fff",letterSpacing:"-.5px"}},"SnowMatch"));
+    hdr.appendChild(sp({style:{fontSize:"11px",color:champ?"#8A6A2E":"rgba(255,255,255,.85)",marginLeft:"4px",flex:"1"}},"スキー・スノボ仲間を見つけよう"));
     // 通知ベルボタン
     var unreadNotifs = 0;
     var vn2=visibleNotifs();for(var ni=0;ni<vn2.length;ni++){if(!vn2[ni].read)unreadNotifs++;}unreadNotifs+=unreadChatItems().length;
     var bellWrap=document.createElement("div");bellWrap.style.cssText="position:relative;flex-shrink:0;margin-left:auto";
     var bellBtn=document.createElement("button");bellBtn.style.cssText="font-size:22px;background:rgba(255,255,255,0.2);border:none;border-radius:12px;width:38px;height:38px;cursor:pointer;display:flex;align-items:center;justify-content:center";
-    bellBtn.textContent="🔔";
+    bellBtn.textContent="🔔";if(champ){bellBtn.style.background="rgba(255,255,255,.75)";bellBtn.style.boxShadow="0 0 0 1px #E8D9B8";}
     bellBtn.addEventListener("click",function(){S.showNotif=!S.showNotif;for(var i=0;i<S.notifs.length;i++)S.notifs[i].read=true;saveNotifsRead(S.notifs);render();});
     if(unreadNotifs>0){
       var bellBdg=document.createElement("div");bellBdg.style.cssText="position:absolute;top:-4px;right:-4px;background:#FF3B30;color:#fff;border-radius:10px;min-width:16px;height:16px;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center;padding:0 3px";
