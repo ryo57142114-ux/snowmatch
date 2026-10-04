@@ -1324,6 +1324,72 @@ function svc(url){
   return{icon:"🎬",name:"動画を見る",bg:"linear-gradient(135deg,#FF6B2B,#FF8C55)"};
 }
 
+// ===== 使い方・よくある質問 =====
+var FAQ=[
+ {sec:"📱 はじめに",items:[
+  ["SnowMatchってどんなアプリ？","スキー・スノーボードの仲間を見つけるアプリです。\n・無料で一緒に滑る友達を探す\n・お金を払って、一緒に滑ってくれる人や追い撮り（撮影）してくれる人にお願いする\n・逆に、自分が同行・撮影してお金を受け取る\nといった使い方ができます。"],
+  ["アプリストアからダウンロードするの？","いいえ。SnowMatchはWebアプリなので、ダウンロードは不要です。SafariやChromeで開いて「ホーム画面に追加」すると、普通のアプリと同じようにアイコンから開けます（次の質問を見てください）。"],
+  ["ホーム画面に追加する方法（iPhone）","① Safariで SnowMatch を開く（Chromeなど他のアプリからではなく、Safariで開いてください）\n② 画面下の共有ボタン（□に↑のマーク）をタップ\n③ メニューを下にスクロールして「ホーム画面に追加」をタップ\n④ 右上の「追加」をタップ\n\nホーム画面に「スノマ」のアイコンができます。次からはそのアイコンから開くと、上下のバーがない全画面で、アプリと同じように使えます。"],
+  ["ホーム画面に追加する方法（Android）","① Chromeで SnowMatch を開く\n② 右上の「︙」をタップ\n③「ホーム画面に追加」または「アプリをインストール」をタップ\n④「追加」または「インストール」をタップ\n\nホーム画面にアイコンができます。"],
+  ["ゲストでも使える？","「ゲストとして見る」から、登録なしで仲間探しや募集掲示板、つぶやきなどを見られます。メッセージ・予約・参加・書き込みなどをするには無料登録が必要です。"]
+ ]},
+ {sec:"📝 登録の流れ",items:[
+  ["登録はどうやるの？","① 最初の画面で「はじめる（無料登録）」をタップ\n② メールアドレスを入力して登録\n③ ニックネーム・アイコン・種目（スキー／スノーボード）・レベルなどのプロフィールを入力\n④ マイページで「活動エリア・スキー場」を選ぶ\n\nこれで仲間探し・メッセージ・無料の募集への参加ができます。登録は無料です。"],
+  ["本人確認は必要？","次のことをするには本人確認（身分証の提出）が必要です。\n・お金を受け取る（有料で同行・撮影する、有料の募集に参加する）\n・ラウンジの会員限定の部屋を使う\n\n無料で仲間を探すだけなら本人確認なしでも使えます。本人確認済みの人には「確認済」マークが付くので、相手選びの安心材料になります。"],
+  ["本人確認のやり方は？","マイページから本人確認を申請し、身分証の写真を提出します。運営が確認して承認すると「確認済」になります。結果はアプリ内の通知でお知らせします。"],
+  ["プロフィールで大事なところは？","アイコン写真・自己紹介・活動スキー場・レベルを入れておくと、相手が安心して声をかけやすくなります。有料で同行する人は、料金と、滑りや撮影の動画（投稿・実績）を載せるのがおすすめです。"]
+ ]},
+ {sec:"🏂 アプリの使い方",items:[
+  ["仲間はどうやって探すの？","「探す」→「仲間を探す」で、エリア・種目・レベルなどで絞り込めます。気になる人がいたらプロフィールを見て、フォローやメッセージをしてみましょう。"],
+  ["募集掲示板って何？","日付つきで投稿できる掲示板です。\n・「同行します」：この日空いているので一緒に滑れます、という投稿\n・「同行してくれる人募集」：この日一緒に滑る人を探しています、という投稿\nそれぞれ「無料」か「有料」を選べます。"],
+  ["「参加します」を押すとどうなる？","【無料の投稿】相手に「参加したいです！」というメッセージが自動で届き、チャットで日時や集合場所を決めます。\n\n【有料の募集】応募として相手に届きます。募集した人が応募者の中から1人を選ぶと予約が確定します。確定するまでは何人でも応募でき、選ばれなかった人には自動でお知らせが届きます。"],
+  ["メッセージは誰にでも送れる？","フォローした相手にメッセージを送れます。プロフィールの「メッセージ」や、募集の「参加します」「質問」から送ると、自動でフォローされます。"],
+  ["ラウンジでは何ができる？","・つぶやき：誰でも見られるひとこと投稿（自分のつぶやきはマイページに日付つきで残ります）\n・ゲレンデ速報：今日の雪質・天気・混み具合を写真つきで共有（毎日0時にリセット）\n・会員：本人確認済みの人だけの部屋（雑談部屋・悩み相談・Q&A・チェックイン）。メッセージを長押しすると返信でき、写真や動画も送れます。"]
+ ]},
+ {sec:"💴 料金とお支払いの流れ",items:[
+  ["アプリの利用料は？","登録・仲間探し・メッセージ・無料の募集などは、すべて無料です。お金がかかるのは、有料の同行・撮影をお願いするときだけです。"],
+  ["有料の同行をお願いする流れは？","【相手のプロフィールから予約する場合】\n① 相手の料金（1時間／半日／1日）を見て「予約する」\n② 日付・時間・プランを選んで申し込み、支払う\n③ 相手が承認すると予約確定\n\n【募集掲示板で募集する場合】\n① 「同行してくれる人募集」＋「有料」で、払う金額を決めて投稿\n② 「参加します」と応募してくれた人から1人を選ぶ\n③ 支払い画面で支払うと予約確定"],
+  ["表示の料金に何が含まれる？","表示の料金は「全部込み」の金額です。同行謝礼・食事代・交通費・リフト券代が含まれます。宿泊費・撮影機材費は各自負担です。予約時に支払うのは表示の金額だけで、追加の手数料はかかりません。"],
+  ["払ったお金はいつ相手に渡るの？","支払ったお金は、いったんStripe（決済会社）が安全に預かります。\n① 支払い → ② 当日一緒に滑る → ③ 滑走日のあと、トラブルがなければ同行した人へ送金\nという流れなので、滑る前にお金だけ相手に渡ってしまう心配はありません。"],
+  ["お金を受け取る側の手数料は？","受け取る金額から、運営手数料15%（カード決済手数料込み）が差し引かれます。たとえば3,000円の同行なら、受け取り額は2,550円です。払う側の追加手数料はありません。"],
+  ["キャンセルしたらどうなる？","・前日までのキャンセル：全額返金\n・当日のキャンセル：料金の100%\n・悪天候・リフト運休・相手側の都合の場合：全額返金"],
+  ["当日なにかトラブルがあったら？","マイページの「お問い合わせ」から、できるだけ早く運営に知らせてください。相手への送金前であれば、運営が双方に確認して対応します。"],
+  ["今はお金がかかる？","現在、決済はテスト（デモ）中のため、実際の請求は行われません。本番の決済が始まるときは、アプリ内でお知らせします。"]
+ ]},
+ {sec:"🛡 安全に使うために",items:[
+  ["初めて会う人と滑るときの注意は？","・集合場所はゲレンデのセンターハウスなど、人の多い場所にしましょう\n・本人確認済みの「確認済」マークやプロフィール、つぶやきも参考にしましょう\n・アプリの外での直接のお金のやり取りはしないでください（トラブルのとき運営が対応できません）"],
+  ["嫌な思いをしたときは？","つぶやきの「通報」や、マイページの「お問い合わせ」から運営に知らせてください。悪質な場合は、運営が投稿の非表示や利用停止などの対応をします。"]
+ ]},
+ {sec:"❓ 困ったとき",items:[
+  ["画面が古いまま・うまく動かない","ホーム画面のアプリを一度完全に閉じて（下から上にスワイプして終了）、もう一度開いてください。それでも直らないときは、Safariで直接開き直してみてください。"],
+  ["通知のバッジが消えない","「探す」のバッジは募集掲示板の新しい投稿のお知らせです。「探す」画面の上にある「募集掲示板」タブを開くと消えます。"],
+  ["問い合わせ先は？","マイページの「お問い合わせ」から送ってください。運営より順次お返事します。"]
+ ]}
+];
+function FaqModal(){
+  return Modal(true,function(){R({showFaq:false});},function(box){
+    var hd=d({style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"6px"}});
+    var t=d({style:{fontWeight:"900",fontSize:"19px",color:"#1A1A2E"}});t.textContent="📖 使い方・よくある質問";hd.appendChild(t);
+    var x=document.createElement("button");x.textContent="✕";x.setAttribute("aria-label","閉じる");x.style.cssText="width:36px;height:36px;border-radius:50%;border:none;background:#F3F4F6;color:#4B5563;font-size:16px;cursor:pointer;flex-shrink:0";x.addEventListener("click",function(){R({showFaq:false});});hd.appendChild(x);
+    box.appendChild(hd);
+    var st=d({style:{fontSize:"12px",color:"#6B7280",marginBottom:"14px"}});st.textContent="質問をタップすると答えが開きます";box.appendChild(st);
+    FAQ.forEach(function(sec,si){
+      var sh=d({style:{fontWeight:"900",fontSize:"15px",color:"#1A1A2E",margin:si?"18px 0 8px":"0 0 8px"}});sh.textContent=sec.sec;box.appendChild(sh);
+      sec.items.forEach(function(it,ii){
+        var key=si+"_"+ii;var on=S.faqOpen===key;
+        var c=d({style:{border:"1.5px solid "+(on?"#FDBA74":"#EEF0F3"),background:on?"#FFF7ED":"#fff",borderRadius:"14px",marginBottom:"8px",overflow:"hidden"}});
+        var q=document.createElement("button");q.style.cssText="display:flex;width:100%;align-items:center;gap:8px;text-align:left;padding:12px 14px;border:none;background:none;cursor:pointer;font-family:inherit;font-size:13.5px;font-weight:800;color:#1A1A2E";
+        q.appendChild(sp({style:{color:"#FF6B2B",flexShrink:"0"}},"Q"));q.appendChild(sp({style:{flex:"1"}},it[0]));q.appendChild(sp({style:{color:"#9CA3AF",flexShrink:"0"}},on?"▾":"›"));
+        q.addEventListener("click",function(){S.faqOpen=on?null:key;render();});
+        c.appendChild(q);
+        if(on){var a=d({style:{padding:"0 14px 14px 14px",fontSize:"13px",color:"#374151",lineHeight:"1.8",whiteSpace:"pre-line"}});a.textContent=it[1];c.appendChild(a);}
+        box.appendChild(c);
+      });
+    });
+    var cb=obtn("📧 解決しないときはお問い合わせ",function(){if(S.pg!=="main"){alert("お問い合わせは、ログイン後のマイページから送れます");return;}R({showFaq:false,showContact:true});},"obtn-s obtn-full");cb.style.marginTop="14px";box.appendChild(cb);
+    var cl=obtn("閉じる",function(){R({showFaq:false});},"obtn-full");cl.style.marginTop="8px";box.appendChild(cl);
+  });
+}
 function Modal(full,onClose,fn){
   var ov=d({class:"ov"+(full?" top":""),onClick:onClose});
   var box=d({class:"mbox"+(full?" full":""),onClick:function(e){e.stopPropagation();}});
@@ -2042,6 +2108,8 @@ function renderSplash(){
     }
     if(window.sb&&currentUser){window.sb.auth.signOut().then(enterGuest,enterGuest);}else{enterGuest();}
   });cont.appendChild(gb);
+  var fqb=document.createElement("button");fqb.textContent="📖 使い方・よくある質問";fqb.style.cssText="width:100%;padding:10px 0;margin-top:8px;background:none;border:none;color:#fff;font-weight:800;font-size:13.5px;text-decoration:underline;cursor:pointer;font-family:inherit";
+  fqb.addEventListener("click",function(){R({showFaq:true,faqOpen:null});});cont.appendChild(fqb);
 
   // メールログインボタン（Supabase）
   var emailLoginBtn=document.createElement("button");
@@ -4212,6 +4280,10 @@ function renderProfile(){
   var supportDiv=d({style:{padding:"16px 20px 4px",display:"flex",flexDirection:"column",gap:"8px"}});
 
   var contactBtn2=document.createElement("button");contactBtn2.style.cssText="padding:12px;background:#F9FAFB;border:1.5px solid #E8E8E8;border-radius:14px;font-size:13px;font-weight:700;color:#374151;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px";
+  var faqBtn=document.createElement("button");faqBtn.style.cssText="padding:12px;background:#FFF7ED;border:1.5px solid #FED7AA;border-radius:14px;font-size:13px;font-weight:800;color:#C2410C;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px";
+  faqBtn.innerHTML="<span>📖</span><span>使い方・よくある質問</span>";
+  faqBtn.addEventListener("click",function(){R({showFaq:true,faqOpen:null});});
+  supportDiv.appendChild(faqBtn);
   contactBtn2.innerHTML="<span>📧</span><span>お問い合わせ</span>";
   contactBtn2.addEventListener("click",function(){S.showContact=true;render();});
   supportDiv.appendChild(contactBtn2);
@@ -4659,7 +4731,7 @@ function render(){
 }
 function _renderInner(){
   var app=document.getElementById("app");app.innerHTML="";
-  if(S.pg==="splash"){app.appendChild(renderSplash());if(S.showLoginModal)app.appendChild(LoginModal());return;}
+  if(S.pg==="splash"){app.appendChild(renderSplash());if(S.showLoginModal)app.appendChild(LoginModal());if(S.showFaq)app.appendChild(FaqModal());return;}
   if(S.pg==="onboard"){app.appendChild(renderOnboard());return;}
   if(S.pg==="terms"){app.appendChild(renderTerms());return;}
   if(S.pg==="kyc"){app.appendChild(renderKyc());return;}
@@ -4789,6 +4861,7 @@ function _renderInner(){
   if(S.showCheckin)app.appendChild(CheckinModal());
   if(S.showReport)app.appendChild(ReportModal());
   if(S.showContact)app.appendChild(ContactModal());
+  if(S.showFaq)app.appendChild(FaqModal());
   if(S.showDeleteAccount)app.appendChild(DeleteAccountModal());
   if(S.showLoginModal)app.appendChild(LoginModal());
   if(S.showEditProfile)app.appendChild(EditProfileModal());
