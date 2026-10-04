@@ -2783,8 +2783,7 @@ function renderChat(){
   phB.style.cssText="flex-shrink:0;width:44px;height:44px;border-radius:50%;border:1.5px solid #E5E7EB;background:#fff;font-size:20px;cursor:pointer;padding:0";
   phB.addEventListener("click",function(){phIn.click();});
   ir.appendChild(phIn);ir.appendChild(phB);ir.appendChild(ci2);ir.appendChild(sendB2);cw.appendChild(ir);
-  setTimeout(function(){ma.scrollTop=ma.scrollHeight;},0);
-  setTimeout(function(){ma.scrollTop=ma.scrollHeight;},120);
+  if(window._cmStickBottom!==false){setTimeout(function(){ma.scrollTop=ma.scrollHeight;},0);setTimeout(function(){ma.scrollTop=ma.scrollHeight;},120);}
   return cw;
 }
 
@@ -5268,7 +5267,13 @@ function render(){
   var appTop=app?app.scrollTop:0;
   var mbs=app?app.querySelectorAll(".mbox"):[];var mbTop=mbs.length?mbs[mbs.length-1].scrollTop:0;
   var _ae=document.activeElement,_aid=isTypingEl(_ae)?_ae.id:null,_ss=_aid?_ae.selectionStart:0;
+  // チャット欄のスクロール位置を、描き直しの前後でそのまま保つ（一瞬上に戻ってから下へ飛ぶのを防ぐ）
+  var _cm0=document.getElementById("chatmsgs"),_cmTop=0,_cmBottom=true;
+  if(_cm0){_cmTop=_cm0.scrollTop;_cmBottom=_cm0.scrollHeight-_cm0.scrollTop-_cm0.clientHeight<80;}
+  window._cmStickBottom=(!_cm0||_cmBottom||!same);
   _renderInner();
+  var _cm1=document.getElementById("chatmsgs");
+  if(_cm1){if(!_cm0||_cmBottom)_cm1.scrollTop=_cm1.scrollHeight;else if(same)_cm1.scrollTop=_cmTop;}
   if(_aid){var _ne=document.getElementById(_aid);if(_ne){try{_ne.focus({preventScroll:true});_ne.setSelectionRange(_ss,_ss);}catch(e){}}}
   if(same&&app){
     app.scrollTop=appTop;
