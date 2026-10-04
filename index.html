@@ -92,6 +92,47 @@ var LEVELS=["初心者","初中級","中級","上級","エキスパート"];
 var CERTS=["JSBA会員","JSBA会員","スキー歴20年","スキー歴15年","スノースポーツ愛好家"];
 var ACTS=["スキー","スノーボード","両方","🎥 追い撮り・撮影"];
 var FEE=0.15;
+// 地方ごとのまとまり（活動エリアの選択をコンパクトにするため）
+var REGIONS=[
+  {r:"北海道",areas:["北海道・道央","北海道・道北","北海道・道東","北海道・道南"]},
+  {r:"東北",areas:["東北・青森","東北・岩手・秋田","東北・宮城・山形","東北・福島"]},
+  {r:"新潟",areas:["新潟・湯沢エリア","新潟・妙高エリア"]},
+  {r:"長野",areas:["長野・白馬エリア","長野・北信エリア","長野・中南信エリア"]},
+  {r:"群馬・栃木",areas:["群馬・栃木"]},
+  {r:"北陸・岐阜",areas:["岐阜・福井","富山・石川"]},
+  {r:"関西",areas:["滋賀・京都・兵庫"]},
+  {r:"中国・四国",areas:["中国・四国"]},
+  {r:"九州",areas:["九州"]}
+];
+(function(){var used={};REGIONS.forEach(function(g){g.areas.forEach(function(a){used[a]=1;});});AREAS.forEach(function(a){if(!used[a.area])REGIONS.push({r:a.area,areas:[a.area]});});})();
+function areaByName(n){for(var i=0;i<AREAS.length;i++){if(AREAS[i].area===n)return AREAS[i];}return null;}
+function subAreaLbl(region,area){var p=region+"・";return area.indexOf(p)===0?area.slice(p.length):area;}
+function areaPicker(myRs){
+  var w=d({});
+  function cntIn(names){var n=0;names.forEach(function(nm){var a=areaByName(nm);if(a)a.resorts.forEach(function(r){if(myRs.indexOf(r)>=0)n++;});});return n;}
+  function chip(txt,on,cnt,fn){var b=document.createElement("button");b.className="chip"+(on?" on":"");b.style.cssText="font-size:12.5px;padding:7px 12px";b.textContent=txt+(cnt?"（"+cnt+"）":"");b.addEventListener("click",fn);return b;}
+  function lbl(t){var l=d({style:{fontSize:"11px",fontWeight:"800",color:"#9CA3AF",margin:"10px 0 6px"}});l.textContent=t;w.appendChild(l);}
+  lbl("① 地方を選ぶ");
+  var r1=d({style:{display:"flex",flexWrap:"wrap",gap:"6px"}});
+  REGIONS.forEach(function(g){var on=S.rsRegion===g.r;r1.appendChild(chip(g.r,on,cntIn(g.areas),function(){S.rsRegion=on?null:g.r;S.rsOpenArea=(!on&&g.areas.length===1)?g.areas[0]:null;render();}));});
+  w.appendChild(r1);
+  var g=null;REGIONS.forEach(function(x){if(x.r===S.rsRegion)g=x;});
+  if(!g)return w;
+  if(g.areas.length>1){
+    lbl("② エリアを選ぶ");
+    var r2=d({style:{display:"flex",flexWrap:"wrap",gap:"6px"}});
+    g.areas.forEach(function(an){var on=S.rsOpenArea===an;r2.appendChild(chip(subAreaLbl(g.r,an),on,cntIn([an]),function(){S.rsOpenArea=on?null:an;render();}));});
+    w.appendChild(r2);
+  }
+  var area=S.rsOpenArea?areaByName(S.rsOpenArea):null;
+  if(area&&g.areas.indexOf(area.area)>=0){
+    lbl((g.areas.length>1?"③":"②")+" スキー場を選ぶ（複数可）");
+    var r3=d({style:{display:"flex",flexWrap:"wrap",gap:"6px",background:"#F9FAFB",borderRadius:"12px",padding:"10px"}});
+    area.resorts.forEach(function(r){var on=myRs.indexOf(r)>=0;var c=document.createElement("button");c.className="chip"+(on?" on":"");c.style.cssText="font-size:12px;padding:6px 10px";c.textContent=(on?"✓ ":"")+r;c.addEventListener("click",function(){var k=myRs.indexOf(r);if(k>=0)myRs.splice(k,1);else myRs.push(r);saveD();render();});r3.appendChild(c);});
+    w.appendChild(r3);
+  }
+  return w;
+}
 function calcF(p){var f=Math.round(p*FEE);return{fee:f,payout:p-f};}
 var USERS=[
 ];
@@ -642,6 +683,41 @@ function PostModal(){
   });
 }
 // ===== マイページ：空き日程（期間・曜日・時間でまとめて登録） =====
+function fmtDateTime(iso){var t=new Date(iso);if(isNaN(t))return "";var w=["日","月","火","水","木","金","土"][t.getDay()];return t.getFullYear()+"/"+(t.getMonth()+1)+"/"+t.getDate()+"（"+w+"）"+t.getHours()+":"+String(t.getMinutes()).padStart(2,"0");}
+function loadMyOpenPosts(){
+  if(typeof sb==="undefined"||!sb||!currentUser||S._myOpenLoading)return;
+  S._myOpenLoading=true;
+  sb.from("open_posts_public").select("*").eq("user_id",currentUser.id).order("created_at",{ascending:false}).limit(100).then(function(r){
+    S._myOpenLoading=false;
+    if(r.error){console.error("my open posts",r.error.message||r.error);S.myOpenPosts=S.myOpenPosts||[];S.myOpenErr=r.error.message;render();return;}
+    S.myOpenErr=null;S.myOpenPosts=r.data||[];render();
+  });
+}
+function MyOpenHistory(){
+  var c=d({class:"card",style:{marginBottom:"14px"}});
+  var hd=d({style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"10px"}});
+  var t=d({style:{fontWeight:"900",fontSize:"16px",color:"#1A1A2E"}});t.textContent="📣 つぶやき履歴";hd.appendChild(t);
+  var nb=document.createElement("button");nb.textContent="＋ つぶやく";nb.style.cssText="padding:7px 14px;border-radius:12px;border:none;background:linear-gradient(135deg,#FF6B2B,#FF8C55);color:#fff;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit";
+  nb.addEventListener("click",function(){R({tab:"market",marketTab:"open",openRoom:null});});hd.appendChild(nb);c.appendChild(hd);
+  if(!currentUser){var g=d({style:{fontSize:"12px",color:"#9CA3AF"}});g.textContent="ログインすると、自分のつぶやきが日付つきでここに残ります。";c.appendChild(g);return c;}
+  var list=S.myOpenPosts;
+  if(list===undefined){loadMyOpenPosts();var ld=d({style:{fontSize:"12px",color:"#9CA3AF",padding:"8px 0"}});ld.textContent="読み込み中…";c.appendChild(ld);return c;}
+  if(S.myOpenErr&&!list.length){var er=d({style:{fontSize:"12px",color:"#EF4444"}});er.textContent="読み込めませんでした: "+S.myOpenErr;c.appendChild(er);return c;}
+  if(!list.length){var em=d({style:{fontSize:"12px",color:"#9CA3AF",padding:"6px 0",lineHeight:"1.7"}});em.textContent="まだつぶやきがありません。\nラウンジの「つぶやき」で書き込むと、ここに日付つきで残ります。";em.style.whiteSpace="pre-line";c.appendChild(em);return c;}
+  var lim=S.myOpenMore?list.length:5;
+  list.slice(0,lim).forEach(function(p,i){
+    var row=d({style:{padding:"10px 0",borderTop:i?"1px solid #F3F4F6":"none"}});
+    var tp=d({style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"4px"}});
+    var dt=d({style:{fontSize:"11.5px",fontWeight:"800",color:"#FF6B2B"}});dt.textContent="🗓 "+fmtDateTime(p.created_at);tp.appendChild(dt);
+    var del=document.createElement("button");del.textContent="削除";del.style.cssText="border:none;background:none;color:#9CA3AF;font-size:11px;cursor:pointer;font-family:inherit;padding:2px 4px";
+    del.addEventListener("click",function(){if(!confirm("このつぶやきを削除しますか？"))return;sb.from("open_posts").delete().eq("id",p.id).then(function(r){if(r.error){alert("削除できませんでした: "+r.error.message);return;}S.myOpenPosts=(S.myOpenPosts||[]).filter(function(x){return x.id!==p.id;});if(S.openPosts)S.openPosts=S.openPosts.filter(function(x){return x.id!==p.id;});render();});});
+    tp.appendChild(del);row.appendChild(tp);
+    var bd=d({style:{fontSize:"13.5px",color:"#1A1A2E",lineHeight:"1.7",whiteSpace:"pre-wrap",wordBreak:"break-word"}});bd.textContent=p.body;row.appendChild(bd);
+    c.appendChild(row);
+  });
+  if(list.length>5){var mb=document.createElement("button");mb.textContent=S.myOpenMore?"閉じる":"もっと見る（全"+list.length+"件）";mb.style.cssText="display:block;width:100%;margin-top:6px;padding:9px;border-radius:12px;border:1.5px solid #E5E7EB;background:#fff;color:#4B5563;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit";mb.addEventListener("click",function(){S.myOpenMore=!S.myOpenMore;render();});c.appendChild(mb);}
+  return c;
+}
 function MyAvailCard(){
   if(S.isGuest||!currentUser||!S.myProfile)return null;
   var me=S.myProfile;
@@ -922,7 +998,7 @@ function renderOpenBoard(wrap){
     if(!logged){var gn=(S.openName||"").trim();if(!gn){alert("ニックネームを入力してください");return;}row2.guest_name=gn;try{localStorage.setItem("sm_open_name",gn);}catch(e){}}
     if(pb.disabled)return;pb.disabled=true;pb.textContent="送信中...";
     sb.from("open_posts").insert(row2).then(function(r){
-      pb.disabled=false;pb.textContent="📣 つぶやく";
+      pb.disabled=false;pb.textContent="📣 つぶやく";if(!r.error)S.myOpenPosts=undefined;
       if(r.error){alert(r.error.message.indexOf("open_posts:")>=0?r.error.message.split("open_posts:")[1]:("書き込めませんでした: "+r.error.message));return;}
       S.openDraft="";loadOpenPosts();
     });
@@ -3676,25 +3752,7 @@ function renderProfile(){
       selRow.appendChild(t);
     });
     rsCard.appendChild(selRow);
-    AREAS.forEach(function(area){
-      var cnt=area.resorts.filter(function(r){return myRs.indexOf(r)>=0;}).length;
-      var open=S.rsOpenArea===area.area;
-      var ab=document.createElement("button");
-      ab.textContent=(open?"▾ ":"▸ ")+area.area+(cnt?"（"+cnt+"）":"");
-      ab.style.cssText="display:block;width:100%;text-align:left;background:"+(open?"#FFF0E8":"#F9FAFB")+";border:1.5px solid "+(open?"#FF6B2B":"#EEF0F3")+";border-radius:12px;padding:10px 12px;margin-bottom:6px;font-size:13px;font-weight:800;color:#1A1A2E;cursor:pointer;font-family:inherit";
-      ab.addEventListener("click",function(){S.rsOpenArea=open?null:area.area;render();});
-      rsCard.appendChild(ab);
-      if(open){
-        var cr=document.createElement("div");cr.style.cssText="display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px";
-        area.resorts.forEach(function(r){
-          var on=myRs.indexOf(r)>=0;
-          var c=document.createElement("button");c.className="chip"+(on?" on":"");c.style.cssText="font-size:12px;padding:6px 10px";c.textContent=r;
-          c.addEventListener("click",function(){var k=myRs.indexOf(r);if(k>=0)myRs.splice(k,1);else myRs.push(r);saveD();render();});
-          cr.appendChild(c);
-        });
-        rsCard.appendChild(cr);
-      }
-    });
+    rsCard.appendChild(areaPicker(myRs));
     var rsSave=document.createElement("button");rsSave.className="obtn obtn-full";rsSave.style.marginTop="8px";rsSave.textContent="💾 保存する";
     wireSaveBtn(rsSave,"💾 保存する");
     rsCard.appendChild(rsSave);
@@ -4069,6 +4127,7 @@ function renderProfile(){
   priceCard.appendChild(savedMsg);
   body.appendChild(priceCard);
   var availCard=MyAvailCard();if(availCard)body.appendChild(availCard);
+  body.appendChild(MyOpenHistory());
 
   var ph=d({style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"12px"}});
   var ptit=d({style:{fontWeight:"900",fontSize:"16px",color:"#1A1A2E"}});ptit.textContent="🎥 投稿・実績";ph.appendChild(ptit);
