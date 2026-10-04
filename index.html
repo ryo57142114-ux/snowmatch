@@ -1493,7 +1493,7 @@ var FAQ=[
   ["募集掲示板って何？","日付つきで投稿できる掲示板です。\n・「同行・撮影します」：この日空いているので一緒に滑れる・撮影できます、という投稿\n・「同行・撮影お願いします」：この日一緒に滑る人・撮影してくれる人を探しています、という投稿\nそれぞれ「無料」か「有料」を選べます。"],
   ["「参加します」を押すとどうなる？","【無料の投稿】相手に「参加したいです！」というメッセージが自動で届き、チャットで日時や集合場所を決めます。\n\n【有料の募集】応募として相手に届きます。募集した人が応募者の中から1人を選ぶと予約が確定します。確定するまでは何人でも応募でき、選ばれなかった人には自動でお知らせが届きます。"],
   ["メッセージは誰にでも送れる？","フォローした相手にメッセージを送れます。プロフィールの「メッセージ」や、募集の「参加します」「質問」から送ると、自動でフォローされます。"],
-  ["ラウンジでは何ができる？","・タイムライン：誰でも見られるひとこと投稿（自分の投稿はマイページに日付つきで残り、返信もできます）\n・ゲレンデ速報：今日の雪質・天気・混み具合を写真つきで共有（毎日0時にリセット）\n・会員：本人確認済みの人だけの部屋（雑談部屋・悩み相談・Q&A・チェックイン）。メッセージを長押しすると返信でき、写真や動画も送れます。"]
+  ["ラウンジでは何ができる？","・タイムライン：誰でも見られるひとこと投稿（自分の投稿はマイページに日付つきで残り、返信もできます）\n・ゲレンデ速報：今日の雪質・天気・混み具合を写真つきで共有（毎日0時にリセット）\n・会員ページ：本人確認済みの人だけの部屋（雑談部屋・悩み相談・Q&A）。メッセージを長押しすると返信でき、写真や動画も送れます。"]
  ]},
  {sec:"💴 料金とお支払いの流れ",items:[
   ["アプリの利用料は？","登録・仲間探し・メッセージ・無料の募集などは、すべて無料です。お金がかかるのは、有料の同行・撮影をお願いするときだけです。"],
@@ -2809,10 +2809,11 @@ function renderMarket(){
   }
   var hd=d({style:{marginBottom:"14px"}});
   var ht=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"4px"}});ht.textContent="スノマラウンジ";
-  var hs=d({style:{color:"#6B7280",fontSize:"13px"}});hs.textContent="会員限定 · 仲間と語ろう・チェックイン・悩み相談";
+  var hs=d({style:{color:"#6B7280",fontSize:"13px"}});hs.textContent="会員限定 · 仲間と語ろう・悩み相談・Q&A";
   hd.appendChild(ht);hd.appendChild(hs);wrap.appendChild(hd);
   var tabs=d({style:{display:"flex",gap:"0",marginBottom:"16px",background:"#F5F7FA",borderRadius:"16px",padding:"4px",overflowX:"auto",webkitOverflowScrolling:"touch"}});
-  var tabDefs=[["room","雑談部屋"],["nayami","悩み相談"],["qa","Q&A"],["checkin","チェックイン"]];
+  var tabDefs=[["room","雑談部屋"],["nayami","悩み相談"],["qa","Q&A"]];
+  if(S.marketTab==="checkin")S.marketTab="room";
   for(var ti=0;ti<tabDefs.length;ti++){
     (function(id,lbl){
       var tb=document.createElement("button");
