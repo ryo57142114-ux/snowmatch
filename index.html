@@ -2631,8 +2631,10 @@ function renderMarket(){
   var ht=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"4px"}});ht.textContent="🛖 スノマラウンジ";
   var hs=d({style:{color:"#6B7280",fontSize:"13px"}});hs.textContent="会員限定 · 仲間と語ろう・チェックイン・悩み相談";
   hd.appendChild(ht);hd.appendChild(hs);wrap.appendChild(hd);
+  if(S.marketTab==="livecam")return renderLiveCams(wrap);
+  wrap.appendChild(LiveCamHero());
   var tabs=d({style:{display:"flex",gap:"0",marginBottom:"16px",background:"#F5F7FA",borderRadius:"16px",padding:"4px",overflowX:"auto",webkitOverflowScrolling:"touch"}});
-  var tabDefs=[["room","💬 雑談部屋"],["nayami","💭 悩み相談"],["qa","📖 Q&A"],["checkin","📍 チェックイン"],["livecam","📹 ライブカメラ"]];
+  var tabDefs=[["room","💬 雑談部屋"],["nayami","💭 悩み相談"],["qa","📖 Q&A"],["checkin","📍 チェックイン"]];
   for(var ti=0;ti<tabDefs.length;ti++){
     (function(id,lbl){
       var tb=document.createElement("button");
@@ -2642,7 +2644,6 @@ function renderMarket(){
   }
   wrap.appendChild(tabs);
 
-  if(S.marketTab==="livecam")return renderLiveCams(wrap);
   if(S.openRoom&&(S.marketTab==="room"||S.marketTab==="nayami")){var _rc=renderRoomChat();if(_rc)return _rc;}
   if(S.marketTab==="nayami"){
     var nyNote=d({style:{color:"#6B7280",fontSize:"12.5px",lineHeight:"1.7",marginBottom:"12px"}});nyNote.textContent="滑りの悩み、道具選び、仲間づくりのことなど、気軽に相談できる部屋です。";wrap.appendChild(nyNote);
@@ -3819,14 +3820,67 @@ function loadLiveCams(){
     S.liveCams=(!r.error&&r.data&&r.data.length)?r.data:LIVECAMS_DEFAULT;render();
   },function(){S._camsLoading=false;S.liveCams=LIVECAMS_DEFAULT;render();});
 }
+var CAM_GROUPS=[
+  ["北海道",["北海道・道央","北海道・道北","北海道・道東","北海道・道南"]],
+  ["東北",["東北・青森","東北・岩手・秋田","東北・宮城・山形","東北・福島"]],
+  ["新潟",["新潟・湯沢エリア","新潟・妙高エリア"]],
+  ["長野",["長野・白馬エリア","長野・北信エリア","長野・中南信エリア"]],
+  ["群馬・栃木",["群馬・栃木"]],
+  ["北陸・岐阜",["岐阜・福井","富山・石川"]],
+  ["関西・中国・四国",["滋賀・京都・兵庫","中国・四国"]],
+  ["九州",["九州"]]
+];
+function camGroupOf(area){for(var i=0;i<CAM_GROUPS.length;i++){if(CAM_GROUPS[i][1].indexOf(area)>=0)return CAM_GROUPS[i][0];}return "その他";}
+function camList(){if(!S.liveCams)loadLiveCams();return S.liveCams||LIVECAMS_DEFAULT;}
+function LiveCamHero(){
+  var list=camList();var cnt={};list.forEach(function(c){var g=camGroupOf(c.area);cnt[g]=(cnt[g]||0)+1;});
+  var card=document.createElement("div");
+  card.style.cssText="background:linear-gradient(135deg,#1E1B4B,#312E81);border-radius:20px;padding:16px;margin-bottom:16px;cursor:pointer;position:relative;overflow:hidden";
+  card.addEventListener("click",function(){S.camGroup=null;S.marketTab="livecam";render();});
+  var top=document.createElement("div");top.style.cssText="display:flex;align-items:center;gap:12px;margin-bottom:12px";
+  var ic=document.createElement("div");ic.style.cssText="width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0";ic.textContent="📹";
+  var tx=document.createElement("div");tx.style.cssText="flex:1;min-width:0";
+  var t1=document.createElement("div");t1.style.cssText="font-weight:900;font-size:16px;color:#fff";t1.textContent="全国スキー場ライブカメラ";
+  var t2=document.createElement("div");t2.style.cssText="font-size:11.5px;color:#C7D2FE;margin-top:2px";t2.textContent="会員限定・"+list.length+"か所の今の雪をチェック";
+  tx.appendChild(t1);tx.appendChild(t2);
+  var ar=document.createElement("div");ar.style.cssText="color:rgba(255,255,255,.6);font-size:22px";ar.textContent="›";
+  top.appendChild(ic);top.appendChild(tx);top.appendChild(ar);card.appendChild(top);
+  var grid=document.createElement("div");grid.style.cssText="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px";
+  CAM_GROUPS.forEach(function(g){
+    var n=cnt[g[0]]||0;if(!n)return;
+    var b=document.createElement("button");
+    b.style.cssText="border:none;font-family:inherit;cursor:pointer;text-align:left;border-radius:10px;padding:8px 10px;background:rgba(255,255,255,.12);color:#fff;font-size:12px;font-weight:800;display:flex;justify-content:space-between;align-items:center";
+    b.innerHTML="<span></span><span style=\"color:#C7D2FE;font-weight:700;font-size:11px\"></span>";
+    b.children[0].textContent=g[0];b.children[1].textContent=n+"か所";
+    b.addEventListener("click",function(e){e.stopPropagation();S.camGroup=g[0];S.marketTab="livecam";render();});
+    grid.appendChild(b);
+  });
+  card.appendChild(grid);
+  return card;
+}
 function renderLiveCams(wrap){
-  if(!S.liveCams){loadLiveCams();var ld=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"13px",padding:"24px 0"}});ld.textContent="読み込み中…";wrap.appendChild(ld);return wrap;}
+  var back=document.createElement("button");back.textContent="‹ ラウンジに戻る";
+  back.style.cssText="background:none;border:none;color:#FF6B2B;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;padding:0;margin-bottom:10px";
+  back.addEventListener("click",function(){S.marketTab="room";S.camGroup=null;render();});wrap.appendChild(back);
+  var ht=d({style:{fontWeight:"900",fontSize:"19px",color:"#1A1A2E",marginBottom:"4px"}});ht.textContent="📹 全国スキー場ライブカメラ";wrap.appendChild(ht);
+  if(!S.liveCams){loadLiveCams();}
+  var list=S.liveCams||LIVECAMS_DEFAULT;
   var intro=d({style:{color:"#6B7280",fontSize:"12.5px",lineHeight:"1.7",marginBottom:"12px"}});
-  intro.textContent="各スキー場のライブカメラを見られるページへのリンク集です。タップすると外部サイトが開きます。";wrap.appendChild(intro);
+  intro.textContent="エリアを選んで、スキー場をタップするとライブカメラのページ（外部サイト）が開きます。";wrap.appendChild(intro);
   function openUrl(u){if(!/^https:\/\//.test(String(u||"")))return;window.open(u,"_blank","noopener");}
-  var all=document.createElement("button");all.style.cssText="width:100%;text-align:left;padding:12px 14px;border-radius:14px;border:1.5px solid #BAE6FD;background:#F0F9FF;color:#0369A1;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;margin-bottom:14px";
-  all.textContent="🌐 全国のゲレンデカメラ一覧（ウェザーニュース） ›";all.addEventListener("click",function(){openUrl("https://weathernews.jp/ski/camera/");});wrap.appendChild(all);
-  var by={};S.liveCams.forEach(function(c){var a=c.area||"その他";(by[a]=by[a]||[]).push(c);});
+  var chips=d({style:{display:"flex",gap:"6px",overflowX:"auto",paddingBottom:"4px",marginBottom:"12px"}});
+  var cnt={};list.forEach(function(c){var g=camGroupOf(c.area);cnt[g]=(cnt[g]||0)+1;});
+  [["すべて",list.length]].concat(CAM_GROUPS.filter(function(g){return cnt[g[0]];}).map(function(g){return [g[0],cnt[g[0]]];})).forEach(function(g){
+    var on=(g[0]==="すべて"&&!S.camGroup)||S.camGroup===g[0];
+    var c=document.createElement("button");c.className="chip"+(on?" on":"");c.style.cssText="white-space:nowrap;font-size:12px;padding:6px 12px";
+    c.textContent=g[0]+" "+g[1];c.addEventListener("click",function(){S.camGroup=g[0]==="すべて"?null:g[0];render();});chips.appendChild(c);
+  });
+  wrap.appendChild(chips);
+  if(!S.camGroup){
+    var all=document.createElement("button");all.style.cssText="width:100%;text-align:left;padding:12px 14px;border-radius:14px;border:1.5px solid #BAE6FD;background:#F0F9FF;color:#0369A1;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;margin-bottom:14px";
+    all.textContent="🌐 全国のゲレンデカメラ一覧（ウェザーニュース） ›";all.addEventListener("click",function(){openUrl("https://weathernews.jp/ski/camera/");});wrap.appendChild(all);
+  }
+  var by={};list.forEach(function(c){if(S.camGroup&&camGroupOf(c.area)!==S.camGroup)return;var a=c.area||"その他";(by[a]=by[a]||[]).push(c);});
   var order=AREAS.map(function(a){return a.area;});Object.keys(by).forEach(function(k){if(order.indexOf(k)<0)order.push(k);});
   order.forEach(function(a){
     if(!by[a])return;
@@ -3835,13 +3889,10 @@ function renderLiveCams(wrap){
       var b=document.createElement("button");b.style.cssText="width:100%;display:flex;align-items:center;gap:10px;text-align:left;padding:12px 14px;border-radius:14px;border:1px solid #E5E7EB;background:#fff;cursor:pointer;font-family:inherit;margin-bottom:8px";
       var ic=document.createElement("span");ic.textContent="📹";ic.style.fontSize="18px";
       var tx=document.createElement("span");tx.style.cssText="flex:1;min-width:0";
-      var nm=document.createElement("div");nm.style.cssText="font-weight:800;font-size:14px;color:#1A1A2E";nm.textContent=c.resort||"";
-      tx.appendChild(nm);
+      var nm=document.createElement("div");nm.style.cssText="font-weight:800;font-size:14px;color:#1A1A2E";nm.textContent=c.resort||"";tx.appendChild(nm);
       if(c.note){var nt=document.createElement("div");nt.style.cssText="font-size:11px;color:#9CA3AF;margin-top:2px";nt.textContent=c.note;tx.appendChild(nt);}
       var ar=document.createElement("span");ar.textContent="›";ar.style.cssText="color:#9CA3AF;font-size:18px";
-      b.appendChild(ic);b.appendChild(tx);b.appendChild(ar);
-      b.addEventListener("click",function(){openUrl(c.url);});
-      wrap.appendChild(b);
+      b.appendChild(ic);b.appendChild(tx);b.appendChild(ar);b.addEventListener("click",function(){openUrl(c.url);});wrap.appendChild(b);
     });
   });
   var ft=d({style:{fontSize:"11px",color:"#9CA3AF",lineHeight:"1.6",marginTop:"8px"}});
