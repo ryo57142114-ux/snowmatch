@@ -4228,6 +4228,31 @@ function removeCover(){
   });
 }
 
+// マイページの見出し・ボタンの先頭の絵文字を外す（⚠️注意・✅/🪪/⏳の状態の印は残す。絵文字だけのアイコンや投稿の中身はそのまま）
+var KEEP_EMOJI=["⚠","✅","🪪","⏳"];
+var LEAD_EMOJI=null;try{LEAD_EMOJI=new RegExp("^\\s*((?:\\p{Extended_Pictographic}|\\p{Regional_Indicator})(?:\\uFE0F|\\u200D(?:\\p{Extended_Pictographic})|[\\u{1F3FB}-\\u{1F3FF}])*\\uFE0F?)\\s*","u");}catch(e){LEAD_EMOJI=null;}
+function stripLabelEmoji(root){
+  if(!LEAD_EMOJI)return root;
+  try{
+    var w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,null);var list=[];var n;
+    while((n=w.nextNode()))list.push(n);
+    list.forEach(function(t){
+      var el=t.parentNode;if(!el)return;
+      if(el.closest&&(el.closest(".pcard")||el.closest("textarea")||el.closest("[data-keep-emoji]")))return;
+      var v=t.nodeValue;var m=v.match(LEAD_EMOJI);if(!m)return;
+      var rest=v.slice(m[0].length);
+      for(var i=0;i<KEEP_EMOJI.length;i++){if(m[1].indexOf(KEEP_EMOJI[i])===0)return;}
+      if(!rest.trim()){
+        // ボタンの中で「絵文字だけのspan＋文字」になっている場合は絵文字のspanを外す。それ以外の絵文字だけのアイコンは残す
+        var pb=el.parentNode;
+        if(el.tagName==="SPAN"&&pb&&pb.tagName==="BUTTON"&&pb.textContent.replace(v,"").trim()){pb.removeChild(el);}
+        return;
+      }
+      t.nodeValue=rest;
+    });
+  }catch(e){}
+  return root;
+}
 function renderProfile(){
   var wrap=d({style:{paddingBottom:"80px"}});
   var kycOk=!!(S.myProfile&&S.myProfile.ok===true);var postOk=true;
@@ -5312,7 +5337,7 @@ function _renderInner(){
   else if(S.tab==="chat")app.appendChild(renderChat());
   else if(S.tab==="market")app.appendChild(renderMarket());
   else if(S.tab==="bookings")app.appendChild(renderBookings());
-  else if(S.tab==="profile")app.appendChild(renderProfile());
+  else if(S.tab==="profile")app.appendChild(stripLabelEmoji(renderProfile()));
   if(!cf){
     var nav=d({class:"nav"});var navItems=[{id:"explore",ic:"🔍",lbl:"探す"},{id:"chat",ic:"💬",lbl:"チャット"},{id:"market",ic:"🛖",lbl:"ラウンジ"},{id:"bookings",ic:"🎿",lbl:"予約"},{id:"profile",ic:"👤",lbl:"マイページ"}];
     for(var ni=0;ni<navItems.length;ni++){
