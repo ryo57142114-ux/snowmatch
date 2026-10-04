@@ -456,7 +456,18 @@ function talkTo(u){
 }
 // 掲示板は2分ごと・アプリに戻ってきたときに読み直す
 setInterval(function(){if(!document.hidden)loadPosts();},120000);
-document.addEventListener("visibilitychange",function(){if(!document.hidden){loadPosts();if(currentUser)loadMessagesFromSupabase(true);}});
+document.addEventListener("visibilitychange",function(){
+  if(document.hidden){saveDmCache();return;}
+  loadPosts();
+  if(!currentUser||!sb)return;
+  // アプリに戻ったら、ログインの鍵を先に更新してから最新メッセージを取る（期限切れで失敗して待たされるのを防ぐ）
+  var go=function(){
+    try{if(_rtChannel&&_rtChannel.state&&_rtChannel.state!=="joined"&&_rtChannel.state!=="joining"){sb.removeChannel(_rtChannel);_rtChannel=null;startRealtime();}}catch(e){}
+    loadMessagesFromSupabase(true);
+  };
+  sb.auth.getSession().then(go,go);
+});
+window.addEventListener("pagehide",function(){saveDmCache();});
 function boardSeenAt(){try{return localStorage.getItem("sm_board_seen")||"";}catch(e){return "";}}
 // 既読の基準は「サーバーの投稿時刻」で持つ（スマホの時計のずれに影響されないように）
 function markBoardSeen(){
@@ -3625,17 +3636,18 @@ function restoreDmCache(){
   try{var c=JSON.parse(localStorage.getItem(dmCacheKey())||"null");if(!c)return false;
     for(var k in c){if(c.hasOwnProperty(k))S.chatMsgs[k]=c[k];}return true;}catch(e){return false;}
 }
-function loadMessagesFromSupabase(force){
+function loadMessagesFromSupabase(force,tries){
   if(!sb||!currentUser)return;
-  var now=Date.now();
+  var now=Date.now();tries=tries||0;
   if(!force&&window._dmLoadedAt&&now-window._dmLoadedAt<20000)return;
-  if(window._dmLoading)return;
-  window._dmLoading=true;
+  if(window._dmLoading&&now-(window._dmLoadingAt||0)<12000)return; // 応答がない読み込みで止まり続けないようにする
+  window._dmLoading=true;window._dmLoadingAt=now;
+  function retry(){window._dmLoading=false;if(tries<4)setTimeout(function(){loadMessagesFromSupabase(true,tries+1);},1200*(tries+1));}
   if(restoreDmCache())render();
   // 新しい順に取ってから並べ直す（古い順だと件数が多いときに最新のメッセージが漏れるため）
   sb.from("dm_messages").select("id,from_user,to_user,body,image_path,created_at,read_at").or("from_user.eq."+currentUser.id+",to_user.eq."+currentUser.id).order("created_at",{ascending:false}).limit(2000).then(function(r){
     window._dmLoading=false;
-    if(r.error){console.error("messages load error",r.error);return;}
+    if(r.error){console.error("messages load error",r.error);retry();return;}
     window._dmLoadedAt=Date.now();
     var keep={};
     for(var k in S.chatMsgs){if(k.indexOf("sb_")!==0)continue;keep[k]=S.chatMsgs[k].filter(function(m){return m.pending||(!m.id&&m.preview);});delete S.chatMsgs[k];}
@@ -3644,7 +3656,7 @@ function loadMessagesFromSupabase(force){
     for(var k2 in keep){if(!keep[k2].length)continue;if(!S.chatMsgs[k2])S.chatMsgs[k2]=[];keep[k2].forEach(function(m){S.chatMsgs[k2].push(m);});}
     saveDmCache();
     render();
-  },function(e){window._dmLoading=false;console.error("messages load error",e);});
+  },function(e){console.error("messages load error",e);retry();});
 }
 function addDmRow(row,live){
   var mine=row.from_user===currentUser.id;
