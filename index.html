@@ -455,7 +455,7 @@ function talkTo(u){
 }
 // 掲示板は2分ごと・アプリに戻ってきたときに読み直す
 setInterval(function(){if(!document.hidden)loadPosts();},120000);
-document.addEventListener("visibilitychange",function(){if(!document.hidden)loadPosts();});
+document.addEventListener("visibilitychange",function(){if(!document.hidden){loadPosts();if(currentUser)loadMessagesFromSupabase(true);}});
 function boardSeenAt(){try{return localStorage.getItem("sm_board_seen")||"";}catch(e){return "";}}
 // 既読の基準は「サーバーの投稿時刻」で持つ（スマホの時計のずれに影響されないように）
 function markBoardSeen(){
@@ -3477,15 +3477,43 @@ function sendMsg(text){if(S.isGuest){guestPrompt();return;}
   }
   S.chatMsgs[cid].push({f:"m",t:body,time:hmOf()});S.chatIn="";saveD();render();
 }
-function loadMessagesFromSupabase(){
+// メッセージは端末にも保存しておき、アプリを開いた瞬間にまず表示 → そのあとサーバーの最新と入れ替える
+function dmCacheKey(){return "sm_dmc_"+(currentUser?currentUser.id:"");}
+function saveDmCache(){
+  if(!currentUser)return;
+  try{
+    var out={};
+    for(var k in S.chatMsgs){if(!S.chatMsgs.hasOwnProperty(k)||k.indexOf("sb_")!==0)continue;
+      out[k]=S.chatMsgs[k].filter(function(m){return m.id&&!m.pending;}).slice(-80).map(function(m){return {id:m.id,f:m.f,t:m.t,img:m.img||null,time:m.time,readAt:m.readAt||null};});}
+    localStorage.setItem(dmCacheKey(),JSON.stringify(out));
+  }catch(e){}
+}
+function restoreDmCache(){
+  if(!currentUser)return false;
+  for(var k0 in S.chatMsgs){if(k0.indexOf("sb_")===0&&S.chatMsgs[k0].length)return false;}
+  try{var c=JSON.parse(localStorage.getItem(dmCacheKey())||"null");if(!c)return false;
+    for(var k in c){if(c.hasOwnProperty(k))S.chatMsgs[k]=c[k];}return true;}catch(e){return false;}
+}
+function loadMessagesFromSupabase(force){
   if(!sb||!currentUser)return;
-  sb.from("dm_messages").select("id,from_user,to_user,body,image_path,created_at,read_at").or("from_user.eq."+currentUser.id+",to_user.eq."+currentUser.id).order("created_at",{ascending:true}).limit(1000).then(function(r){
+  var now=Date.now();
+  if(!force&&window._dmLoadedAt&&now-window._dmLoadedAt<20000)return;
+  if(window._dmLoading)return;
+  window._dmLoading=true;
+  if(restoreDmCache())render();
+  // 新しい順に取ってから並べ直す（古い順だと件数が多いときに最新のメッセージが漏れるため）
+  sb.from("dm_messages").select("id,from_user,to_user,body,image_path,created_at,read_at").or("from_user.eq."+currentUser.id+",to_user.eq."+currentUser.id).order("created_at",{ascending:false}).limit(2000).then(function(r){
+    window._dmLoading=false;
     if(r.error){console.error("messages load error",r.error);return;}
-    for(var k in S.chatMsgs){if(k.indexOf("sb_")===0)delete S.chatMsgs[k];}
-    var rows=r.data||[];
+    window._dmLoadedAt=Date.now();
+    var keep={};
+    for(var k in S.chatMsgs){if(k.indexOf("sb_")!==0)continue;keep[k]=S.chatMsgs[k].filter(function(m){return m.pending||(!m.id&&m.preview);});delete S.chatMsgs[k];}
+    var rows=(r.data||[]).slice().reverse();
     for(var i=0;i<rows.length;i++)addDmRow(rows[i],false);
+    for(var k2 in keep){if(!keep[k2].length)continue;if(!S.chatMsgs[k2])S.chatMsgs[k2]=[];keep[k2].forEach(function(m){S.chatMsgs[k2].push(m);});}
+    saveDmCache();
     render();
-  });
+  },function(e){window._dmLoading=false;console.error("messages load error",e);});
 }
 function addDmRow(row,live){
   var mine=row.from_user===currentUser.id;
@@ -3495,6 +3523,7 @@ function addDmRow(row,live){
   for(var j=0;j<list.length;j++){if(list[j].id===row.id){if(row.read_at)list[j].readAt=row.read_at;return;}}
   if(live&&mine){for(var j2=list.length-1;j2>=0;j2--){if(list[j2].pending&&list[j2].t===row.body&&(list[j2].img||null)===(row.image_path||null)){list[j2].pending=false;list[j2].id=row.id;return;}}}
   list.push({id:row.id,f:mine?"m":"t",t:row.body,img:row.image_path||null,time:hmOf(row.created_at),readAt:row.read_at||null});
+  if(live){clearTimeout(window._dmCacheT);window._dmCacheT=setTimeout(saveDmCache,1500);}
   if(live&&!mine){
     var u=findRealUser(other);var nm=u?u.name:"だれか";
     if(!S.notifs)S.notifs=[];
@@ -5148,7 +5177,7 @@ function _renderInner(){
 
 try{window._hs=!!localStorage.getItem("sm2");}catch(e){window._hs=false;}
 if(/[?&]stripe=(return|refresh)/.test(location.search)){S.tab="profile";S.stripeSt=undefined;try{history.replaceState(null,"",location.pathname);}catch(e){}}
-if(sb){sb.auth.getSession().then(function(r){S.sessionChecked=true;if(r&&r.data&&r.data.session){currentUser=r.data.session.user;S.isGuest=false;loadUsersFromSupabase();}render();}).catch(function(){S.sessionChecked=true;render();});}
+if(sb){sb.auth.getSession().then(function(r){S.sessionChecked=true;if(r&&r.data&&r.data.session){currentUser=r.data.session.user;S.isGuest=false;loadMessagesFromSupabase(true);loadUsersFromSupabase();}render();}).catch(function(){S.sessionChecked=true;render();});}
 render();
 </script>
 <script>
