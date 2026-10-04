@@ -2897,7 +2897,7 @@ function renderMarket(){
       resort2.appendChild(rname);info.appendChild(name2);info.appendChild(resort2);
       var time2=d({style:{fontSize:"11px",color:"#9CA3AF",flexShrink:"0"}});time2.textContent=ci.time;
       tr.appendChild(ico);tr.appendChild(info);tr.appendChild(time2);card.appendChild(tr);
-      var snow2=d({style:{background:"#F0F9FF",borderRadius:"10px",padding:"8px 12px",fontSize:"13px",color:"#0369A1",fontWeight:"600",marginBottom:"10px"}});snow2.textContent=ci.snow;card.appendChild(snow2);
+      var snow2=d({style:{background:"#F0F9FF",borderRadius:"10px",padding:"8px 12px",fontSize:"13px",color:"#0369A1",fontWeight:"600",marginBottom:"10px"}});snow2.textContent=ci.snow||"";if(!ci.snow)snow2.style.display="none";card.appendChild(snow2);
       var lkRow=d({style:{display:"flex",alignItems:"center",gap:"6px"}});var lkBtn=document.createElement("button");lkBtn.style.cssText="font-size:12px;font-weight:800;background:#FFF0E8;color:#FF6B2B;border:none;border-radius:12px;cursor:pointer;padding:4px 12px;font-family:inherit";lkBtn.textContent="いいね";var lkCnt=d({style:{fontSize:"12px",color:"#6B7280",fontWeight:"700"}});lkCnt.textContent=ci.likes+"件";lkRow.appendChild(lkBtn);lkRow.appendChild(lkCnt);card.appendChild(lkRow);wrap.appendChild(card);
     });
   }
@@ -4858,25 +4858,26 @@ function CheckinModal(){
   var ciResort = AREAS[0].resorts[0];
   var ciSnow = "";
   return Modal(false,function(){S.showCheckin=false;render();},function(box){
-    var title=document.createElement("div");title.style.cssText="font-weight:900;font-size:18px;color:#1A1A2E;margin-bottom:14px";title.textContent="📍 チェックイン";box.appendChild(title);
+    var title=document.createElement("div");title.style.cssText="font-weight:900;font-size:18px;color:#1A1A2E;margin-bottom:14px";title.textContent="チェックイン";box.appendChild(title);
     var rl=document.createElement("div");rl.style.cssText="font-size:12px;font-weight:700;color:#6B7280;margin-bottom:6px";rl.textContent="ゲレンデを選択";box.appendChild(rl);
 
     var rSel=document.createElement("select");rSel.className="inp";rSel.style.marginBottom="12px";
     var flatResorts=[];
     for(var ai=0;ai<AREAS.length;ai++){for(var ri=0;ri<AREAS[ai].resorts.length;ri++){flatResorts.push(AREAS[ai].resorts[ri]);}}
-    for(var fi=0;fi<flatResorts.length;fi++){var op=document.createElement("option");op.value=flatResorts[fi];op.textContent=flatResorts[fi];rSel.appendChild(op);}
+    var myRs=(S.myProfile&&S.myProfile.resorts)||[];
+    if(myRs.length){var ogm=document.createElement("optgroup");ogm.label="よく滑るスキー場";myRs.forEach(function(r){var o=document.createElement("option");o.value=r;o.textContent=r;ogm.appendChild(o);});rSel.appendChild(ogm);ciResort=myRs[0];}
+    AREAS.forEach(function(a){var og=document.createElement("optgroup");og.label=a.area;a.resorts.forEach(function(r){var o=document.createElement("option");o.value=r;o.textContent=r;og.appendChild(o);});rSel.appendChild(og);});
     rSel.addEventListener("change",function(e){ciResort=e.target.value;});
     box.appendChild(rSel);
 
-    var sl=document.createElement("div");sl.style.cssText="font-size:12px;font-weight:700;color:#6B7280;margin-bottom:6px";sl.textContent="雪のコンディション・ひとこと";box.appendChild(sl);
-    var sta=document.createElement("textarea");sta.className="inp";sta.rows=3;sta.placeholder="例：膝上パウダー最高！視界良好";sta.style.marginBottom="14px";
+    var sl=document.createElement("div");sl.style.cssText="font-size:12px;font-weight:700;color:#6B7280;margin-bottom:6px";sl.textContent="ひとこと（任意）";box.appendChild(sl);
+    var sta=document.createElement("textarea");sta.className="inp";sta.rows=3;sta.maxLength=200;sta.placeholder="例：午前中はゴンドラ周辺で滑ってます。一緒に滑れる人いたら声かけてください！";sta.style.marginBottom="14px";
     sta.addEventListener("input",function(e){ciSnow=e.target.value;});
     box.appendChild(sta);
 
-    var sb=document.createElement("button");sb.className="obtn obtn-full";sb.textContent="📍 チェックインする";
+    var sb=document.createElement("button");sb.className="obtn obtn-full";sb.textContent="チェックインする";
     sb.addEventListener("click",function(){
       var snow=ciSnow.trim();
-      if(!snow){alert("コンディションを入力してください");return;}
       var resort=rSel.value||ciResort;
       var now=new Date();var hm=now.getHours()+":"+String(now.getMinutes()).padStart(2,"0");
       var ci={id:"c"+Date.now(),uid:(S.myProfile&&S.myProfile.uid)||null,profileImg:(S.myProfile&&S.myProfile.profileImg)||null,user:(S.myProfile&&(S.myProfile.nick||S.myProfile.name))||"あなた",icon:(S.myProfile&&S.myProfile.icon)||"🏂",resort:resort,snow:snow,time:hm,likes:0};
