@@ -540,7 +540,7 @@ function renderBoard(wrap){
     var hr=d({style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"8px"}});
     hr.appendChild(avU(40,20,u));
     var hi=d({style:{flex:"1",minWidth:"0"}});
-    var nm=d({style:{fontWeight:"800",fontSize:"14px",color:"#1A1A2E"}});nm.textContent=(u.name||"")+(mine?"（あなた）":"");hi.appendChild(nm);
+    var nm=d({style:{fontWeight:"800",fontSize:"14px",color:"#1A1A2E",display:"flex",alignItems:"center",gap:"4px"}});nm.appendChild(sp({},(u.name||"")+(mine?"（あなた）":"")));addPlus(nm,p.user_id,15);hi.appendChild(nm);
     var tm=d({style:{fontSize:"13px",color:"#374151",fontWeight:"700"}});tm.textContent=hm5(p.start_time)+"〜"+hm5(p.end_time)+(p.resort?"　"+p.resort:"");hi.appendChild(tm);
     hr.appendChild(hi);card.appendChild(hr);
     var bg=d({style:{display:"flex",flexWrap:"wrap",gap:"6px",marginBottom:p.note?"8px":"10px"}});
@@ -1023,7 +1023,7 @@ function OpenPreviewCard(){
     var nm=sp({style:{fontWeight:"800",color:"#1A1A2E",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"55%"}},u?u.name:(p.guest_name||"ゲスト"));
     if(u&&!mine){nm.style.cursor="pointer";nm.addEventListener("click",function(e){e.stopPropagation();R({selUser:u});});}
     top.appendChild(nm);
-    top.appendChild(u?regBadge(15):sp({style:{fontSize:"10px",fontWeight:"800",padding:"1px 6px",borderRadius:"8px",whiteSpace:"nowrap",background:"#F3F4F6",color:"#6B7280"}},"ゲスト"));
+    top.appendChild(u?regBadge(15,p.user_id):sp({style:{fontSize:"10px",fontWeight:"800",padding:"1px 6px",borderRadius:"8px",whiteSpace:"nowrap",background:"#F3F4F6",color:"#6B7280"}},"ゲスト"));
     top.appendChild(sp({style:{color:"#9CA3AF",marginLeft:"auto",fontSize:"11px",whiteSpace:"nowrap"}},timeAgo(p.created_at)));
     col.appendChild(top);
     var bd=d({style:{fontSize:"13px",color:"#374151",lineHeight:"1.6",display:"-webkit-box",WebkitLineClamp:"2",WebkitBoxOrient:"vertical",overflow:"hidden",wordBreak:"break-word"}});bd.textContent=p.body;col.appendChild(bd);
@@ -1070,7 +1070,7 @@ function CommentBox(p,logged){
     var avEl=avU(26,13,u||{icon:"👤"});if(u&&!mine){avEl.style.cursor="pointer";avEl.addEventListener("click",function(){R({selUser:u});});}row.appendChild(avEl);
     var bub=d({style:{flex:"1",minWidth:"0",background:"#F5F7FA",borderRadius:"12px",padding:"6px 10px"}});
     var top=d({style:{display:"flex",alignItems:"center",gap:"6px",fontSize:"11.5px"}});
-    top.appendChild(sp({style:{fontWeight:"800",color:"#1A1A2E"}},(u?u.name:"退会したユーザー")+(mine?"（あなた）":"")));
+    top.appendChild(sp({style:{fontWeight:"800",color:"#1A1A2E"}},(u?u.name:"退会したユーザー")+(mine?"（あなた）":"")));addPlus(top,c.user_id,13);
     top.appendChild(sp({style:{color:"#9CA3AF",fontSize:"10.5px"}},timeAgo(c.created_at)));
     if(mine||S.isAdmin){var del=document.createElement("button");del.textContent="削除";del.style.cssText="margin-left:auto;background:none;border:none;color:#9CA3AF;font-size:10.5px;cursor:pointer;font-family:inherit;padding:0";
       del.addEventListener("click",function(){if(!confirm("このコメントを削除しますか？"))return;sb.from("open_post_comments").delete().eq("id",c.id).then(function(r){if(r.error){alert("削除できませんでした: "+r.error.message);return;}var l=S.openComments[p.id]||[];S.openComments[p.id]=l.filter(function(x){return x.id!==c.id;});render();});});top.appendChild(del);}
@@ -1110,7 +1110,7 @@ function renderPostDetail(wrap,logged){
   var avEl=u?avU(42,21,u):av(42,21,"👤");if(u&&!mine){avEl.style.cursor="pointer";avEl.addEventListener("click",function(){R({selUser:u});});}hr.appendChild(avEl);
   var hi=d({style:{flex:"1",minWidth:"0"}});
   var nmL=d({style:{fontWeight:"800",fontSize:"14px",color:"#1A1A2E",display:"flex",alignItems:"center",gap:"6px"}});
-  nmL.appendChild(sp({},u?(u.name+(mine?"（あなた）":"")):(p.guest_name||"ゲスト")));if(u)nmL.appendChild(regBadge(16));hi.appendChild(nmL);
+  nmL.appendChild(sp({},u?(u.name+(mine?"（あなた）":"")):(p.guest_name||"ゲスト")));if(u)nmL.appendChild(regBadge(16,p.user_id));hi.appendChild(nmL);
   var tm=d({style:{fontSize:"11px",color:"#9CA3AF"}});tm.textContent=timeAgo(p.created_at);hi.appendChild(tm);
   hr.appendChild(hi);c.appendChild(hr);
   var bd=d({style:{fontSize:"16px",color:"#1A1A2E",lineHeight:"1.75",whiteSpace:"pre-wrap",wordBreak:"break-word",marginBottom:"8px"}});bd.textContent=p.body;c.appendChild(bd);
@@ -1181,7 +1181,7 @@ function renderOpenBoard(wrap){
     else hr.appendChild(av(36,18,"👤"));
     var hi=d({style:{flex:"1",minWidth:"0"}});
     var nmL=d({style:{fontWeight:"800",fontSize:"13px",color:"#1A1A2E",display:"flex",alignItems:"center",gap:"6px",flexWrap:"wrap"}});
-    if(u){nmL.appendChild(sp({style:{cursor:mine?"default":"pointer"}},u.name+(mine?"（あなた）":"")));nmL.appendChild(regBadge(16));if(!mine)nmL.firstChild.addEventListener("click",function(){R({selUser:u});});}
+    if(u){nmL.appendChild(sp({style:{cursor:mine?"default":"pointer"}},u.name+(mine?"（あなた）":"")));nmL.appendChild(regBadge(16,p.user_id));if(!mine)nmL.firstChild.addEventListener("click",function(){R({selUser:u});});}
     else{nmL.appendChild(sp({},(p.guest_name||"ゲスト")));nmL.appendChild(sp({style:{background:"#F3F4F6",color:"#6B7280",fontSize:"10px",fontWeight:"800",padding:"1px 7px",borderRadius:"10px"}},"ゲスト"));}
     hi.appendChild(nmL);
     var tm=d({style:{fontSize:"11px",color:"#9CA3AF"}});tm.textContent=timeAgo(p.created_at);hi.appendChild(tm);
@@ -1452,10 +1452,29 @@ function b2(a,t){var e=mk("button",a);if(t)e.textContent=t;return e;}
 function i2(a){return mk("input",a);}
 function t2(a){return mk("textarea",a);}
 // 登録ユーザーの青いバッジ
-function regBadge(sz){
-  var w=document.createElement("span");w.title="登録ユーザー";w.setAttribute("aria-label","登録ユーザー");
+// ===== スノマ プラス（課金会員）：バッジが金色になる =====
+// plus_members 表に入っている人がプラス会員（今は運営が手動で追加。将来はStripeの支払いと連動）
+function loadPlusMembers(){
+  if(typeof sb==="undefined"||!sb)return;
+  sb.from("plus_members").select("user_id").then(function(r){
+    if(r.error){return;}
+    var ids=(r.data||[]).map(function(x){return x.user_id;}).sort();
+    var key=ids.join(",");if(key===window._plusKey)return;window._plusKey=key;
+    S.plusIds=ids;render();
+  },function(){});
+}
+function plusMark(uid,sz,extra){if(!isPlus(uid))return null;var b=regBadge(sz||16,uid);if(extra)b.style.cssText+=";"+extra;return b;}
+function addPlus(el,uid,sz,extra){var b=plusMark(uid,sz,extra);if(b&&el)el.appendChild(b);return el;}
+function isPlus(uid){return !!(uid&&S.plusIds&&S.plusIds.indexOf(uid)>=0);}
+setTimeout(loadPlusMembers,1500);setInterval(function(){if(!document.hidden)loadPlusMembers();},300000);
+// 登録ユーザーのバッジ（青）。プラス会員は金色
+function regBadge(sz,uid){
+  var gold=isPlus(uid);
+  var w=document.createElement("span");w.title=gold?"スノマ プラス会員":"登録ユーザー";w.setAttribute("aria-label",w.title);
   w.style.cssText="display:inline-flex;align-items:center;vertical-align:middle;flex-shrink:0;width:"+sz+"px;height:"+sz+"px";
-  w.innerHTML='<svg viewBox="0 0 24 24" width="'+sz+'" height="'+sz+'" aria-hidden="true"><path fill="#1D9BF0" d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91s-2.52-1.27-3.91-.81c-.66-1.31-1.91-2.19-3.34-2.19s-2.67.88-3.33 2.19c-1.4-.46-2.91-.2-3.92.81s-1.26 2.52-.8 3.91C2.63 9.33 1.75 10.57 1.75 12s.88 2.67 2.19 3.34c-.46 1.39-.2 2.9.81 3.91s2.52 1.26 3.91.81c.67 1.31 1.91 2.19 3.34 2.19s2.68-.88 3.34-2.19c1.39.46 2.9.2 3.91-.81s1.27-2.52.81-3.91c1.31-.67 2.19-1.91 2.19-3.34z"/><path fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M7.8 12.3l2.8 2.8 5.6-6"/></svg>';
+  var fill=gold?"url(#smGold)":"#1D9BF0";
+  var defs=gold?'<defs><linearGradient id="smGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FBE38E"/><stop offset=".5" stop-color="#E6B325"/><stop offset="1" stop-color="#B8860B"/></linearGradient></defs>':'';
+  w.innerHTML='<svg viewBox="0 0 24 24" width="'+sz+'" height="'+sz+'" aria-hidden="true">'+defs+'<path fill="'+fill+'" d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91s-2.52-1.27-3.91-.81c-.66-1.31-1.91-2.19-3.34-2.19s-2.67.88-3.33 2.19c-1.4-.46-2.91-.2-3.92.81s-1.26 2.52-.8 3.91C2.63 9.33 1.75 10.57 1.75 12s.88 2.67 2.19 3.34c-.46 1.39-.2 2.9.81 3.91s2.52 1.26 3.91.81c.67 1.31 1.91 2.19 3.34 2.19s2.68-.88 3.34-2.19c1.39.46 2.9.2 3.91-.81s1.27-2.52.81-3.91c1.31-.67 2.19-1.91 2.19-3.34z"/><path fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M7.8 12.3l2.8 2.8 5.6-6"/></svg>';
   return w;
 }
 function av(sz,fs,icon){var e=d({class:"av",style:{width:sz+"px",height:sz+"px",fontSize:fs+"px"}});e.textContent=icon;return e;}
@@ -1858,7 +1877,7 @@ function CamModal(u){
     hr.appendChild(avU(72,36,u));
     var info=d({style:{flex:"1"}});
     var nr=d({style:{display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap"}});
-    nr.appendChild(sp({style:{fontWeight:"900",fontSize:"21px",color:"#fff"}},u.name));
+    nr.appendChild(sp({style:{fontWeight:"900",fontSize:"21px",color:"#fff"}},u.name));addPlus(nr,u.uid,20);
     if(u.ok)nr.appendChild(sp({style:{background:"rgba(255,255,255,.2)",borderRadius:"20px",padding:"2px 8px",fontSize:"11px",color:"#fff",fontWeight:"700"}},"🪪 本人確認済"));
     nr.appendChild(sp({style:{background:"#22C55E",borderRadius:"20px",padding:"2px 8px",fontSize:"11px",color:"#fff",fontWeight:"700"}},"🎥 カメラマン"));
     info.appendChild(nr);
@@ -1952,7 +1971,7 @@ function InsModal(u){
     var hr=d({style:{display:"flex",gap:"14px",alignItems:"center"}});hr.appendChild(avU(72,36,u));
     var info=d({});
     var nr=d({style:{display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap"}});
-    nr.appendChild(sp({style:{fontWeight:"900",fontSize:"21px",color:"#fff"}},u.name));
+    nr.appendChild(sp({style:{fontWeight:"900",fontSize:"21px",color:"#fff"}},u.name));addPlus(nr,u.uid,20);
     if(u.ok)nr.appendChild(sp({style:{background:"rgba(255,255,255,.25)",borderRadius:"20px",padding:"2px 8px",fontSize:"11px",color:"#fff",fontWeight:"700"}},"🪪 本人確認済"));
     info.appendChild(nr);
     var agd=d({style:{color:"rgba(255,255,255,.85)",fontSize:"13px",marginTop:"2px"}});agd.textContent=u.act+"・"+u.lv;info.appendChild(agd);
@@ -2532,7 +2551,7 @@ function renderExplore(){
     var av=document.createElement("div");av.style.cssText="width:32px;height:32px;border-radius:50%;overflow:hidden;flex-shrink:0;border:2px solid #fff;background:#fff;display:flex;align-items:center;justify-content:center;font-size:16px";
     if(u.profileImg){var aimg=document.createElement("img");aimg.src=u.profileImg;aimg.alt="";aimg.style.cssText="width:100%;height:100%;object-fit:cover;display:block";av.appendChild(aimg);}else{av.textContent=u.icon||"🏂";}
     var txt=document.createElement("div");txt.style.cssText="min-width:0;flex:1";
-    var nm=document.createElement("div");nm.style.cssText="font-weight:900;font-size:13px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis";nm.textContent=u.name+(u.ok?" ✅":"");
+    var nm=document.createElement("div");nm.style.cssText="font-weight:900;font-size:13px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:4px";nm.appendChild(sp({style:{overflow:"hidden",textOverflow:"ellipsis"}},u.name+(u.ok?" ✅":"")));addPlus(nm,u.uid,14);
     var sub=[];if(u.act)sub.push(u.act);if(u.resorts&&u.resorts.length)sub.push(u.resorts[0]);
     var sb2=document.createElement("div");sb2.style.cssText="font-size:10.5px;color:rgba(255,255,255,.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis";sb2.textContent=sub.join("・")||(u.lv||"");
     txt.appendChild(nm);txt.appendChild(sb2);info.appendChild(av);info.appendChild(txt);card.appendChild(info);
@@ -2633,7 +2652,7 @@ function renderExplore(){
       }else{row.appendChild(av(56,28,u.icon));}
       var inf=d({style:{flex:"1"}});
       var nl=d({style:{display:"flex",alignItems:"center",gap:"6px",marginBottom:"4px",flexWrap:"wrap"}});
-      var nm=d({style:{fontWeight:"800",color:"#1A1A2E",fontSize:"16px"}});nm.textContent=u.name;nl.appendChild(nm);
+      var nm=d({style:{fontWeight:"800",color:"#1A1A2E",fontSize:"16px"}});nm.textContent=u.name;nl.appendChild(nm);addPlus(nl,u.uid,16);
       if(u.ok)nl.appendChild(sp({style:{background:"rgba(46,204,113,.15)",color:"#27AE60",borderRadius:"20px",padding:"2px 8px",fontSize:"11px",fontWeight:"700"}},"🪪"));
       inf.appendChild(nl);
       var bd=d({class:"bdrow",style:{marginBottom:"4px",display:"flex",flexWrap:"wrap",gap:"4px 6px",alignItems:"center"}});
@@ -2724,7 +2743,7 @@ function renderChat(){
           var msgs=S.chatMsgs[String(u.id)]||[];var last=msgs[msgs.length-1];
           var c=d({class:"card",style:{cursor:"pointer"},onClick:function(){R({chatUser:u});}});
           var row=d({style:{display:"flex",alignItems:"center",gap:"12px"}});row.appendChild(avU(48,24,u));
-          var inf=d({style:{flex:"1"}});var nm=d({style:{fontWeight:"800",color:"#1A1A2E"}});nm.textContent=u.name;inf.appendChild(nm);
+          var inf=d({style:{flex:"1"}});var nm=d({style:{fontWeight:"800",color:"#1A1A2E",display:"flex",alignItems:"center",gap:"4px"}});nm.appendChild(sp({},u.name));addPlus(nm,u.uid,15);inf.appendChild(nm);
           var unr=u.isReal?unreadCountFor(String(u.id)):0;
           if(last){var le=d({style:{color:unr>0?"#1A1A2E":"#6B7280",fontWeight:unr>0?"700":"400",fontSize:"13px",marginTop:"2px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"190px"}});le.textContent=(last.f==="m"?"あなた: ":"")+last.t;inf.appendChild(le);}
           row.appendChild(inf);
@@ -2746,7 +2765,7 @@ function renderChat(){
   bb.addEventListener("click",function(){R({chatUser:null});});
   hdr.appendChild(bb);hdr.appendChild(avU(38,20,S.chatUser));
   var ci=d({style:{flex:"1"}});
-  var cnm=d({style:{fontWeight:"800",color:"#fff",fontSize:"15px"}});cnm.textContent=S.chatUser.name;
+  var cnm=d({style:{fontWeight:"800",color:"#fff",fontSize:"15px",display:"flex",alignItems:"center",gap:"4px"}});cnm.appendChild(sp({},S.chatUser.name));addPlus(cnm,S.chatUser.uid,15);
   var cdet=d({style:{color:"rgba(255,255,255,.8)",fontSize:"11px"}});cdet.textContent=(S.chatUser.lv||"")+((S.chatUser.lv&&S.chatUser.act)?"・":"")+(S.chatUser.act||"");
   if(window._dmLoading&&S.chatUser.isReal){cdet.textContent+="　更新中…";}
   ci.appendChild(cnm);ci.appendChild(cdet);hdr.appendChild(ci);
@@ -3004,7 +3023,7 @@ function roomMsgRow(m){
   var row=d({style:{display:"flex",justifyContent:isMe?"flex-end":"flex-start",marginBottom:"10px",gap:"8px",alignItems:"flex-start"}});
   if(!isMe){var avw=d({style:{cursor:u?"pointer":"default",flexShrink:"0"}});avw.appendChild(avU(34,18,u||{profileImg:m.profile_img,icon:m.icon||"🏂"}));if(u)avw.addEventListener("click",function(){R({selUser:u});});row.appendChild(avw);}
   var box=d({style:{maxWidth:"74%",display:"flex",flexDirection:"column",alignItems:isMe?"flex-end":"flex-start"}});
-  if(!isMe){var n=d({style:{fontSize:"11px",color:"#6B7280",marginBottom:"3px",fontWeight:"700"}});n.textContent=nm;box.appendChild(n);}
+  if(!isMe){var n=d({style:{fontSize:"11px",color:"#6B7280",marginBottom:"3px",fontWeight:"700",display:"flex",alignItems:"center",gap:"3px"}});n.appendChild(sp({},nm));addPlus(n,m.user_id,12);box.appendChild(n);}
   var line=d({style:{display:"flex",alignItems:"flex-end",gap:"6px",flexDirection:isMe?"row-reverse":"row"}});
   var bub=d({style:{background:isMe?"linear-gradient(135deg,#FF6B2B,#FF8C55)":"#fff",color:isMe?"#fff":"#1A1A2E",padding:"9px 13px",borderRadius:isMe?"18px 18px 4px 18px":"4px 18px 18px 18px",fontSize:"14px",lineHeight:"1.6",boxShadow:"0 1px 4px rgba(0,0,0,0.07)",wordBreak:"break-word",WebkitUserSelect:"none",userSelect:"none",WebkitTouchCallout:"none",transition:"transform .15s"}});
   if(m.reply_to){
@@ -4347,6 +4366,7 @@ function renderProfile(){
   aw.addEventListener("click",function(){S.showEditProfile=true;render();});hr.appendChild(aw);
   var hi=d({style:{marginTop:"8px"}});var hn=d({style:{display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap"}});
   hn.appendChild(sp({style:{fontWeight:"900",fontSize:"22px",color:"#2E2414"}},(S.myProfile&&(S.myProfile.nick||S.myProfile.name))||"名前未設定"));
+  if(currentUser)addPlus(hn,currentUser.id,22);
   if(kycOk)hn.appendChild(sp({style:{background:"#fff",border:"1px solid #E8D9B8",borderRadius:"20px",padding:"2px 8px",fontSize:"11px",color:"#8A6A2E",fontWeight:"700"}},"🪪 本人確認済"));
   hi.appendChild(hn);
   var agd=d({style:{color:"#8A6A2E",fontSize:"13px",marginTop:"2px"}});agd.textContent=((S.myProfile&&S.myProfile.act)||"")+"・"+((S.myProfile&&S.myProfile.lv)||"");hi.appendChild(agd);
@@ -5411,7 +5431,7 @@ function _renderInner(){
         app.appendChild(Modal(false,function(){R({selUser:null});},function(box){
           var row=d({style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"14px"}});row.appendChild(avU(84,40,u));
           var cb=b2({style:{padding:"10px 20px",minHeight:"44px",background:"#F5F7FA",border:"1.5px solid #E8E8E8",borderRadius:"22px",fontSize:"15px",fontWeight:"800",color:"#4B5563",cursor:"pointer",fontFamily:"inherit"}},"← 戻る");cb.addEventListener("click",function(){R({selUser:null});});var stb=d({style:{position:"sticky",top:"-24px",margin:"-24px -24px 10px",padding:"12px 16px",background:"rgba(255,255,255,.97)",zIndex:"5",display:"flex",justifyContent:"flex-start",borderBottom:"1px solid #F0F0F0",borderRadius:"24px 24px 0 0"}});stb.appendChild(cb);box.appendChild(stb);box.appendChild(row);
-          var nr=d({style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"4px",flexWrap:"wrap"}});nr.appendChild(sp({style:{fontWeight:"900",fontSize:"22px",color:"#1A1A2E"}},u.name));if(u.ok)nr.appendChild(sp({style:{fontSize:"12px",color:"#2ECC71",fontWeight:"700"}},"🪪 確認済"));box.appendChild(nr);
+          var nr=d({style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"4px",flexWrap:"wrap"}});nr.appendChild(sp({style:{fontWeight:"900",fontSize:"22px",color:"#1A1A2E"}},u.name));addPlus(nr,u.uid,22);if(u.ok)nr.appendChild(sp({style:{fontSize:"12px",color:"#2ECC71",fontWeight:"700"}},"🪪 確認済"));box.appendChild(nr);
           if(u.age||u.gender){var ag=d({style:{color:"#6B7280",fontSize:"13px",marginBottom:"10px"}});ag.textContent=[u.age?u.age+"歳":"",u.gender||""].filter(Boolean).join("・");box.appendChild(ag);}
           var tagSt={background:"#FFF0E8",color:"#FF6B2B",display:"inline-block",padding:"3px 10px",borderRadius:"20px",fontSize:"11px",fontWeight:"700",marginRight:"6px"};
           var bd=d({style:{marginBottom:"14px"}});if(u.act)bd.appendChild(sp({style:tagSt},u.act));if(u.lv)bd.appendChild(sp({style:tagSt},u.lv));box.appendChild(bd);
