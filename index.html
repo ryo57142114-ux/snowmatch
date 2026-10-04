@@ -1022,7 +1022,9 @@ function sendOpenComment(postId){
 }
 function CommentBox(p,logged){
   var list=(S.openComments&&S.openComments[p.id])||[];
-  var box=d({style:{marginTop:"10px",borderTop:"1px solid #F3F4F6",paddingTop:"10px"}});
+  var box=d({style:{}});
+  var lw=d({});
+  if(!list.length){var em0=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"12.5px",padding:"18px 0"}});em0.textContent="まだ返信はありません。最初の返信をどうぞ";lw.appendChild(em0);}
   list.forEach(function(c){
     var mine=logged&&c.user_id===currentUser.id;
     var u=mine?{uid:currentUser.id,name:(S.myProfile&&S.myProfile.nick)||"あなた",icon:(S.myProfile&&S.myProfile.icon)||"🏂",profileImg:S.myProfile&&S.myProfile.profileImg}:findRealUser(c.user_id);
@@ -1036,24 +1038,54 @@ function CommentBox(p,logged){
       del.addEventListener("click",function(){if(!confirm("このコメントを削除しますか？"))return;sb.from("open_post_comments").delete().eq("id",c.id).then(function(r){if(r.error){alert("削除できませんでした: "+r.error.message);return;}var l=S.openComments[p.id]||[];S.openComments[p.id]=l.filter(function(x){return x.id!==c.id;});render();});});top.appendChild(del);}
     bub.appendChild(top);
     var bt=d({style:{fontSize:"13px",color:"#1A1A2E",lineHeight:"1.6",whiteSpace:"pre-wrap",wordBreak:"break-word"}});bt.textContent=c.body;bub.appendChild(bt);
-    row.appendChild(bub);box.appendChild(row);
+    row.appendChild(bub);lw.appendChild(row);
   });
+  var ir0=d({style:{marginBottom:"12px"}});
   if(logged){
     if(!S.cmtDraft)S.cmtDraft={};
     var ir=d({style:{display:"flex",gap:"6px",alignItems:"center"}});
-    var inp=document.createElement("input");inp.type="text";inp.className="inp";inp.id="cmt_"+p.id;inp.maxLength=200;inp.placeholder="コメントを書く…";inp.style.cssText="flex:1;font-size:16px;padding:8px 12px;border-radius:16px";
+    var inp=document.createElement("input");inp.type="text";inp.className="inp";inp.id="cmt_"+p.id;inp.maxLength=200;inp.placeholder="返信を書く…";inp.style.cssText="flex:1;font-size:16px;padding:8px 12px;border-radius:16px";
     inp.value=S.cmtDraft[p.id]||"";
     inp.addEventListener("input",function(e){S.cmtDraft[p.id]=e.target.value;});
     inp.addEventListener("keydown",function(e){if(e.key==="Enter"&&!e.isComposing&&e.keyCode!==229){e.preventDefault();sendOpenComment(p.id);}});
     var sbn=document.createElement("button");sbn.textContent="送信";sbn.style.cssText="padding:8px 14px;border-radius:14px;border:none;background:linear-gradient(135deg,#FF6B2B,#FF8C55);color:#fff;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit;flex-shrink:0";
     sbn.addEventListener("click",function(){sendOpenComment(p.id);});
-    ir.appendChild(inp);ir.appendChild(sbn);box.appendChild(ir);
+    ir.appendChild(inp);ir.appendChild(sbn);ir0.appendChild(ir);
   }else{
-    var gn=d({style:{fontSize:"11.5px",color:"#9CA3AF",textAlign:"center",padding:"4px 0"}});gn.textContent="コメントするには無料登録が必要です";box.appendChild(gn);
+    var gn=d({style:{fontSize:"11.5px",color:"#9CA3AF",textAlign:"center",padding:"4px 0"}});gn.textContent="返信するには無料登録が必要です";ir0.appendChild(gn);
   }
+  box.appendChild(ir0);box.appendChild(lw);
   return box;
 }
+function openPostDetail(id){S.openDetail=id;var app=document.getElementById("app");render();if(app)app.scrollTop=0;window.scrollTo(0,0);}
+function renderPostDetail(wrap,logged){
+  var p=null;(S.openPosts||[]).forEach(function(x){if(x.id===S.openDetail)p=x;});
+  var back=document.createElement("button");back.textContent="‹ つぶやきに戻る";
+  back.style.cssText="background:none;border:none;color:#FF6B2B;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;padding:0;margin-bottom:10px";
+  back.addEventListener("click",function(){S.openDetail=null;render();});wrap.appendChild(back);
+  if(!p){var nf=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"13px",padding:"30px 0"}});nf.textContent="このつぶやきは見つかりませんでした（削除された可能性があります）";wrap.appendChild(nf);return wrap;}
+  if(!S.openComments||!S.openComments[p.id])loadOpenComments((S.openPosts||[]).map(function(x){return x.id;}));
+  var mine=logged&&p.user_id===currentUser.id;
+  var u=p.user_id?(mine?{uid:currentUser.id,name:(S.myProfile&&S.myProfile.nick)||"あなた",icon:(S.myProfile&&S.myProfile.icon)||"🏂",profileImg:S.myProfile&&S.myProfile.profileImg}:findRealUser(p.user_id)):null;
+  var c=d({class:"card",style:{marginBottom:"12px",padding:"14px"}});
+  var hr=d({style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"8px"}});
+  var avEl=u?avU(42,21,u):av(42,21,"👤");if(u&&!mine){avEl.style.cursor="pointer";avEl.addEventListener("click",function(){R({selUser:u});});}hr.appendChild(avEl);
+  var hi=d({style:{flex:"1",minWidth:"0"}});
+  var nmL=d({style:{fontWeight:"800",fontSize:"14px",color:"#1A1A2E",display:"flex",alignItems:"center",gap:"6px"}});
+  nmL.appendChild(sp({},u?(u.name+(mine?"（あなた）":"")):(p.guest_name||"ゲスト")));if(u)nmL.appendChild(regBadge(16));hi.appendChild(nmL);
+  var tm=d({style:{fontSize:"11px",color:"#9CA3AF"}});tm.textContent=timeAgo(p.created_at);hi.appendChild(tm);
+  hr.appendChild(hi);c.appendChild(hr);
+  var bd=d({style:{fontSize:"16px",color:"#1A1A2E",lineHeight:"1.75",whiteSpace:"pre-wrap",wordBreak:"break-word",marginBottom:"8px"}});bd.textContent=p.body;c.appendChild(bd);
+  var nC=((S.openComments&&S.openComments[p.id])||[]).length;
+  var st=d({style:{display:"flex",alignItems:"center",gap:"8px",borderTop:"1px solid #F3F4F6",paddingTop:"8px"}});
+  st.appendChild(sp({style:{fontSize:"12.5px",color:"#4B5563",fontWeight:"800"}},"💬 "+nC+"件の返信"));st.appendChild(ReactBar(p));
+  c.appendChild(st);wrap.appendChild(c);
+  var rh=d({style:{fontSize:"12px",fontWeight:"800",color:"#6B7280",margin:"4px 2px 8px"}});rh.textContent="返信";wrap.appendChild(rh);
+  var cb=d({class:"card",style:{padding:"12px 14px"}});cb.appendChild(CommentBox(p,logged));wrap.appendChild(cb);
+  return wrap;
+}
 function renderOpenBoard(wrap){
+  if(S.openDetail){return renderPostDetail(wrap,!!(sb&&currentUser&&!S.isGuest));}
   markOpenSeen();
   if(S.openPosts===undefined){S.openPosts=null;loadOpenPosts();}
   var logged=!!(sb&&currentUser&&!S.isGuest);
@@ -1127,14 +1159,12 @@ function renderOpenBoard(wrap){
       sb.from("open_post_reports").insert({post_id:p.id}).then(function(r){if(r.error&&String(r.error.message).indexOf("duplicate")<0){alert("通報できませんでした: "+r.error.message);return;}rp[p.id]=1;alert("通報しました。ご協力ありがとうございます");loadOpenPosts();});
     });
     var nC=((S.openComments&&S.openComments[p.id])||[]).length;
-    if(!S.cmtOpen)S.cmtOpen={};
     var rbRow=d({style:{display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap"}});
-    rbRow.appendChild(ReactBar(p));
-    var cbtn=document.createElement("button");cbtn.textContent="コメント"+(nC?" "+nC:"");
-    cbtn.style.cssText="padding:6px 12px;border-radius:14px;border:1.5px solid "+(S.cmtOpen[p.id]?"#FF6B2B":"#E5E7EB")+";background:"+(S.cmtOpen[p.id]?"#FFF0E8":"#fff")+";color:"+(S.cmtOpen[p.id]?"#FF6B2B":"#4B5563")+";font-size:12px;font-weight:800;cursor:pointer;font-family:inherit";
-    cbtn.addEventListener("click",function(){S.cmtOpen[p.id]=!S.cmtOpen[p.id];render();if(S.cmtOpen[p.id]&&logged){setTimeout(function(){var el=document.getElementById("cmt_"+p.id);if(el&&!nC)el.focus();},50);}});
-    rbRow.appendChild(cbtn);c.appendChild(rbRow);
-    if(S.cmtOpen[p.id])c.appendChild(CommentBox(p,logged));
+    var cbtn=document.createElement("button");cbtn.textContent="💬 "+nC;cbtn.setAttribute("aria-label","返信を見る");
+    cbtn.style.cssText="padding:6px 12px;border-radius:14px;border:1.5px solid #E5E7EB;background:#fff;color:#4B5563;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit";
+    cbtn.addEventListener("click",function(){openPostDetail(p.id);});
+    rbRow.appendChild(cbtn);rbRow.appendChild(ReactBar(p));c.appendChild(rbRow);
+    bd.style.cursor="pointer";bd.addEventListener("click",function(){openPostDetail(p.id);});
     c.appendChild(ac);wrap.appendChild(c);
   });
   return wrap;
@@ -2683,7 +2713,7 @@ function renderMarket(){
   if(!S.marketTab||S.marketTab==="room"&&!S._mtInit){S._mtInit=true;S.marketTab="open";}
   // 上のタブ：つぶやきは誰でも、ほかは本人確認済みの会員だけ
   var mt=d({style:{display:"flex",background:"#EEF0F3",borderRadius:"14px",padding:"4px",marginBottom:"14px"}});
-  [["open","📣 つぶやき"],["snow","❄️ ゲレンデ速報"],["member","🛖 会員"]].forEach(function(o){var on=o[0]==="member"?(S.marketTab!=="open"&&S.marketTab!=="snow"):S.marketTab===o[0];var x=document.createElement("button");x.textContent=o[1];x.style.cssText="flex:1;padding:10px 6px;border-radius:11px;border:none;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;background:"+(on?"#fff":"transparent")+";color:"+(on?"#FF6B2B":"#6B7280")+";box-shadow:"+(on?"0 1px 4px rgba(0,0,0,.08)":"none");x.addEventListener("click",function(){if(o[0]==="open"){loadOpenPosts();R({marketTab:"open"});}else if(o[0]==="snow"){loadSnowReports();R({marketTab:"snow"});}else R({marketTab:"room",openRoom:null});});mt.appendChild(x);});
+  [["open","📣 つぶやき"],["snow","❄️ ゲレンデ速報"],["member","🛖 会員"]].forEach(function(o){var on=o[0]==="member"?(S.marketTab!=="open"&&S.marketTab!=="snow"):S.marketTab===o[0];var x=document.createElement("button");x.textContent=o[1];x.style.cssText="flex:1;padding:10px 6px;border-radius:11px;border:none;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;background:"+(on?"#fff":"transparent")+";color:"+(on?"#FF6B2B":"#6B7280")+";box-shadow:"+(on?"0 1px 4px rgba(0,0,0,.08)":"none");x.addEventListener("click",function(){if(o[0]==="open"){loadOpenPosts();R({marketTab:"open",openDetail:null});}else if(o[0]==="snow"){loadSnowReports();R({marketTab:"snow"});}else R({marketTab:"room",openRoom:null});});mt.appendChild(x);});
   wrap.appendChild(mt);
   if(S.marketTab==="open")return renderOpenBoard(wrap);
   if(S.marketTab==="snow")return renderSnowBoard(wrap);
@@ -5077,7 +5107,7 @@ function WelcomeModal(){
 }
 
 
-function viewKey(){return [S.pg,S.tab,S.openRoom||"",S.selUser?S.selUser.id:"",S.chatUser?S.chatUser.id:"",S.bookUser?1:0,S.showEditProfile?1:0].join("|");}
+function viewKey(){return [S.pg,S.tab,S.openDetail||"",S.openRoom||"",S.selUser?S.selUser.id:"",S.chatUser?S.chatUser.id:"",S.bookUser?1:0,S.showEditProfile?1:0].join("|");}
 function isTypingEl(t){return !!(t&&t.id&&(t.id==="chatinput"||t.id==="roominput"||t.id.indexOf("cmt_")===0));}
 var _lastViewKey="";
 // 日本語入力（変換中）の最中に画面を描き直すと、文字が勝手に確定したり消えたりするので、変換が終わるまで待つ
