@@ -1345,7 +1345,7 @@ var FAQ=[
   ["プロフィールで大事なところは？","アイコン写真・自己紹介・活動スキー場・レベルを入れておくと、相手が安心して声をかけやすくなります。有料で同行する人は、料金と、滑りや撮影の動画（投稿・実績）を載せるのがおすすめです。"]
  ]},
  {sec:"🏂 アプリの使い方",items:[
-  ["仲間はどうやって探すの？","「探す」→「仲間を探す」で、エリア・種目・レベルなどで絞り込めます。気になる人がいたらプロフィールを見て、フォローやメッセージをしてみましょう。"],
+  ["仲間はどうやって探すの？","「探す」→「仲間を探す」で、エリア・種目・レベルなどで絞り込めます。気になる人がいたらプロフィールを見て、フォローやメッセージをしてみましょう。\n撮影してくれる人を探すときは「探す」→「🎥 撮影カメラマン」から、使っている機材やエリアで絞り込めます。"],
   ["募集掲示板って何？","日付つきで投稿できる掲示板です。\n・「同行・撮影します」：この日空いているので一緒に滑れる・撮影できます、という投稿\n・「同行・撮影お願いします」：この日一緒に滑る人・撮影してくれる人を探しています、という投稿\nそれぞれ「無料」か「有料」を選べます。"],
   ["「参加します」を押すとどうなる？","【無料の投稿】相手に「参加したいです！」というメッセージが自動で届き、チャットで日時や集合場所を決めます。\n\n【有料の募集】応募として相手に届きます。募集した人が応募者の中から1人を選ぶと予約が確定します。確定するまでは何人でも応募でき、選ばれなかった人には自動でお知らせが届きます。"],
   ["メッセージは誰にでも送れる？","フォローした相手にメッセージを送れます。プロフィールの「メッセージ」や、募集の「参加します」「質問」から送ると、自動でフォローされます。"],
@@ -2308,18 +2308,22 @@ function renderExplore(){
   var wrap=d({class:"pg"});
   var exT=d({style:{display:"flex",background:"#EEF0F3",borderRadius:"14px",padding:"4px",marginBottom:"14px"}});
   var _nb=(S.exTab==="board")?0:newBoardCount();
-  [["people","👥 仲間を探す"],["board","📅 募集掲示板"]].forEach(function(o){var on=(S.exTab||"people")===o[0];var x=document.createElement("button");x.textContent=o[1];x.style.position="relative";if(o[0]==="board"&&_nb>0){x.appendChild(unreadBadge(_nb,"position:absolute;top:-6px;right:6px;"));}x.style.cssText="flex:1;padding:10px 6px;border-radius:11px;border:none;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;background:"+(on?"#fff":"transparent")+";color:"+(on?"#FF6B2B":"#6B7280")+";box-shadow:"+(on?"0 1px 4px rgba(0,0,0,.08)":"none");x.addEventListener("click",function(){if(o[0]==="board")loadPosts();R({exTab:o[0]});});exT.appendChild(x);});
+  [["people","👥 仲間を探す"],["cam","🎥 撮影カメラマン"],["board","📅 募集掲示板"]].forEach(function(o){var on=(S.exTab||"people")===o[0];var x=document.createElement("button");x.textContent=o[1];x.style.position="relative";if(o[0]==="board"&&_nb>0){x.appendChild(unreadBadge(_nb,"position:absolute;top:-6px;right:6px;"));}x.style.cssText="flex:1;padding:10px 3px;border-radius:11px;border:none;font-weight:800;font-size:12px;white-space:nowrap;cursor:pointer;font-family:inherit;background:"+(on?"#fff":"transparent")+";color:"+(on?"#FF6B2B":"#6B7280")+";box-shadow:"+(on?"0 1px 4px rgba(0,0,0,.08)":"none");x.addEventListener("click",function(){if(o[0]==="board")loadPosts();R({exTab:o[0]});});exT.appendChild(x);});
   wrap.appendChild(exT);
   if(S.exTab==="board"){markBoardSeen();return renderBoard(wrap);}
+  // 「仲間を探す」と「撮影カメラマン」はタブで分ける
+  var camTabOn=S.exTab==="cam";
+  S.camOnly=camTabOn;if(!camTabOn||!S.camSel)S.camSel=camTabOn&&S.camSel?S.camSel:[];
+  if(!camTabOn){
   var opc=OpenPreviewCard();if(opc)wrap.appendChild(opc);
   var fvs=FavStrip();if(fvs)wrap.appendChild(fvs);
   var ht=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"4px"}});ht.textContent="🔍 仲間を探す";wrap.appendChild(ht);
   var sub=d({style:{color:"#6B7280",fontSize:"13px",marginBottom:"12px"}});sub.textContent="エリア・種目で絞り込もう";wrap.appendChild(sub);
+  }
 
   // 撮影カメラマンバナー
   var camBanner=document.createElement("div");
-  camBanner.style.cssText="background:linear-gradient(135deg,#0f3460,#16213e,#1a1a2e);border-radius:20px;padding:16px;margin-bottom:16px;cursor:pointer;position:relative;overflow:hidden";
-  camBanner.addEventListener("click",function(){S.camOnly=!S.camOnly;if(!S.camOnly)S.camSel=[];render();});
+  camBanner.style.cssText="background:linear-gradient(135deg,#0f3460,#16213e,#1a1a2e);border-radius:20px;padding:16px;margin-bottom:16px;position:relative;overflow:hidden";
   var cg1=document.createElement("div");cg1.style.cssText="position:absolute;top:-15px;right:-15px;width:80px;height:80px;background:radial-gradient(circle,rgba(34,197,94,0.3),transparent 70%);border-radius:50%";
   camBanner.appendChild(cg1);
   var cbRow=document.createElement("div");cbRow.style.cssText="display:flex;align-items:center;gap:14px;position:relative";
@@ -2346,19 +2350,18 @@ function renderExplore(){
     camTagRow.appendChild(tag);
   });
   cbInfo.appendChild(cbTitle);cbInfo.appendChild(cbSub2);cbInfo.appendChild(camTagRow);
-  var cbArrow=document.createElement("div");cbArrow.style.cssText="color:rgba(255,255,255,0.4);font-size:22px;flex-shrink:0";cbArrow.textContent=S.camOnly?"✅":"›";
-  cbRow.appendChild(cbIconWrap);cbRow.appendChild(cbInfo);cbRow.appendChild(cbArrow);
+  cbRow.appendChild(cbIconWrap);cbRow.appendChild(cbInfo);
   camBanner.appendChild(cbRow);
-  if(S.camOnly){var cbActive=document.createElement("div");cbActive.style.cssText="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.1);font-size:12px;color:#86EFAC;font-weight:700;text-align:center";cbActive.textContent=(S.camSel&&S.camSel.length?"🎥 "+S.camSel.join("・")+" で撮れる人を表示中":"🎥 撮影カメラマンのみ表示中")+"　ここをタップで解除";camBanner.appendChild(cbActive);}
-  wrap.appendChild(camBanner);
+  if(S.camSel&&S.camSel.length){var cbActive=document.createElement("div");cbActive.style.cssText="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.1);font-size:12px;color:#86EFAC;font-weight:700;text-align:center";cbActive.textContent="🎥 "+S.camSel.join("・")+" で撮れる人を表示中";camBanner.appendChild(cbActive);}
+  if(camTabOn)wrap.appendChild(camBanner);
 
   // おすすめ（写真カバー型）
   var recSec=document.createElement("div");recSec.style.marginBottom="16px";
   var recHeader=document.createElement("div");recHeader.style.cssText="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px";
-  var recTitle=document.createElement("div");recTitle.style.cssText="font-weight:900;font-size:16px;color:#1A1A2E";recTitle.textContent="✨ おすすめ";
+  var recTitle=document.createElement("div");recTitle.style.cssText="font-weight:900;font-size:16px;color:#1A1A2E";recTitle.textContent=camTabOn?"✨ おすすめのカメラマン":"✨ おすすめ";
   recHeader.appendChild(recTitle);
   var recData=[];
-  for(var uri=0;uri<USERS.length;uri++){var u2=USERS[uri];recData.push({user:u2,total:(u2.fcnt||0)+(u2.rcnt||0)*3+(u2.posts?u2.posts.length:0)*10});}
+  for(var uri=0;uri<USERS.length;uri++){var u2=USERS[uri];if(camTabOn&&!(u2.isCam||(u2.camGear&&u2.camGear.length)))continue;recData.push({user:u2,total:(u2.fcnt||0)+(u2.rcnt||0)*3+(u2.posts?u2.posts.length:0)*10});}
   recData.sort(function(a,b){var pa=a.user.pr?1:0,pb=b.user.pr?1:0;if(pa!==pb)return pb-pa;return b.total-a.total;});
   recData=recData.slice(0,10);
   if(recData.length>2){var recHint=document.createElement("div");recHint.style.cssText="font-size:11px;color:#9CA3AF;font-weight:700";recHint.textContent="横にスワイプ ›";recHeader.appendChild(recHint);}
@@ -2403,23 +2406,19 @@ function renderExplore(){
     x.addEventListener("click",function(){R({payMode:o[0]});});
     pm.appendChild(x);
   });
-  wrap.appendChild(pm);
+  if(!camTabOn)wrap.appendChild(pm);
   var pmHint=d({style:{fontSize:"11px",color:"#9CA3AF",margin:"0 2px 12px",lineHeight:"1.6"}});
   pmHint.textContent=S.payMode==="free"?"お金のやり取りなしで、一緒に滑る仲間を探せます。気になる人にはメッセージを送ってみよう。":(S.payMode==="paid"?"料金を払って、同行や撮影をお願いできる人です。料金は全部込みの金額で表示されます。":"「無料で一緒に滑る」は友達探し、「有料の同行・撮影」はお願いして来てもらう人です。");
-  wrap.appendChild(pmHint);
+  if(!camTabOn)wrap.appendChild(pmHint);
 
   // フィルター
   var at=d({style:{display:"flex",gap:"8px",overflowX:"auto",paddingBottom:"4px",marginBottom:"14px"}});
   acr=at;
-  at.appendChild(chip2("すべて",!S.selAct&&!S.camOnly,function(){R({selAct:null,camOnly:false,camSel:[]});}));
+  at.appendChild(chip2("すべて",!S.selAct,function(){R({selAct:null});}));
   for(var ai3=0;ai3<ACTS.length;ai3++){
     (function(a){
-      var isCamTab=(a==="🎥 撮影");
-      var isActive=isCamTab?S.camOnly:(S.selAct===a&&!S.camOnly);
-      at.appendChild(chip2(a,isActive,function(){
-        if(isCamTab){R({selAct:null,camOnly:!S.camOnly});}
-        else{R({selAct:S.selAct===a?null:a,camOnly:false});}
-      }));
+      if(a==="🎥 撮影")return; // 撮影カメラマンは専用タブで探す
+      at.appendChild(chip2(a,S.selAct===a,function(){R({selAct:S.selAct===a?null:a});}));
     })(ACTS[ai3]);
   }
   wrap.appendChild(at);
