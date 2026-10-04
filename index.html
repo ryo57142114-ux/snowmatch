@@ -391,7 +391,8 @@ function chatImgUrl(path,cb){
     if(r.error||!r.data){console.error("chat image",path,r.error&&r.error.message);window._chatImgUrl[path]={url:"",err:(r.error&&r.error.message)||"not found",exp:Date.now()+15000};if(cb)cb();return;}
     window._chatImgUrl[path]={url:r.data.signedUrl,exp:Date.now()+3300*1000};
     if(cb)cb();
-  });
+  },function(e){window._chatImgUrl[path]={url:"",err:(e&&e.message)||"network",exp:Date.now()+15000};if(cb)cb();});
+  setTimeout(function(){var c2=window._chatImgUrl[path];if(c2&&c2.loading){window._chatImgUrl[path]={url:"",err:"timeout",exp:Date.now()+15000};if(cb)cb();}},12000);
   return null;
 }
 function shrinkImage(file,maxSide,cb){
@@ -419,14 +420,14 @@ function sendPhoto(file){
   shrinkImage(file,1280,function(blob,preview){
     var path=currentUser.id+"/"+Date.now()+"_"+u.uid+".jpg";
     var tmp={f:"m",t:"📷 写真",img:path,preview:preview,time:hmOf(),pending:true};
-    S.chatMsgs[cid].push(tmp);render();
+    S.chatMsgs[cid].push(tmp);if(chatOpenFor(cid))appendDmRow(tmp);else render();
     sb.storage.from("chat").upload(path,blob,{contentType:"image/jpeg"}).then(function(ur){
       if(ur.error)throw new Error(ur.error.message);
       return sb.from("dm_messages").insert({from_user:currentUser.id,to_user:u.uid,body:"📷 写真",image_path:path}).select().single();
     }).then(function(r){
       if(r&&r.error)throw new Error(r.error.message);
-      tmp.pending=false;if(r&&r.data)tmp.id=r.data.id;render();
-    }).catch(function(e){tmp.t="📷 写真（送信失敗）";tmp.failed=true;render();alert("写真を送れませんでした: "+(e&&e.message?e.message:e));});
+      tmp.pending=false;if(r&&r.data)tmp.id=r.data.id;if(chatOpenFor(cid))refreshDmRow(tmp);else render();
+    }).catch(function(e){tmp.t="📷 写真（送信失敗）";tmp.failed=true;tmp.pending=false;if(chatOpenFor(cid))refreshDmRow(tmp);else render();alert("写真を送れませんでした: "+(e&&e.message?e.message:e));});
   });
 }
 // ===== 募集掲示板（ride_posts） =====
@@ -437,8 +438,8 @@ function areaOfResort(r){for(var i=0;i<AREAS.length;i++){if(AREAS[i].resorts.ind
 function loadPosts(){
   if(typeof sb==="undefined"||!sb)return;
   sb.from("ride_posts").select("*").eq("status","open").gte("ride_date",todayStr())
-    .order("ride_date",{ascending:true}).order("start_time",{ascending:true}).limit(300)
-    .then(function(r){if(r.error){console.error("posts load error",r.error);return;}S.posts=r.data||[];render();});
+    .order("ride_date",{ascending:true}).order("start_time",{ascending:true}).limit(S.postLimit||60)
+    .then(function(r){if(r.error){console.error("posts load error",r.error);return;}var nw=r.data||[];if(JSON.stringify(nw)===JSON.stringify(S.posts||null))return;S.posts=nw;render();});
 }
 function livePosts(){
   var now=new Date(),td=todayStr(),nowHM=String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0");
@@ -710,12 +711,12 @@ function loadUserOpenPosts(uid){
 }
 function UserOpenHistory(u){
   var c=d({class:"card",style:{marginBottom:"14px"}});
-  var t=d({style:{fontWeight:"800",color:"#1A1A2E",marginBottom:"8px",fontSize:"14px"}});t.textContent="📣 つぶやき";c.appendChild(t);
+  var t=d({style:{fontWeight:"800",color:"#1A1A2E",marginBottom:"8px",fontSize:"14px"}});t.textContent="タイムライン";c.appendChild(t);
   var uid=u&&u.uid;
-  if(!uid){var n0=d({style:{fontSize:"12px",color:"#9CA3AF"}});n0.textContent="まだつぶやきはありません";c.appendChild(n0);return c;}
+  if(!uid){var n0=d({style:{fontSize:"12px",color:"#9CA3AF"}});n0.textContent="まだ投稿はありません";c.appendChild(n0);return c;}
   var list=S.userOpen&&S.userOpen[uid];
   if(list===undefined){loadUserOpenPosts(uid);var ld=d({style:{fontSize:"12px",color:"#9CA3AF",padding:"6px 0"}});ld.textContent="読み込み中…";c.appendChild(ld);return c;}
-  if(!list.length){var em=d({style:{fontSize:"12px",color:"#9CA3AF",padding:"4px 0"}});em.textContent="まだつぶやきはありません";c.appendChild(em);return c;}
+  if(!list.length){var em=d({style:{fontSize:"12px",color:"#9CA3AF",padding:"4px 0"}});em.textContent="まだ投稿はありません";c.appendChild(em);return c;}
   var key="uo_"+uid;var lim=S.openMoreKey===key?list.length:3;
   list.slice(0,lim).forEach(function(p,i){
     var row=d({style:{padding:"9px 0",borderTop:i?"1px solid #F3F4F6":"none"}});
@@ -729,21 +730,21 @@ function UserOpenHistory(u){
 function MyOpenHistory(){
   var c=d({class:"card",style:{marginBottom:"14px"}});
   var hd=d({style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"10px"}});
-  var t=d({style:{fontWeight:"900",fontSize:"16px",color:"#1A1A2E"}});t.textContent="📣 つぶやき履歴";hd.appendChild(t);
-  var nb=document.createElement("button");nb.textContent="＋ つぶやく";nb.style.cssText="padding:7px 14px;border-radius:12px;border:none;background:linear-gradient(135deg,#FF6B2B,#FF8C55);color:#fff;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit";
+  var t=d({style:{fontWeight:"900",fontSize:"16px",color:"#1A1A2E"}});t.textContent="自分の投稿";hd.appendChild(t);
+  var nb=document.createElement("button");nb.textContent="＋ 投稿する";nb.style.cssText="padding:7px 14px;border-radius:12px;border:none;background:linear-gradient(135deg,#FF6B2B,#FF8C55);color:#fff;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit";
   nb.addEventListener("click",function(){R({tab:"market",marketTab:"open",openRoom:null});});hd.appendChild(nb);c.appendChild(hd);
-  if(!currentUser){var g=d({style:{fontSize:"12px",color:"#9CA3AF"}});g.textContent="ログインすると、自分のつぶやきが日付つきでここに残ります。";c.appendChild(g);return c;}
+  if(!currentUser){var g=d({style:{fontSize:"12px",color:"#9CA3AF"}});g.textContent="ログインすると、自分の投稿が日付つきでここに残ります。";c.appendChild(g);return c;}
   var list=S.myOpenPosts;
   if(list===undefined){loadMyOpenPosts();var ld=d({style:{fontSize:"12px",color:"#9CA3AF",padding:"8px 0"}});ld.textContent="読み込み中…";c.appendChild(ld);return c;}
   if(S.myOpenErr&&!list.length){var er=d({style:{fontSize:"12px",color:"#EF4444"}});er.textContent="読み込めませんでした: "+S.myOpenErr;c.appendChild(er);return c;}
-  if(!list.length){var em=d({style:{fontSize:"12px",color:"#9CA3AF",padding:"6px 0",lineHeight:"1.7"}});em.textContent="まだつぶやきがありません。\nラウンジの「つぶやき」で書き込むと、ここに日付つきで残ります。";em.style.whiteSpace="pre-line";c.appendChild(em);return c;}
+  if(!list.length){var em=d({style:{fontSize:"12px",color:"#9CA3AF",padding:"6px 0",lineHeight:"1.7"}});em.textContent="まだ投稿がありません。\nラウンジの「タイムライン」で書き込むと、ここに日付つきで残ります。";em.style.whiteSpace="pre-line";c.appendChild(em);return c;}
   var lim=S.myOpenMore?list.length:5;
   list.slice(0,lim).forEach(function(p,i){
     var row=d({style:{padding:"10px 0",borderTop:i?"1px solid #F3F4F6":"none"}});
     var tp=d({style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"4px"}});
     var dt=d({style:{fontSize:"11.5px",fontWeight:"800",color:"#FF6B2B"}});dt.textContent="🗓 "+fmtDateTime(p.created_at);tp.appendChild(dt);
     var del=document.createElement("button");del.textContent="削除";del.style.cssText="border:none;background:none;color:#9CA3AF;font-size:11px;cursor:pointer;font-family:inherit;padding:2px 4px";
-    del.addEventListener("click",function(){if(!confirm("このつぶやきを削除しますか？"))return;sb.from("open_posts").delete().eq("id",p.id).then(function(r){if(r.error){alert("削除できませんでした: "+r.error.message);return;}S.myOpenPosts=(S.myOpenPosts||[]).filter(function(x){return x.id!==p.id;});if(S.openPosts)S.openPosts=S.openPosts.filter(function(x){return x.id!==p.id;});render();});});
+    del.addEventListener("click",function(){if(!confirm("この投稿を削除しますか？"))return;sb.from("open_posts").delete().eq("id",p.id).then(function(r){if(r.error){alert("削除できませんでした: "+r.error.message);return;}S.myOpenPosts=(S.myOpenPosts||[]).filter(function(x){return x.id!==p.id;});if(S.openPosts)S.openPosts=S.openPosts.filter(function(x){return x.id!==p.id;});render();});});
     tp.appendChild(del);row.appendChild(tp);
     var bd=d({style:{fontSize:"13.5px",color:"#1A1A2E",lineHeight:"1.7",whiteSpace:"pre-wrap",wordBreak:"break-word"}});bd.textContent=p.body;row.appendChild(bd);
     c.appendChild(row);
@@ -946,12 +947,15 @@ function RideInviteModal(){
 function timeAgo(iso){var t=new Date(iso).getTime(),s=Math.floor((Date.now()-t)/1000);if(s<60)return "たった今";if(s<3600)return Math.floor(s/60)+"分前";if(s<86400)return Math.floor(s/3600)+"時間前";if(s<86400*7)return Math.floor(s/86400)+"日前";var d0=new Date(t);return (d0.getMonth()+1)+"/"+d0.getDate();}
 function loadOpenPosts(){
   if(typeof sb==="undefined"||!sb)return;
-  sb.from("open_posts_public").select("*").order("created_at",{ascending:false}).limit(100).then(function(r){
+  sb.from("open_posts_public").select("*").order("created_at",{ascending:false}).limit(S.openLimit||30).then(function(r){
     if(r.error){console.error("open posts load error",r.error.message||r.error);S.openPosts=S.openPosts||[];render();return;}
-    S.openPosts=r.data||[];S.openLoadedAt=Date.now();render();loadReactCounts(S.openPosts.slice(0,100).map(function(x){return x.id;}));loadOpenComments(S.openPosts.map(function(x){return x.id;}));
+    var nw=r.data||[];S.openLoadedAt=Date.now();
+    var changed=JSON.stringify(nw)!==JSON.stringify(S.openPosts||null);
+    S.openPosts=nw;if(changed)render();
+    loadReactCounts(nw.map(function(x){return x.id;}));loadOpenComments(nw.map(function(x){return x.id;}));
   });
 }
-setInterval(function(){if(document.hidden)return;if((S.tab==="market"&&(S.marketTab||"open")==="open")||(S.tab==="explore"&&S.exTab!=="board"))loadOpenPosts();},30000);
+setInterval(function(){if(document.hidden)return;if((S.tab==="market"&&(S.marketTab||"open")==="open")||(S.tab==="explore"&&S.exTab!=="board"))loadOpenPosts();},60000);
 document.addEventListener("visibilitychange",function(){if(!document.hidden&&(S.tab==="explore"||S.tab==="market"))loadOpenPosts();});
 function checkAdmin(){if(!sb||!currentUser)return;sb.rpc("is_admin").then(function(r){S.isAdmin=!!(r&&r.data);});}
 // ホーム（探す）に出す「みんなのつぶやき」の最新3件
@@ -966,7 +970,7 @@ function OpenPreviewCard(){
   c.addEventListener("click",function(){loadOpenPosts();R({tab:"market",marketTab:"open"});});
   var hr=d({style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"8px"}});
   var tt=d({style:{fontWeight:"900",fontSize:"15px",color:"#1A1A2E",display:"flex",alignItems:"center",gap:"6px"}});
-  tt.appendChild(sp({},"📣 みんなのつぶやき"));
+  tt.appendChild(sp({},"タイムライン"));
   if(newCnt>0)tt.appendChild(sp({style:{background:"#EF4444",color:"#fff",fontSize:"10px",fontWeight:"900",padding:"2px 7px",borderRadius:"10px"}},"NEW "+newCnt));
   hr.appendChild(tt);
   hr.appendChild(sp({style:{fontSize:"12px",fontWeight:"800",color:"#FF6B2B"}},"書き込む・もっと見る ›"));
@@ -1001,6 +1005,7 @@ function loadOpenComments(ids){
   sb.from("open_post_comments").select("id,post_id,user_id,body,created_at").in("post_id",ids).order("created_at",{ascending:true}).limit(2000).then(function(r){
     if(r.error){console.error("comments load",r.error.message);return;}
     var m={};(r.data||[]).forEach(function(c){(m[c.post_id]=m[c.post_id]||[]).push(c);});
+    if(JSON.stringify(m)===JSON.stringify(S.openComments||null))return;
     S.openComments=m;render();
   });
 }
@@ -1060,10 +1065,10 @@ function CommentBox(p,logged){
 function openPostDetail(id){S.openDetail=id;var app=document.getElementById("app");render();if(app)app.scrollTop=0;window.scrollTo(0,0);}
 function renderPostDetail(wrap,logged){
   var p=null;(S.openPosts||[]).forEach(function(x){if(x.id===S.openDetail)p=x;});
-  var back=document.createElement("button");back.textContent="‹ つぶやきに戻る";
+  var back=document.createElement("button");back.textContent="‹ タイムラインに戻る";
   back.style.cssText="background:none;border:none;color:#FF6B2B;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;padding:0;margin-bottom:10px";
   back.addEventListener("click",function(){S.openDetail=null;render();});wrap.appendChild(back);
-  if(!p){var nf=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"13px",padding:"30px 0"}});nf.textContent="このつぶやきは見つかりませんでした（削除された可能性があります）";wrap.appendChild(nf);return wrap;}
+  if(!p){var nf=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"13px",padding:"30px 0"}});nf.textContent="この投稿は見つかりませんでした（削除された可能性があります）";wrap.appendChild(nf);return wrap;}
   if(!S.openComments||!S.openComments[p.id])loadOpenComments((S.openPosts||[]).map(function(x){return x.id;}));
   var mine=logged&&p.user_id===currentUser.id;
   var u=p.user_id?(mine?{uid:currentUser.id,name:(S.myProfile&&S.myProfile.nick)||"あなた",icon:(S.myProfile&&S.myProfile.icon)||"🏂",profileImg:S.myProfile&&S.myProfile.profileImg}:findRealUser(p.user_id)):null;
@@ -1097,7 +1102,7 @@ function renderOpenBoard(wrap){
     var jt=d({style:{fontWeight:"900",fontSize:"14px",color:"#1A1A2E",marginBottom:"4px"}});jt.textContent="✍️ 書き込みは会員だけ";jc.appendChild(jt);
     var js=d({style:{fontSize:"12px",color:"#6B7280",marginBottom:"10px",lineHeight:"1.6"}});js.textContent="無料登録（メールアドレスだけ）で書き込めます。読むのとリアクションはそのままどうぞ！";jc.appendChild(js);
     var jb=document.createElement("button");jb.textContent="無料で登録する";jb.style.cssText="padding:10px 22px;border-radius:14px;border:none;background:linear-gradient(135deg,#FF6B2B,#FF8C55);color:#fff;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit";
-    jb.addEventListener("click",function(){if(S.isGuest)askJoin("無料登録すると、つぶやきに書き込めます。");else{S.showLoginModal=true;render();}});jc.appendChild(jb);
+    jb.addEventListener("click",function(){if(S.isGuest)askJoin("無料登録すると、タイムラインに書き込めます。");else{S.showLoginModal=true;render();}});jc.appendChild(jb);
     wrap.appendChild(jc);
   }else{
   var cb=d({class:"card",style:{marginBottom:"14px",padding:"14px"}});
@@ -1114,14 +1119,14 @@ function renderOpenBoard(wrap){
   ta.addEventListener("input",function(e){S.openDraft=e.target.value;cnt.textContent=(e.target.value||"").length+"/300";});cb.appendChild(ta);
   var row=d({style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:"8px"}});
   var cnt=d({style:{fontSize:"11px",color:"#9CA3AF"}});cnt.textContent=(S.openDraft||"").length+"/300";row.appendChild(cnt);
-  var pb=document.createElement("button");pb.textContent="📣 つぶやく";pb.style.cssText="padding:9px 18px;border-radius:12px;border:none;background:linear-gradient(135deg,#FF6B2B,#FF8C55);color:#fff;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit";
+  var pb=document.createElement("button");pb.textContent="投稿する";pb.style.cssText="padding:9px 18px;border-radius:12px;border:none;background:linear-gradient(135deg,#FF6B2B,#FF8C55);color:#fff;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit";
   pb.addEventListener("click",function(){
     var body=(S.openDraft||"").trim();if(!body){alert("内容を入力してください");return;}
     var row2={body:body};
     if(!logged){var gn=(S.openName||"").trim();if(!gn){alert("ニックネームを入力してください");return;}row2.guest_name=gn;try{localStorage.setItem("sm_open_name",gn);}catch(e){}}
     if(pb.disabled)return;pb.disabled=true;pb.textContent="送信中...";
     sb.from("open_posts").insert(row2).then(function(r){
-      pb.disabled=false;pb.textContent="📣 つぶやく";if(!r.error)S.myOpenPosts=undefined;
+      pb.disabled=false;pb.textContent="投稿する";if(!r.error)S.myOpenPosts=undefined;
       if(r.error){alert(r.error.message.indexOf("open_posts:")>=0?r.error.message.split("open_posts:")[1]:("書き込めませんでした: "+r.error.message));return;}
       S.openDraft="";loadOpenPosts();
     });
@@ -1167,6 +1172,12 @@ function renderOpenBoard(wrap){
     bd.style.cursor="pointer";bd.addEventListener("click",function(){openPostDetail(p.id);});
     c.appendChild(ac);wrap.appendChild(c);
   });
+  if(list.length>=(S.openLimit||30)){
+    var more=document.createElement("button");more.textContent="もっと見る";
+    more.style.cssText="width:100%;padding:12px;border-radius:14px;border:1.5px solid #E5E7EB;background:#fff;color:#4B5563;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;margin:4px 0 12px";
+    more.addEventListener("click",function(){S.openLimit=(S.openLimit||30)+30;more.textContent="読み込み中…";loadOpenPosts();});
+    wrap.appendChild(more);
+  }
   return wrap;
 }
 // ===== ❄️ ゲレンデ速報 =====
@@ -1179,7 +1190,7 @@ function loadSnowReports(){
   if(typeof sb==="undefined"||!sb)return;
   sb.from("snow_reports").select("*").gte("created_at",todayStartIso()).order("created_at",{ascending:false}).limit(300).then(function(r){
     if(r.error){console.error("snow load error",r.error.message||r.error);S.snowReports=S.snowReports||[];render();return;}
-    S.snowReports=r.data||[];render();
+    var nw=r.data||[];if(JSON.stringify(nw)===JSON.stringify(S.snowReports||null))return;S.snowReports=nw;render();
   });
 }
 setInterval(function(){if(!document.hidden&&S.tab==="market"&&S.marketTab==="snow")loadSnowReports();},45000);
@@ -1330,6 +1341,7 @@ function loadReactCounts(ids){
   sb.from("open_post_reaction_counts").select("*").in("post_id",ids).then(function(r){
     if(r.error){console.error("reaction counts",r.error.message||r.error);return;}
     var m={};(r.data||[]).forEach(function(x){(m[x.post_id]=m[x.post_id]||{})[x.emoji]=x.cnt;});
+    if(JSON.stringify(m)===JSON.stringify(S.reactCounts||null))return;
     S.reactCounts=m;render();
   });
 }
@@ -1433,7 +1445,7 @@ var FAQ=[
   ["アプリストアからダウンロードするの？","いいえ。SnowMatchはWebアプリなので、ダウンロードは不要です。SafariやChromeで開いて「ホーム画面に追加」すると、普通のアプリと同じようにアイコンから開けます（次の質問を見てください）。"],
   ["ホーム画面に追加する方法（iPhone）","① Safariで SnowMatch を開く（Chromeなど他のアプリからではなく、Safariで開いてください）\n② 画面下の共有ボタン（□に↑のマーク）をタップ\n③ メニューを下にスクロールして「ホーム画面に追加」をタップ\n④ 右上の「追加」をタップ\n\nホーム画面に「スノマ」のアイコンができます。次からはそのアイコンから開くと、上下のバーがない全画面で、アプリと同じように使えます。"],
   ["ホーム画面に追加する方法（Android）","① Chromeで SnowMatch を開く\n② 右上の「︙」をタップ\n③「ホーム画面に追加」または「アプリをインストール」をタップ\n④「追加」または「インストール」をタップ\n\nホーム画面にアイコンができます。"],
-  ["ゲストでも使える？","「ゲストとして見る」から、登録なしで仲間探しや募集掲示板、つぶやきなどを見られます。メッセージ・予約・参加・書き込みなどをするには無料登録が必要です。"]
+  ["ゲストでも使える？","「ゲストとして見る」から、登録なしで仲間探しや募集掲示板、タイムラインなどを見られます。メッセージ・予約・参加・書き込みなどをするには無料登録が必要です。"]
  ]},
  {sec:"📝 登録の流れ",items:[
   ["登録はどうやるの？","① 最初の画面で「はじめる（無料登録）」をタップ\n② メールアドレスを入力して登録\n③ ニックネーム・アイコン・種目（スキー／スノーボード）・レベルなどのプロフィールを入力\n④ マイページで「活動エリア・スキー場」を選ぶ\n\nこれで仲間探し・メッセージ・無料の募集への参加ができます。登録は無料です。"],
@@ -1446,7 +1458,7 @@ var FAQ=[
   ["募集掲示板って何？","日付つきで投稿できる掲示板です。\n・「同行・撮影します」：この日空いているので一緒に滑れる・撮影できます、という投稿\n・「同行・撮影お願いします」：この日一緒に滑る人・撮影してくれる人を探しています、という投稿\nそれぞれ「無料」か「有料」を選べます。"],
   ["「参加します」を押すとどうなる？","【無料の投稿】相手に「参加したいです！」というメッセージが自動で届き、チャットで日時や集合場所を決めます。\n\n【有料の募集】応募として相手に届きます。募集した人が応募者の中から1人を選ぶと予約が確定します。確定するまでは何人でも応募でき、選ばれなかった人には自動でお知らせが届きます。"],
   ["メッセージは誰にでも送れる？","フォローした相手にメッセージを送れます。プロフィールの「メッセージ」や、募集の「参加します」「質問」から送ると、自動でフォローされます。"],
-  ["ラウンジでは何ができる？","・つぶやき：誰でも見られるひとこと投稿（自分のつぶやきはマイページに日付つきで残ります）\n・ゲレンデ速報：今日の雪質・天気・混み具合を写真つきで共有（毎日0時にリセット）\n・会員：本人確認済みの人だけの部屋（雑談部屋・悩み相談・Q&A・チェックイン）。メッセージを長押しすると返信でき、写真や動画も送れます。"]
+  ["ラウンジでは何ができる？","・タイムライン：誰でも見られるひとこと投稿（自分の投稿はマイページに日付つきで残り、返信もできます）\n・ゲレンデ速報：今日の雪質・天気・混み具合を写真つきで共有（毎日0時にリセット）\n・会員：本人確認済みの人だけの部屋（雑談部屋・悩み相談・Q&A・チェックイン）。メッセージを長押しすると返信でき、写真や動画も送れます。"]
  ]},
  {sec:"💴 料金とお支払いの流れ",items:[
   ["アプリの利用料は？","登録・仲間探し・メッセージ・無料の募集などは、すべて無料です。お金がかかるのは、有料の同行・撮影をお願いするときだけです。"],
@@ -1460,8 +1472,8 @@ var FAQ=[
  ]},
  {sec:"🛡 安全に使うために",items:[
   ["スキー場で撮影してもいいの？","スキー場ごとに撮影や営利活動のルールがあります。必ず各スキー場のルールをご確認のうえご利用ください。\n\n【許可のない有償の撮影・営利活動を公式に禁止しているスキー場】\nサッポロテイネ、ルスツリゾート、サホロリゾート、たんばらスキーパーク、ハンターマウンテン塩原、タングラムスキーサーカス、スキージャム勝山、グランデコスノーリゾート、ホワイトワールド尾瀬岩鞍\n→ これらのスキー場では、お金を受け取る撮影の依頼・引き受けはしないでください。\n\n【撮影に事前の登録・申請が必要なスキー場】\nニセコ（グラン・ヒラフ、アンヌプリ、ビレッジ、HANAZONO）、戸隠スキー場\n→ 撮影する前に、公式サイトで手続きを確認してください。\n\nここに載っていないスキー場も、ルールが変わることがあります。撮影する前に公式サイトで確認しましょう。"],
-  ["初めて会う人と滑るときの注意は？","・集合場所はゲレンデのセンターハウスなど、人の多い場所にしましょう\n・本人確認済みの「確認済」マークやプロフィール、つぶやきも参考にしましょう\n・アプリの外での直接のお金のやり取りはしないでください（トラブルのとき運営が対応できません）"],
-  ["嫌な思いをしたときは？","つぶやきの「通報」や、マイページの「お問い合わせ」から運営に知らせてください。悪質な場合は、運営が投稿の非表示や利用停止などの対応をします。"]
+  ["初めて会う人と滑るときの注意は？","・集合場所はゲレンデのセンターハウスなど、人の多い場所にしましょう\n・本人確認済みの「確認済」マークやプロフィール、タイムラインの投稿も参考にしましょう\n・アプリの外での直接のお金のやり取りはしないでください（トラブルのとき運営が対応できません）"],
+  ["嫌な思いをしたときは？","タイムラインの「通報」や、マイページの「お問い合わせ」から運営に知らせてください。悪質な場合は、運営が投稿の非表示や利用停止などの対応をします。"]
  ]},
  {sec:"❓ 困ったとき",items:[
   ["画面が古いまま・うまく動かない","ホーム画面のアプリを一度完全に閉じて（下から上にスワイプして終了）、もう一度開いてください。それでも直らないときは、Safariで直接開き直してみてください。"],
@@ -2625,6 +2637,48 @@ function renderExplore(){
   return wrap;
 }
 
+function dmKey(m){if(!m._k){window._dmK=(window._dmK||0)+1;m._k="k"+window._dmK;}return m._k;}
+// チャットの吹き出し1つ分を作る（画面全体を描き直さずに、追加・差し替えできるようにする）
+function dmRow(m,cu){
+  var isMe=m.f==="m";
+    var mRow=d({style:{display:"flex",justifyContent:isMe?"flex-end":"flex-start",marginBottom:"10px",gap:"8px",alignItems:"flex-end"}});
+    if(!isMe){var mIco=d({style:{fontSize:"20px",flexShrink:"0"}});mIco.textContent=cu.icon;mRow.appendChild(mIco);}
+    var mBox=d({style:{maxWidth:"72%"}});
+    if(!isMe){var mName=d({style:{fontSize:"11px",color:"#9CA3AF",marginBottom:"2px",fontWeight:"700"}});mName.textContent=cu.name;mBox.appendChild(mName);}
+    var mBub=d({style:{background:isMe?"linear-gradient(135deg,#FF6B2B,#FF8C55)":"#fff",color:isMe?"#fff":"#1A1A2E",padding:"10px 16px",borderRadius:isMe?"18px 18px 4px 18px":"18px 18px 18px 4px",fontSize:"14px",lineHeight:"1.6",boxShadow:"0 2px 8px rgba(0,0,0,.08)"}});
+    if(m.img){
+      mBub.style.padding="6px";
+      var src=m.preview||(sb?chatImgUrl(m.img,function(){refreshDmRow(m);}):null);
+      if(src){
+        var im=document.createElement("img");im.src=src;im.alt="写真";
+        im.style.cssText="display:block;max-width:220px;max-height:280px;width:100%;border-radius:14px;object-fit:cover;cursor:pointer;background:#eee";
+        im.setAttribute("data-p",m.img);im.addEventListener("click",function(){var pth=this.getAttribute("data-p");var full=(window._chatImgUrl[pth]&&window._chatImgUrl[pth].url)||this.src;var w=window.open(full,"_blank");if(!w)location.href=full;});
+        mBub.appendChild(im);
+      }else{var _ce=window._chatImgUrl&&window._chatImgUrl[m.img];var _err=!m.failed&&_ce&&_ce.err;var ld=d({style:{width:"180px",height:"140px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontSize:"12px",opacity:".75",textAlign:"center",lineHeight:"1.6",cursor:_err?"pointer":"default"}});ld.textContent=m.failed?"送信できませんでした":(_err?"写真を表示できませんでした\nタップで再読み込み":"📷 読み込み中…");ld.style.whiteSpace="pre-line";if(_err){(function(pth){ld.addEventListener("click",function(){delete window._chatImgUrl[pth];refreshDmRow(m);});})(m.img);}mBub.appendChild(ld);}
+      if(m.pending){var pd=d({style:{fontSize:"10px",opacity:".8",padding:"2px 6px 0"}});pd.textContent="送信中…";mBub.appendChild(pd);}
+    }else mBub.textContent=m.t;
+    var mTime=d({style:{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:"4px",marginTop:"3px"}});
+    var mt=d({style:{fontSize:"10px",opacity:".6"}});mt.textContent=m.time;
+    if(isMe&&(cu.isReal?!!m.readAt:true)){var rd=d({style:{fontSize:"10px",color:"rgba(255,255,255,0.7)"}});rd.textContent="既読";mTime.appendChild(rd);}
+    mTime.appendChild(mt);mBub.appendChild(mTime);mBox.appendChild(mBub);mRow.appendChild(mBox);
+  mRow.setAttribute("data-k",dmKey(m));
+  return mRow;
+}
+function chatOpenFor(cid){return S.pg==="main"&&S.tab==="chat"&&S.chatUser&&String(S.chatUser.id)===cid&&!S.bookUser&&!S.selUser&&document.getElementById("chatmsgs");}
+function refreshDmRow(m){
+  var ma=document.getElementById("chatmsgs");if(!ma||!S.chatUser){render();return;}
+  var old=ma.querySelector('[data-k="'+dmKey(m)+'"]');if(!old){return;}
+  var nearBottom=ma.scrollHeight-ma.scrollTop-ma.clientHeight<160;
+  var nw=dmRow(m,S.chatUser);old.parentNode.replaceChild(nw,old);
+  if(nearBottom){ma.scrollTop=ma.scrollHeight;var ims=nw.getElementsByTagName("img");if(ims.length)ims[0].addEventListener("load",function(){ma.scrollTop=ma.scrollHeight;});}
+}
+function appendDmRow(m){
+  var ma=document.getElementById("chatmsgs");if(!ma||!S.chatUser)return false;
+  var nearBottom=ma.scrollHeight-ma.scrollTop-ma.clientHeight<120;
+  ma.appendChild(dmRow(m,S.chatUser));
+  if(nearBottom||m.f==="m")ma.scrollTop=ma.scrollHeight;
+  return true;
+}
 function renderChat(){
   if(!S.chatUser){
     var wrap=d({class:"pg"});var t=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"16px"}});t.textContent="💬 メッセージ";wrap.appendChild(t);
@@ -2668,42 +2722,20 @@ function renderChat(){
   var ma=d({id:"chatmsgs",style:{flex:"1",minHeight:"0",overflowY:"auto",WebkitOverflowScrolling:"touch",padding:"16px",background:"#F5F7FA"}});
   var msgs=S.chatMsgs[String(S.chatUser.id)]||[];
   markChatRead(S.chatUser,msgs);
-  for(var mi=0;mi<msgs.length;mi++){
-    var m=msgs[mi];var isMe=m.f==="m";
-    var mRow=d({style:{display:"flex",justifyContent:isMe?"flex-end":"flex-start",marginBottom:"10px",gap:"8px",alignItems:"flex-end"}});
-    if(!isMe){var mIco=d({style:{fontSize:"20px",flexShrink:"0"}});mIco.textContent=S.chatUser.icon;mRow.appendChild(mIco);}
-    var mBox=d({style:{maxWidth:"72%"}});
-    if(!isMe){var mName=d({style:{fontSize:"11px",color:"#9CA3AF",marginBottom:"2px",fontWeight:"700"}});mName.textContent=S.chatUser.name;mBox.appendChild(mName);}
-    var mBub=d({style:{background:isMe?"linear-gradient(135deg,#FF6B2B,#FF8C55)":"#fff",color:isMe?"#fff":"#1A1A2E",padding:"10px 16px",borderRadius:isMe?"18px 18px 4px 18px":"18px 18px 18px 4px",fontSize:"14px",lineHeight:"1.6",boxShadow:"0 2px 8px rgba(0,0,0,.08)"}});
-    if(m.img){
-      mBub.style.padding="6px";
-      var src=m.preview||(sb?chatImgUrl(m.img,function(){render();}):null);
-      if(src){
-        var im=document.createElement("img");im.src=src;im.alt="写真";
-        im.style.cssText="display:block;max-width:220px;max-height:280px;width:100%;border-radius:14px;object-fit:cover;cursor:pointer;background:#eee";
-        im.setAttribute("data-p",m.img);im.addEventListener("click",function(){var pth=this.getAttribute("data-p");var full=(window._chatImgUrl[pth]&&window._chatImgUrl[pth].url)||this.src;var w=window.open(full,"_blank");if(!w)location.href=full;});
-        mBub.appendChild(im);
-      }else{var _ce=window._chatImgUrl&&window._chatImgUrl[m.img];var _err=!m.failed&&_ce&&_ce.err;var ld=d({style:{width:"180px",height:"140px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontSize:"12px",opacity:".75",textAlign:"center",lineHeight:"1.6",cursor:_err?"pointer":"default"}});ld.textContent=m.failed?"送信できませんでした":(_err?"写真を表示できませんでした\nタップで再読み込み":"📷 読み込み中…");ld.style.whiteSpace="pre-line";if(_err){(function(pth){ld.addEventListener("click",function(){delete window._chatImgUrl[pth];render();});})(m.img);}mBub.appendChild(ld);}
-      if(m.pending){var pd=d({style:{fontSize:"10px",opacity:".8",padding:"2px 6px 0"}});pd.textContent="送信中…";mBub.appendChild(pd);}
-    }else mBub.textContent=m.t;
-    var mTime=d({style:{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:"4px",marginTop:"3px"}});
-    var mt=d({style:{fontSize:"10px",opacity:".6"}});mt.textContent=m.time;
-    if(isMe&&(S.chatUser.isReal?!!m.readAt:true)){var rd=d({style:{fontSize:"10px",color:"rgba(255,255,255,0.7)"}});rd.textContent="既読";mTime.appendChild(rd);}
-    mTime.appendChild(mt);mBub.appendChild(mTime);mBox.appendChild(mBub);mRow.appendChild(mBox);ma.appendChild(mRow);
-  }
+  for(var mi=0;mi<msgs.length;mi++)ma.appendChild(dmRow(msgs[mi],S.chatUser));
   cw.appendChild(ma);
   var ir=d({style:{padding:"10px 16px calc(12px + env(safe-area-inset-bottom,0px))",background:"#fff",display:"flex",alignItems:"center",gap:"8px",borderTop:"1px solid #F0F0F0",flexShrink:"0"}});
   var ci2=document.createElement("input");ci2.type="text";ci2.className="inp";ci2.style.cssText="flex:1;border-radius:20px";
   ci2.id="chatinput";ci2.style.fontSize="16px";ci2.placeholder="メッセージを入力...";ci2.value=S.chatIn||"";
   ci2.addEventListener("input",function(ev){S.chatIn=ev.target.value;});
   ci2.addEventListener("keydown",function(ev){if(ev.key==="Enter"&&!ev.isComposing&&ev.keyCode!==229){ev.preventDefault();sendMsg();}});
-  var sb=obtn("送信",function(){sendMsg();},"");sb.style.padding="10px 18px";
+  var sendB2=obtn("送信",function(){sendMsg();},"");sendB2.style.padding="10px 18px";
   var phIn=document.createElement("input");phIn.type="file";phIn.accept="image/*";phIn.style.display="none";
   phIn.addEventListener("change",function(e){var f=e.target.files&&e.target.files[0];e.target.value="";if(f)sendPhoto(f);});
   var phB=document.createElement("button");phB.textContent="📷";phB.title="写真を送る";
   phB.style.cssText="flex-shrink:0;width:44px;height:44px;border-radius:50%;border:1.5px solid #E5E7EB;background:#fff;font-size:20px;cursor:pointer;padding:0";
   phB.addEventListener("click",function(){phIn.click();});
-  ir.appendChild(phIn);ir.appendChild(phB);ir.appendChild(ci2);ir.appendChild(sb);cw.appendChild(ir);
+  ir.appendChild(phIn);ir.appendChild(phB);ir.appendChild(ci2);ir.appendChild(sendB2);cw.appendChild(ir);
   setTimeout(function(){ma.scrollTop=ma.scrollHeight;},0);
   return cw;
 }
@@ -2713,7 +2745,7 @@ function renderMarket(){
   if(!S.marketTab||S.marketTab==="room"&&!S._mtInit){S._mtInit=true;S.marketTab="open";}
   // 上のタブ：つぶやきは誰でも、ほかは本人確認済みの会員だけ
   var mt=d({style:{display:"flex",background:"#EEF0F3",borderRadius:"14px",padding:"4px",marginBottom:"14px"}});
-  [["open","📣 つぶやき"],["snow","❄️ ゲレンデ速報"],["member","🛖 会員"]].forEach(function(o){var on=o[0]==="member"?(S.marketTab!=="open"&&S.marketTab!=="snow"):S.marketTab===o[0];var x=document.createElement("button");x.textContent=o[1];x.style.cssText="flex:1;padding:10px 6px;border-radius:11px;border:none;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;background:"+(on?"#fff":"transparent")+";color:"+(on?"#FF6B2B":"#6B7280")+";box-shadow:"+(on?"0 1px 4px rgba(0,0,0,.08)":"none");x.addEventListener("click",function(){if(o[0]==="open"){loadOpenPosts();R({marketTab:"open",openDetail:null});}else if(o[0]==="snow"){loadSnowReports();R({marketTab:"snow"});}else R({marketTab:"room",openRoom:null});});mt.appendChild(x);});
+  [["open","タイムライン"],["snow","❄️ ゲレンデ速報"],["member","🛖 会員"]].forEach(function(o){var on=o[0]==="member"?(S.marketTab!=="open"&&S.marketTab!=="snow"):S.marketTab===o[0];var x=document.createElement("button");x.textContent=o[1];x.style.cssText="flex:1;padding:10px 6px;border-radius:11px;border:none;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;background:"+(on?"#fff":"transparent")+";color:"+(on?"#FF6B2B":"#6B7280")+";box-shadow:"+(on?"0 1px 4px rgba(0,0,0,.08)":"none");x.addEventListener("click",function(){if(o[0]==="open"){loadOpenPosts();R({marketTab:"open",openDetail:null});}else if(o[0]==="snow"){loadSnowReports();R({marketTab:"snow"});}else R({marketTab:"room",openRoom:null});});mt.appendChild(x);});
   wrap.appendChild(mt);
   if(S.marketTab==="open")return renderOpenBoard(wrap);
   if(S.marketTab==="snow")return renderSnowBoard(wrap);
@@ -3565,10 +3597,11 @@ function sendMsg(text){if(S.isGuest){guestPrompt();return;}
     if(!sb||!currentUser){alert("メッセージを送るにはログインが必要です");return;}
     if(!canMessage(u)){alert("メッセージを送るには、相手をフォローしてください（お互いにいいねしてマッチした相手にも送れます）");return;}
     var tmp={f:"m",t:body,time:hmOf(),pending:true};
-    S.chatMsgs[cid].push(tmp);S.chatIn="";render();
-    var _ci=document.getElementById("chatinput");if(_ci)_ci.focus();
+    S.chatMsgs[cid].push(tmp);S.chatIn="";
+    var _ci=document.getElementById("chatinput");
+    if(chatOpenFor(cid)){appendDmRow(tmp);if(_ci){_ci.value="";_ci.focus();}}else{render();}
     sb.from("dm_messages").insert({from_user:currentUser.id,to_user:u.uid,body:body}).select().single().then(function(r){
-      if(r.error){tmp.t=body+"（送信失敗）";render();alert("送信に失敗しました: "+r.error.message);return;}
+      if(r.error){tmp.t=body+"（送信失敗）";tmp.pending=false;if(chatOpenFor(cid))refreshDmRow(tmp);else render();alert("送信に失敗しました: "+r.error.message);return;}
       tmp.pending=false;tmp.id=r.data.id;
     });
     return;
@@ -3677,13 +3710,33 @@ function markChatRead(u,msgs){
   if(!need)return;
   sb.from("dm_messages").update({read_at:now}).eq("from_user",u.uid).eq("to_user",currentUser.id).is("read_at",null).then(function(r){if(r.error)console.error("mark read error",r.error);});
 }
+// 新着メッセージ：開いているチャットなら、その1件だけ画面に追加する（全体を描き直さない）
+function onDmInsert(row){
+  var mine=row.from_user===currentUser.id;var cid="sb_"+(mine?row.to_user:row.from_user);
+  var list=S.chatMsgs[cid]||[];var before=list.length;var pend=null;
+  if(mine){for(var j=list.length-1;j>=0;j--){if(list[j].pending&&list[j].t===row.body&&(list[j].img||null)===(row.image_path||null)){pend=list[j];break;}}}
+  addDmRow(row,true);
+  if(chatOpenFor(cid)){
+    var l2=S.chatMsgs[cid];
+    if(pend){refreshDmRow(pend);return;}
+    if(l2.length>before){var nm=l2[l2.length-1];appendDmRow(nm);if(!mine)markChatRead(S.chatUser,l2);}
+    return;
+  }
+  render();
+}
+function onDmUpdate(row){
+  var cid="sb_"+row.to_user;var list=S.chatMsgs[cid]||[];var hit=null;
+  for(var i=0;i<list.length;i++){if(list[i].id===row.id){hit=list[i];break;}}
+  addDmRow(row,false);
+  if(hit&&chatOpenFor(cid))refreshDmRow(hit);
+}
 var _rtChannel=null;
 function startRealtime(){
   if(!sb||!currentUser||_rtChannel)return;
   _rtChannel=sb.channel("sm-"+currentUser.id)
-    .on("postgres_changes",{event:"INSERT",schema:"public",table:"dm_messages",filter:"to_user=eq."+currentUser.id},function(p){addDmRow(p.new,true);render();})
-    .on("postgres_changes",{event:"INSERT",schema:"public",table:"dm_messages",filter:"from_user=eq."+currentUser.id},function(p){addDmRow(p.new,true);render();})
-    .on("postgres_changes",{event:"UPDATE",schema:"public",table:"dm_messages",filter:"from_user=eq."+currentUser.id},function(p){addDmRow(p.new,false);render();})
+    .on("postgres_changes",{event:"INSERT",schema:"public",table:"dm_messages",filter:"to_user=eq."+currentUser.id},function(p){onDmInsert(p.new);})
+    .on("postgres_changes",{event:"INSERT",schema:"public",table:"dm_messages",filter:"from_user=eq."+currentUser.id},function(p){onDmInsert(p.new);})
+    .on("postgres_changes",{event:"UPDATE",schema:"public",table:"dm_messages",filter:"from_user=eq."+currentUser.id},function(p){onDmUpdate(p.new);})
     .on("postgres_changes",{event:"INSERT",schema:"public",table:"user_likes",filter:"to_user=eq."+currentUser.id},function(){loadLikesFromSupabase();})
     .on("postgres_changes",{event:"INSERT",schema:"public",table:"user_follows",filter:"followee=eq."+currentUser.id},function(){loadFollowsFromSupabase();})
     .on("postgres_changes",{event:"*",schema:"public",table:"reservations",filter:"provider=eq."+currentUser.id},function(){loadReservations();})
