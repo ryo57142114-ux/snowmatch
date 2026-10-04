@@ -2345,55 +2345,47 @@ function renderExplore(){
   if(S.camOnly){var cbActive=document.createElement("div");cbActive.style.cssText="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.1);font-size:12px;color:#86EFAC;font-weight:700;text-align:center";cbActive.textContent=(S.camSel&&S.camSel.length?"🎥 "+S.camSel.join("・")+" で撮れる人を表示中":"🎥 追い撮り・カメラマンのみ表示中")+"　ここをタップで解除";camBanner.appendChild(cbActive);}
   wrap.appendChild(camBanner);
 
-  // ランキング
-  var rankSec=document.createElement("div");rankSec.style.marginBottom="16px";
-  var rankHeader=document.createElement("div");rankHeader.style.cssText="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px";
-  var rankTitle=document.createElement("div");rankTitle.style.cssText="font-weight:900;font-size:16px;color:#1A1A2E";rankTitle.textContent="👑 人気ランキング";
-  var rankCats2=["総合","フォロワー","投稿数"];
-  if(!S.rankCat||S.rankCat==="いいね")S.rankCat="総合";
-  var rankCatSel=document.createElement("div");rankCatSel.style.cssText="display:flex;gap:4px";
-  rankCats2.forEach(function(c){
-    var rb=document.createElement("button");rb.style.cssText="padding:4px 10px;border-radius:10px;border:none;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;background:"+(S.rankCat===c?"#FF6B2B":"#F5F7FA")+";color:"+(S.rankCat===c?"#fff":"#6B7280");rb.textContent=c;
-    rb.addEventListener("click",function(){S.rankCat=c;render();});rankCatSel.appendChild(rb);
+  // おすすめ（写真カバー型）
+  var recSec=document.createElement("div");recSec.style.marginBottom="16px";
+  var recHeader=document.createElement("div");recHeader.style.cssText="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px";
+  var recTitle=document.createElement("div");recTitle.style.cssText="font-weight:900;font-size:16px;color:#1A1A2E";recTitle.textContent="✨ おすすめ";
+  recHeader.appendChild(recTitle);
+  var recData=[];
+  for(var uri=0;uri<USERS.length;uri++){var u2=USERS[uri];recData.push({user:u2,total:(u2.fcnt||0)+(u2.rcnt||0)*3+(u2.posts?u2.posts.length:0)*10});}
+  recData.sort(function(a,b){var pa=a.user.pr?1:0,pb=b.user.pr?1:0;if(pa!==pb)return pb-pa;return b.total-a.total;});
+  recData=recData.slice(0,10);
+  if(recData.length>2){var recHint=document.createElement("div");recHint.style.cssText="font-size:11px;color:#9CA3AF;font-weight:700";recHint.textContent="横にスワイプ ›";recHeader.appendChild(recHint);}
+  recSec.appendChild(recHeader);
+  if(!recData.length){var recEmpty=document.createElement("div");recEmpty.style.cssText="text-align:center;color:#9CA3AF;font-size:13px;padding:16px 0";recEmpty.textContent="おすすめのユーザーはまだいません";recSec.appendChild(recEmpty);}
+  var recRow=document.createElement("div");recRow.style.cssText="display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory;padding-bottom:4px;scrollbar-width:none";
+  recData.forEach(function(rd){
+    var u=rd.user;
+    var cover=null;
+    if(u.posts){for(var k=0;k<u.posts.length;k++){if(u.posts[k].type==="image"&&u.posts[k].url){cover=u.posts[k].url;break;}}}
+    if(!cover&&u.profileImg)cover=u.profileImg;
+    var isSki=String(u.act||"").indexOf("スキー")>=0;
+    var baseBg=isSki?"#0F6E56":"#534AB7";
+    var card=document.createElement("div");
+    card.style.cssText="flex:0 0 calc(50% - 4px);scroll-snap-align:start;height:200px;border-radius:16px;overflow:hidden;position:relative;cursor:pointer;background:"+baseBg+";box-shadow:0 4px 14px rgba(0,0,0,.12)";
+    card.addEventListener("click",function(){R({selUser:u});});
+    if(cover){var cimg=document.createElement("img");cimg.src=cover;cimg.loading="lazy";cimg.alt="";cimg.style.cssText="position:absolute;top:0;left:0;right:0;bottom:0;width:100%;height:100%;object-fit:cover;display:block";card.appendChild(cimg);}
+    else{var big=document.createElement("div");big.style.cssText="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;font-size:56px;padding-bottom:40px";big.textContent=u.icon||"🏂";card.appendChild(big);}
+    var shade=document.createElement("div");shade.style.cssText="position:absolute;left:0;right:0;bottom:0;height:60%;background:linear-gradient(to top,rgba(0,0,0,.78),rgba(0,0,0,0))";card.appendChild(shade);
+    var tag=document.createElement("div");tag.style.cssText="position:absolute;top:8px;left:8px;font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:10px;background:rgba(255,255,255,.92);color:#1A1A2E";
+    tag.textContent=u.isCam?"📷 撮影OK":(u.priceHour||u.priceHalf||u.priceDay)?"🏂 同行OK":"🤝 仲間募集";card.appendChild(tag);
+    if(u.pr){var prb=document.createElement("div");prb.style.cssText="position:absolute;top:8px;right:8px;font-size:10px;font-weight:800;padding:2px 6px;border-radius:6px;background:rgba(0,0,0,.55);color:#fff";prb.textContent="PR";card.appendChild(prb);}
+    var info=document.createElement("div");info.style.cssText="position:absolute;left:0;right:0;bottom:0;padding:10px;display:flex;align-items:center;gap:8px";
+    var av=document.createElement("div");av.style.cssText="width:32px;height:32px;border-radius:50%;overflow:hidden;flex-shrink:0;border:2px solid #fff;background:#fff;display:flex;align-items:center;justify-content:center;font-size:16px";
+    if(u.profileImg){var aimg=document.createElement("img");aimg.src=u.profileImg;aimg.alt="";aimg.style.cssText="width:100%;height:100%;object-fit:cover;display:block";av.appendChild(aimg);}else{av.textContent=u.icon||"🏂";}
+    var txt=document.createElement("div");txt.style.cssText="min-width:0;flex:1";
+    var nm=document.createElement("div");nm.style.cssText="font-weight:900;font-size:13px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis";nm.textContent=u.name+(u.ok?" ✅":"");
+    var sub=[];if(u.act)sub.push(u.act);if(u.resorts&&u.resorts.length)sub.push(u.resorts[0]);
+    var sb2=document.createElement("div");sb2.style.cssText="font-size:10.5px;color:rgba(255,255,255,.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis";sb2.textContent=sub.join("・")||(u.lv||"");
+    txt.appendChild(nm);txt.appendChild(sb2);info.appendChild(av);info.appendChild(txt);card.appendChild(info);
+    recRow.appendChild(card);
   });
-  rankHeader.appendChild(rankTitle);rankHeader.appendChild(rankCatSel);rankSec.appendChild(rankHeader);
-  var rankData2=[];
-  for(var uri=0;uri<USERS.length;uri++){var u2=USERS[uri];rankData2.push({user:u2,likes:u2.fcnt||0,posts:u2.posts?u2.posts.length:0,matches:u2.rcnt||0,total:(u2.fcnt||0)+(u2.rcnt||0)*3+(u2.posts?u2.posts.length:0)*10});}
-  if(S.rankCat==="フォロワー")rankData2.sort(function(a,b){return b.likes-a.likes;});
-  else if(S.rankCat==="投稿数")rankData2.sort(function(a,b){return b.posts-a.posts;});
-  else rankData2.sort(function(a,b){return b.total-a.total;});
-  if(!rankData2.length){var rkEmpty=document.createElement("div");rkEmpty.style.cssText="text-align:center;color:#9CA3AF;font-size:13px;padding:16px 0";rkEmpty.textContent="まだランキングはありません";rankSec.appendChild(rkEmpty);}
-  var podWrap=document.createElement("div");podWrap.style.cssText="display:flex;gap:8px;margin-bottom:10px";
-  var podOrder=[1,0,2];var podMedals=["🥈","🥇","🥉"];var podColors=["#C0C0C0","#FFD700","#CD7F32"];
-  var podBgs=["linear-gradient(135deg,#F5F5F5,#E8E8E8)","linear-gradient(135deg,#FFF9E6,#FFE680)","linear-gradient(135deg,#FFF0E0,#F0C080)"];
-  for(var pi=0;pi<3;pi++){
-    var rank=podOrder[pi];if(rank>=rankData2.length)continue;var rd3=rankData2[rank];
-    var pod=document.createElement("div");pod.style.cssText="flex:1;background:"+podBgs[pi]+";border-radius:16px;padding:12px 8px;text-align:center;cursor:pointer;border:2px solid "+(pi===1?"#FFD700":"transparent");
-    pod.addEventListener("click",function(r){return function(){R({selUser:r.user});};}(rd3));
-    var pMedal=document.createElement("div");pMedal.style.fontSize="18px";pMedal.textContent=podMedals[pi];
-    var pIcon=document.createElement("div");pIcon.style.cssText="font-size:"+(pi===1?"28":"22")+"px;margin:4px 0";pIcon.textContent=rd3.user.icon;if(rd3.user.profileImg){var pSz=(pi===1?44:36);pIcon.textContent="";pIcon.style.cssText="width:"+pSz+"px;height:"+pSz+"px;border-radius:50%;overflow:hidden;margin:4px auto";var pImg=document.createElement("img");pImg.src=rd3.user.profileImg;pImg.style.cssText="width:100%;height:100%;object-fit:cover;display:block";pIcon.appendChild(pImg);}
-    var pName=document.createElement("div");pName.style.cssText="font-weight:800;font-size:11px;color:#1A1A2E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis";pName.textContent=rd3.user.name;
-    var sv3=S.rankCat==="フォロワー"?rd3.likes:S.rankCat==="投稿数"?rd3.posts:rd3.total;
-    var pScore=document.createElement("div");pScore.style.cssText="font-weight:900;font-size:13px;margin-top:3px;color:"+podColors[pi];pScore.textContent=String(sv3)+(S.rankCat==="総合"?"pt":"");
-    pod.appendChild(pMedal);pod.appendChild(pIcon);pod.appendChild(pName);pod.appendChild(pScore);podWrap.appendChild(pod);
-  }
-  rankSec.appendChild(podWrap);
-  var rankScroll=document.createElement("div");rankScroll.style.cssText="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px";
-  for(var ri2=3;ri2<Math.min(rankData2.length,8);ri2++){
-    (function(rd4,ri3){
-      var rCard=document.createElement("div");rCard.style.cssText="flex-shrink:0;background:#fff;border-radius:14px;padding:10px 12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.06);cursor:pointer;min-width:80px";
-      rCard.addEventListener("click",function(){R({selUser:rd4.user});});
-      var rnNum=document.createElement("div");rnNum.style.cssText="font-size:11px;font-weight:700;color:#9CA3AF;margin-bottom:2px";rnNum.textContent=String(ri3+1)+"位";
-      var rnIco=document.createElement("div");rnIco.style.cssText="font-size:22px;margin:2px 0";rnIco.textContent=rd4.user.icon;if(rd4.user.profileImg){rnIco.textContent="";rnIco.style.cssText="width:32px;height:32px;border-radius:50%;overflow:hidden;margin:2px auto";var rnImg=document.createElement("img");rnImg.src=rd4.user.profileImg;rnImg.style.cssText="width:100%;height:100%;object-fit:cover;display:block";rnIco.appendChild(rnImg);}
-      var rnName=document.createElement("div");rnName.style.cssText="font-weight:700;font-size:10px;color:#1A1A2E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70px";rnName.textContent=rd4.user.name;
-      var sv4=S.rankCat==="フォロワー"?rd4.likes:S.rankCat==="投稿数"?rd4.posts:rd4.total;
-      var rnScore=document.createElement("div");rnScore.style.cssText="font-weight:900;font-size:12px;color:#FF6B2B;margin-top:2px";rnScore.textContent=String(sv4)+(S.rankCat==="総合"?"pt":"");
-      rCard.appendChild(rnNum);rCard.appendChild(rnIco);rCard.appendChild(rnName);rCard.appendChild(rnScore);
-      rankScroll.appendChild(rCard);
-    })(rankData2[ri2],ri2);
-  }
-  if(rankData2.length>3)rankSec.appendChild(rankScroll);
-  wrap.appendChild(rankSec);
+  if(recData.length)recSec.appendChild(recRow);
+  wrap.appendChild(recSec);
 
   // 無料の仲間探し／有料の同行 の切り替え
   var pm=d({style:{display:"flex",gap:"8px",marginBottom:"8px"}});
