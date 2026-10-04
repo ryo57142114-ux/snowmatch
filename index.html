@@ -407,7 +407,7 @@ function fillChatImg(path){
     var nearBottom=ma.scrollHeight-ma.scrollTop-ma.clientHeight<160;
     if(c.url){
       var im=document.createElement("img");im.src=c.url;im.alt="写真";
-      im.style.cssText="display:block;max-width:220px;max-height:280px;width:100%;border-radius:14px;object-fit:cover;cursor:pointer;background:#eee";
+      im.style.cssText="display:block;width:220px;height:260px;max-width:100%;border-radius:14px;object-fit:cover;cursor:pointer;background:#eee";
       im.addEventListener("click",function(){var u=(window._chatImgUrl[path]&&window._chatImgUrl[path].url)||this.src;var w=window.open(u,"_blank");if(!w)location.href=u;});
       if(nearBottom)im.addEventListener("load",function(){ma.scrollTop=ma.scrollHeight;});
       ph.parentNode.replaceChild(im,ph);
@@ -2684,10 +2684,10 @@ function dmRow(m,cu){
       var src=m.preview||(sb?chatImgUrl(m.img):null);
       if(src){
         var im=document.createElement("img");im.src=src;im.alt="写真";
-        im.style.cssText="display:block;max-width:220px;max-height:280px;width:100%;border-radius:14px;object-fit:cover;cursor:pointer;background:#eee";
+        im.style.cssText="display:block;width:220px;height:260px;max-width:100%;border-radius:14px;object-fit:cover;cursor:pointer;background:#eee";
         im.setAttribute("data-p",m.img);im.addEventListener("click",function(){var pth=this.getAttribute("data-p");var full=(window._chatImgUrl[pth]&&window._chatImgUrl[pth].url)||this.src;var w=window.open(full,"_blank");if(!w)location.href=full;});
         mBub.appendChild(im);
-      }else{var _ce=window._chatImgUrl&&window._chatImgUrl[m.img];var _err=!m.failed&&_ce&&_ce.err;var ld=d({style:{width:"180px",height:"140px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontSize:"12px",opacity:".75",textAlign:"center",lineHeight:"1.6",cursor:_err?"pointer":"default"}});ld.textContent=m.failed?"送信できませんでした":(_err?"写真を表示できませんでした\nタップで再読み込み":"📷 読み込み中…");ld.style.whiteSpace="pre-line";if(!m.failed)ld.setAttribute("data-imgph",m.img);if(_err){(function(pth){ld.addEventListener("click",function(){delete window._chatImgUrl[pth];ld.textContent="📷 読み込み中…";chatImgUrl(pth);});})(m.img);}mBub.appendChild(ld);}
+      }else{var _ce=window._chatImgUrl&&window._chatImgUrl[m.img];var _err=!m.failed&&_ce&&_ce.err;var ld=d({style:{width:"220px",maxWidth:"100%",height:"260px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontSize:"12px",opacity:".75",textAlign:"center",lineHeight:"1.6",cursor:_err?"pointer":"default"}});ld.textContent=m.failed?"送信できませんでした":(_err?"写真を表示できませんでした\nタップで再読み込み":"📷 読み込み中…");ld.style.whiteSpace="pre-line";if(!m.failed)ld.setAttribute("data-imgph",m.img);if(_err){(function(pth){ld.addEventListener("click",function(){delete window._chatImgUrl[pth];ld.textContent="📷 読み込み中…";chatImgUrl(pth);});})(m.img);}mBub.appendChild(ld);}
       if(m.pending){var pd=d({style:{fontSize:"10px",opacity:".8",padding:"2px 6px 0"}});pd.textContent="送信中…";mBub.appendChild(pd);}
     }else mBub.textContent=m.t;
     var mTime=d({style:{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:"4px",marginTop:"3px"}});
@@ -2784,6 +2784,7 @@ function renderChat(){
   phB.addEventListener("click",function(){phIn.click();});
   ir.appendChild(phIn);ir.appendChild(phB);ir.appendChild(ci2);ir.appendChild(sendB2);cw.appendChild(ir);
   setTimeout(function(){ma.scrollTop=ma.scrollHeight;},0);
+  setTimeout(function(){ma.scrollTop=ma.scrollHeight;},120);
   return cw;
 }
 
@@ -3686,7 +3687,7 @@ function loadMessagesFromSupabase(force,tries){
   window._dmLoading=true;window._dmLoadingAt=now;
   try{localStorage.setItem("sm_last_uid",currentUser.id);}catch(e){}
   var att=(window._dmAtt=(window._dmAtt||0)+1);
-  function retry(){if(window._dmAtt!==att)return;window._dmLoading=false;if(tries<6)setTimeout(function(){loadMessagesFromSupabase(true,tries+1);},1500*(tries+1));render();}
+  function retry(){if(window._dmAtt!==att)return;window._dmLoading=false;if(tries<6)setTimeout(function(){loadMessagesFromSupabase(true,tries+1);},1500*(tries+1));if(S.chatUser&&!(S.chatMsgs[String(S.chatUser.id)]||[]).length)render();}
   setTimeout(function(){if(window._dmLoading&&window._dmAtt===att){console.warn("messages load slow, retrying");window._dmLastErr="応答がありません（タイムアウト）";window._dmLoading=false;if(tries<6)loadMessagesFromSupabase(true,tries+1);else render();}},7000);
   if(restoreDmCache())render();
   // 新しい順に取ってから並べ直す（古い順だと件数が多いときに最新のメッセージが漏れるため）
@@ -3710,13 +3711,25 @@ function loadMessagesFromSupabase(force,tries){
     if(!(r.data&&r.data.length)&&!window._dmZeroRetried){window._dmZeroRetried=true;window._dmLastErr="確認中";retry();return;}
     if(!(r.data&&r.data.length)&&hadAny&&tries<6){console.warn("messages: got 0 rows, retrying");window._dmLastErr="サーバーから空の応答（再試行中）";retry();return;}
     window._dmLastErr=null;
+    var _openCid=S.chatUser?String(S.chatUser.id):null;
+    function _sig(){var l=_openCid&&S.chatMsgs[_openCid]||[];return l.map(function(m){return (m.id||"p")+":"+(m.readAt?1:0);}).join(",");}
+    var _before=_sig();var _wasLoaded=!!window._dmLoadedAt;
     window._dmLoadedAt=Date.now();
-    var keep={};
-    for(var k in S.chatMsgs){if(k.indexOf("sb_")!==0)continue;keep[k]=S.chatMsgs[k].filter(function(m){return m.pending||(!m.id&&m.preview);});delete S.chatMsgs[k];}
+    var keep={},kmap={};
+    for(var k in S.chatMsgs){if(k.indexOf("sb_")!==0)continue;S.chatMsgs[k].forEach(function(m){if(m.id&&m._k)kmap[m.id]=m._k;});keep[k]=S.chatMsgs[k].filter(function(m){return m.pending||(!m.id&&m.preview);});delete S.chatMsgs[k];}
     var rows=(r.data||[]).slice().reverse();
     for(var i=0;i<rows.length;i++)addDmRow(rows[i],false);
+    for(var kk in S.chatMsgs){if(kk.indexOf("sb_")===0)S.chatMsgs[kk].forEach(function(m){if(m.id&&kmap[m.id])m._k=kmap[m.id];});}
     for(var k2 in keep){if(!keep[k2].length)continue;if(!S.chatMsgs[k2])S.chatMsgs[k2]=[];keep[k2].forEach(function(m){S.chatMsgs[k2].push(m);});}
     saveDmCache();
+    // 開いているチャットの中身が変わっていなければ描き直さない（ブルブル防止）
+    if(_openCid&&_wasLoaded&&_sig()===_before&&chatOpenFor(_openCid))return;
+    if(_openCid&&chatOpenFor(_openCid)&&_before&&_sig().indexOf(_before)===0){
+      // 末尾に新着が増えただけなら、その分だけ追加
+      var l3=S.chatMsgs[_openCid];var oldN=_before.split(",").length;
+      for(var a3=oldN;a3<l3.length;a3++)appendDmRow(l3[a3]);
+      return;
+    }
     render();
   },function(e){console.error("messages load error",e);window._dmLastErr=(e&&e.message)||"通信エラー";retry();});
 }
