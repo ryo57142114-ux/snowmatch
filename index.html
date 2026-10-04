@@ -2761,7 +2761,7 @@ function renderChat(){
     var es=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"12.5px",lineHeight:"1.7",padding:"40px 16px",whiteSpace:"pre-line"}});
     if(window._dmLoading||(!window._dmLoadedAt&&!window._dmLastErr))es.textContent="メッセージを読み込み中…";
     else if(!window._dmLoadedAt&&window._dmLastErr){es.textContent="メッセージを読み込めませんでした\n（"+window._dmLastErr+"）\n\nタップで再読み込み";es.style.cursor="pointer";es.addEventListener("click",function(){window._dmLastErr=null;loadMessagesFromSupabase(true);render();});}
-    else es.textContent="まだメッセージはありません";
+    else{es.textContent="まだメッセージはありません\n（表示されない場合はタップで再読み込み）";es.style.cursor="pointer";es.addEventListener("click",function(){es.textContent="メッセージを読み込み中…";loadMessagesFromSupabase(true);});}
     ma.appendChild(es);
   }
   cw.appendChild(ma);
@@ -3684,10 +3684,25 @@ function loadMessagesFromSupabase(force,tries){
   setTimeout(function(){if(window._dmLoading&&window._dmAtt===att){console.warn("messages load slow, retrying");window._dmLastErr="応答がありません（タイムアウト）";window._dmLoading=false;if(tries<6)loadMessagesFromSupabase(true,tries+1);else render();}},7000);
   if(restoreDmCache())render();
   // 新しい順に取ってから並べ直す（古い順だと件数が多いときに最新のメッセージが漏れるため）
-  sb.from("dm_messages").select("id,from_user,to_user,body,image_path,created_at,read_at").or("from_user.eq."+currentUser.id+",to_user.eq."+currentUser.id).order("created_at",{ascending:false}).limit(2000).then(function(r){
+  // ログインの鍵が切れかけていたら先に更新してから取る（鍵なしで取ると0件が返ってくるため）
+  sb.auth.getSession().then(function(rs){
+    var ses=rs&&rs.data&&rs.data.session;
+    if(!ses){window._dmLastErr="ログイン情報を確認中です";retry();return null;}
+    var exp=(ses.expires_at||0)*1000;
+    if(exp&&exp-Date.now()<90000)return sb.auth.refreshSession().then(function(){return true;},function(){return true;});
+    return true;
+  }).then(function(ok){
+    if(!ok)return;
+    return sb.from("dm_messages").select("id,from_user,to_user,body,image_path,created_at,read_at").or("from_user.eq."+currentUser.id+",to_user.eq."+currentUser.id).order("created_at",{ascending:false}).limit(2000);
+  }).then(function(r){
+    if(!r)return;
     if(window._dmAtt!==att&&window._dmLoadedAt&&window._dmLoadedAt>now)return;
     window._dmLoading=false;
     if(r.error){console.error("messages load error",r.error);window._dmLastErr=r.error.message||String(r.error.code||"error");retry();return;}
+    // 手元にメッセージがあるのに0件が返ってきたら、通信の不調とみなして消さずにやり直す
+    var hadAny=false;for(var hk in S.chatMsgs){if(hk.indexOf("sb_")===0&&S.chatMsgs[hk].some(function(m){return !!m.id;})){hadAny=true;break;}}
+    if(!(r.data&&r.data.length)&&!window._dmZeroRetried){window._dmZeroRetried=true;window._dmLastErr="確認中";retry();return;}
+    if(!(r.data&&r.data.length)&&hadAny&&tries<6){console.warn("messages: got 0 rows, retrying");window._dmLastErr="サーバーから空の応答（再試行中）";retry();return;}
     window._dmLastErr=null;
     window._dmLoadedAt=Date.now();
     var keep={};
