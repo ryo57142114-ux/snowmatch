@@ -2562,6 +2562,7 @@ function renderExplore(){
   if(S.exTab==="board"){markBoardSeen();return stripLabelEmoji(renderBoard(wrap));}
   // 「仲間を探す」と「撮影カメラマン」はタブで分ける
   var camTabOn=S.exTab==="cam";
+  if(S.skillListView&&!camTabOn)return renderSkillList(wrap);
   S.camOnly=camTabOn;if(!camTabOn||!S.camSel)S.camSel=camTabOn&&S.camSel?S.camSel:[];
   if(!camTabOn){
   var opc=OpenPreviewCard();if(opc)wrap.appendChild(opc);
@@ -2645,6 +2646,7 @@ function renderExplore(){
   });
   if(recData.length)recSec.appendChild(recRow);
   wrap.appendChild(recSec);
+  if(!camTabOn)wrap.appendChild(SkillShelf());
 
   // 無料の仲間探し／有料の同行 の切り替え
   var pm=d({style:{display:"flex",flexWrap:"wrap",gap:"8px",marginBottom:"8px"}});
@@ -4706,7 +4708,217 @@ function handleDeepLink(){
   try{history.replaceState(null,"",location.pathname);}catch(e){}
 }
 try{if(/[?&]ref=/.test(location.search)&&!/[?&]u=/.test(location.search))history.replaceState(null,"",location.pathname);}catch(e){}
+// ===================== スキル販売（出品メニュー） =====================
+var SKILL_FEE=0.15;
+var SKILL_CATS=[
+  {id:"consult",name:"相談",items:["上達の悩み相談（オンライン）","初めてのスキー・スノボ相談（オンライン）","スキー場選びの相談（情報提供のみ）","怖さとの向き合い方の相談（オンライン）"]},
+  {id:"gear",name:"ギア",items:["ギア選び相談（オンライン）","道具の揃え方相談（オンライン）","セッティング（スタンス・角度）相談","中古ギアの選び方相談（販売なし）"]},
+  {id:"video",name:"動画",items:["滑り動画の考察（1本）","動画編集（1本）","SNS用ショート動画の作り方レクチャー","GoPro・Insta360の設定レクチャー"]},
+  {id:"maint",name:"メンテナンス",items:["ワックスのやり方レクチャー（オンライン）","チューンナップの基礎レクチャー（オンライン）","道具の手入れ・保管の相談"]},
+  {id:"train",name:"トレーニング",items:["上達プラン作成","オフシーズンの練習メニュー作成","自宅でできるトレーニングの相談"]}
+];
+var SKILL_UNITS=["30分","1時間","1本","1回"];
+var SKILL_NG=[
+  [/レッスン|講習|スクール|教えます|指導/,"ゲレンデでのレッスン・指導は、スキー場の規約や法律に触れるおそれがあるため出品できません（オンラインでの相談は可）"],
+  [/ガイド|案内|コース紹介|ツアー/,"ゲレンデでのガイド・コース案内やツアーは出品できません"],
+  [/送迎|送り迎え|相乗り|乗せ|ドライブ/,"送迎・相乗りでお金を受け取ること（白タク）は禁止です"],
+  [/宿|泊め|宿泊|部屋貸/,"宿の提供は旅館業の許可が必要なため出品できません"],
+  [/手配|予約代行/,"旅行の手配・予約の代行は旅行業の登録が必要なため出品できません"],
+  [/販売します|売ります|譲ります|中古品|お譲り/,"物の販売は出品できません（中古品の売買は古物の許可が必要です）"],
+  [/マッサージ|整体|施術|治療/,"資格が必要な行為は出品できません"],
+  [/LINE交換|直接振込|現金で|振り込み/,"アプリの外での直接のお金のやり取り・連絡先の交換はできません"]
+];
+function skillNgCheck(t){var out=[];SKILL_NG.forEach(function(x){if(x[0].test(t||""))out.push(x[1]);});return out;}
+function skillCatName(id){for(var i=0;i<SKILL_CATS.length;i++)if(SKILL_CATS[i].id===id)return SKILL_CATS[i].name;return id;}
+function skillLimit(){return (currentUser&&isPlus(currentUser.id))?5:1;}
+function loadSkillMenus(force){
+  if(typeof sb==="undefined"||!sb)return;
+  if(!force&&window._skAt&&Date.now()-window._skAt<60000)return;
+  if(window._skLoading)return;window._skLoading=true;window._skAt=Date.now();
+  sb.from("skill_menus").select("*").order("created_at",{ascending:false}).limit(500).then(function(r){
+    window._skLoading=false;if(r.error){console.error("skill menus",r.error.message);return;}
+    var key=JSON.stringify(r.data||[]);if(key===window._skKey)return;window._skKey=key;
+    S.skillMenus=r.data||[];render();
+  },function(){window._skLoading=false;});
+}
+function skillsOf(uid,approvedOnly){return (S.skillMenus||[]).filter(function(m){return m.user_id===uid&&(!approvedOnly||m.status==="approved");});}
+function skillCard(m,u,compact){
+  var c=document.createElement("div");
+  c.style.cssText="background:#fff;border:1px solid #F0E6DE;border-radius:14px;padding:12px;"+(compact?"flex:0 0 72%;scroll-snap-align:start;":"margin-bottom:10px;")+"cursor:pointer";
+  var top=document.createElement("div");top.style.cssText="display:flex;align-items:center;gap:6px;margin-bottom:6px";
+  var cat=document.createElement("span");cat.textContent=skillCatName(m.category);cat.style.cssText="font-size:10.5px;font-weight:800;background:#FFF0E8;color:#C2410C;border-radius:8px;padding:2px 8px";top.appendChild(cat);
+  var md=document.createElement("span");md.textContent="オンライン";md.style.cssText="font-size:10.5px;font-weight:800;background:#E0F2FE;color:#075985;border-radius:8px;padding:2px 8px";top.appendChild(md);
+  c.appendChild(top);
+  var t=document.createElement("div");t.style.cssText="font-weight:900;font-size:14px;color:#1A1A2E;line-height:1.5";t.textContent=m.title;c.appendChild(t);
+  if(!compact&&m.description){var ds=document.createElement("div");ds.style.cssText="font-size:12.5px;color:#4B5563;line-height:1.7;margin-top:4px;white-space:pre-wrap";ds.textContent=m.description;c.appendChild(ds);}
+  var bt=document.createElement("div");bt.style.cssText="display:flex;justify-content:space-between;align-items:center;margin-top:8px";
+  var who=document.createElement("div");who.style.cssText="font-size:11.5px;color:#6B7280;display:flex;align-items:center;gap:4px;min-width:0";
+  if(u){who.appendChild(sp({style:{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},u.name||""));addPlus(who,u.uid,12);}
+  var pr=document.createElement("div");pr.style.cssText="font-weight:900;font-size:15px;color:#FF6B2B;flex-shrink:0";pr.textContent="¥"+Number(m.price).toLocaleString()+"／"+(m.unit||"");
+  bt.appendChild(who);bt.appendChild(pr);c.appendChild(bt);
+  c.addEventListener("click",function(){if(u)R({selUser:u});});
+  return c;
+}
+function SkillMenusBlock(u){
+  if(!u||!u.uid)return null;
+  var list=skillsOf(u.uid,true);if(!list.length)return null;
+  var w=document.createElement("div");w.style.cssText="margin-bottom:14px";
+  var h=document.createElement("div");h.style.cssText="font-size:12px;font-weight:800;color:#9CA3AF;margin:0 0 6px";h.textContent="出品メニュー";w.appendChild(h);
+  list.forEach(function(m){
+    var card=skillCard(m,null,false);card.style.cursor="default";
+    var b=document.createElement("button");b.textContent="このメニューについて相談する";
+    b.style.cssText="width:100%;margin-top:10px;padding:10px;border-radius:12px;border:none;background:linear-gradient(135deg,#FF6B2B,#FF8C55);color:#fff;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit";
+    b.addEventListener("click",function(e){e.stopPropagation();if(!currentUser||S.isGuest){alert("相談するには登録（ログイン）が必要です");return;}R({selUser:null,tab:"chat",chatUser:u,chatIn:"「"+m.title+"」（¥"+Number(m.price).toLocaleString()+"／"+(m.unit||"")+"）について相談したいです。"});});
+    card.appendChild(b);w.appendChild(card);
+  });
+  return w;
+}
+function SkillShelf(){
+  loadSkillMenus(false);
+  var list=(S.skillMenus||[]).filter(function(m){return m.status==="approved";});
+  var sec=document.createElement("div");sec.style.cssText="margin-bottom:16px";
+  var hd=document.createElement("div");hd.style.cssText="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px";
+  var t=document.createElement("div");t.style.cssText="font-weight:900;font-size:16px;color:#1A1A2E";t.textContent="スキル・オンライン相談";hd.appendChild(t);
+  if(list.length){var all=document.createElement("button");all.textContent="すべて見る ›";all.style.cssText="background:none;border:none;color:#FF6B2B;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit;padding:0";all.addEventListener("click",function(){S.skillListView=true;S.skillCat=null;render();});hd.appendChild(all);}
+  sec.appendChild(hd);
+  if(!list.length){var em=document.createElement("div");em.style.cssText="background:#fff;border:1.5px dashed #FDBA74;border-radius:14px;padding:14px;font-size:12.5px;color:#9A3412;line-height:1.7";em.textContent="ギア選び相談・滑り動画の考察など、自分のスキルを販売できます。マイページの「スキル販売」から出品してみよう！";sec.appendChild(em);return sec;}
+  var row=document.createElement("div");row.style.cssText="display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:4px";
+  list.slice(0,10).forEach(function(m){row.appendChild(skillCard(m,findRealUser(m.user_id),true));});
+  sec.appendChild(row);return sec;
+}
+function renderSkillList(wrap){
+  var back=document.createElement("button");back.textContent="‹ ホームに戻る";back.style.cssText="background:none;border:none;color:#FF6B2B;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;padding:0;margin-bottom:10px";
+  back.addEventListener("click",function(){S.skillListView=false;render();});wrap.appendChild(back);
+  var ht=d({style:{fontWeight:"900",fontSize:"19px",color:"#1A1A2E",marginBottom:"10px"}});ht.textContent="スキル・オンライン相談";wrap.appendChild(ht);
+  var ch=d({style:{display:"flex",gap:"6px",overflowX:"auto",marginBottom:"12px",paddingBottom:"4px"}});
+  [{id:null,name:"すべて"}].concat(SKILL_CATS).forEach(function(c){var on=(S.skillCat||null)===c.id;var b=document.createElement("button");b.className="chip"+(on?" on":"");b.textContent=c.name;b.addEventListener("click",function(){S.skillCat=c.id;render();});ch.appendChild(b);});
+  wrap.appendChild(ch);
+  var list=(S.skillMenus||[]).filter(function(m){return m.status==="approved"&&(!S.skillCat||m.category===S.skillCat);});
+  list.sort(function(a,b){var pa=isPlus(a.user_id)?1:0,pb=isPlus(b.user_id)?1:0;if(pa!==pb)return pb-pa;return String(b.created_at)>String(a.created_at)?1:-1;});
+  if(!list.length){var em=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"13px",padding:"30px 0"}});em.textContent="まだこのカテゴリの出品はありません";wrap.appendChild(em);}
+  list.forEach(function(m){wrap.appendChild(skillCard(m,findRealUser(m.user_id),false));});
+  return wrap;
+}
+var SKILL_STATUS={pending:["審査中","#92400E","#FEF3C7"],approved:["公開中","#166534","#DCFCE7"],rejected:["却下","#991B1B","#FEE2E2"],paused:["停止中","#4B5563","#F3F4F6"]};
+function MySkillSection(){
+  if(!currentUser||S.isGuest)return null;
+  loadSkillMenus(false);
+  var mine=skillsOf(currentUser.id,false);var used=mine.filter(function(m){return m.status!=="rejected";}).length;var lim=skillLimit();
+  var c=d({class:"card",style:{margin:"0 0 14px",padding:"14px"}});
+  var hd=d({style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px"}});
+  hd.appendChild(sp({style:{fontWeight:"900",fontSize:"16px",color:"#1A1A2E"}},"スキル販売"));
+  hd.appendChild(sp({style:{fontSize:"11.5px",color:"#6B7280"}},"出品 "+used+"／"+lim+(lim===1?"（スノマ＋なら5つ）":"")));
+  c.appendChild(hd);
+  var ex=d({style:{fontSize:"12px",color:"#6B7280",lineHeight:"1.7",marginBottom:"10px"}});ex.textContent="オンライン相談・ギア選び相談・滑り動画の考察など、自分のスキルをメニューにして販売できます。運営の確認後に公開されます。";c.appendChild(ex);
+  mine.forEach(function(m){
+    var r=d({style:{border:"1px solid #F0F0F0",borderRadius:"12px",padding:"10px 12px",marginBottom:"8px"}});
+    var tp=d({style:{display:"flex",justifyContent:"space-between",gap:"8px",alignItems:"flex-start"}});
+    tp.appendChild(sp({style:{fontWeight:"800",fontSize:"13.5px",color:"#1A1A2E",lineHeight:"1.5"}},m.title));
+    var stv=SKILL_STATUS[m.status]||SKILL_STATUS.pending;var st=sp({style:{flexShrink:"0",fontSize:"10.5px",fontWeight:"800",borderRadius:"8px",padding:"2px 8px",color:stv[1],background:stv[2]}},stv[0]);tp.appendChild(st);r.appendChild(tp);
+    r.appendChild(d({style:{fontSize:"12px",color:"#FF6B2B",fontWeight:"800",marginTop:"4px"}}));r.lastChild.textContent="¥"+Number(m.price).toLocaleString()+"／"+(m.unit||"")+"　（受け取り目安 ¥"+Math.floor(m.price*(1-SKILL_FEE)).toLocaleString()+"）";
+    if(m.status==="rejected"&&m.reject_reason){var rj=d({style:{fontSize:"11.5px",color:"#991B1B",marginTop:"4px",lineHeight:"1.6"}});rj.textContent="却下の理由："+m.reject_reason;r.appendChild(rj);}
+    var bt=d({style:{display:"flex",gap:"8px",marginTop:"8px"}});
+    var eb=document.createElement("button");eb.textContent="編集";eb.style.cssText="flex:1;padding:8px;border-radius:10px;border:1px solid #E5E7EB;background:#fff;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;color:#374151";
+    eb.addEventListener("click",function(){S.skillEdit={id:m.id,category:m.category,title:m.title,description:m.description||"",price:String(m.price),unit:m.unit||"1時間"};render();window.scrollTo(0,0);});
+    var db=document.createElement("button");db.textContent="削除";db.style.cssText="flex:1;padding:8px;border-radius:10px;border:1px solid #FECACA;background:#fff;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;color:#EF4444";
+    db.addEventListener("click",function(){if(!confirm("このメニューを削除しますか？"))return;sb.from("skill_menus").delete().eq("id",m.id).then(function(res){if(res.error){alert("削除できませんでした: "+res.error.message);return;}S.skillMenus=(S.skillMenus||[]).filter(function(x){return x.id!==m.id;});render();});});
+    bt.appendChild(eb);bt.appendChild(db);r.appendChild(bt);c.appendChild(r);
+  });
+  var nb=document.createElement("button");
+  var full=used>=lim;
+  nb.textContent=full?(lim===1?"スノマ＋なら5つまで出品できます":"出品は5つまでです"):"＋ メニューを出品する";
+  nb.style.cssText="width:100%;padding:12px;border-radius:12px;border:none;font-weight:900;font-size:14px;cursor:pointer;font-family:inherit;"+(full?"background:#F3F4F6;color:#9CA3AF":"background:linear-gradient(135deg,#FF6B2B,#FF8C55);color:#fff");
+  nb.addEventListener("click",function(){if(full)return;S.skillEdit={id:null,category:"consult",title:"",description:"",price:"",unit:"1時間"};render();window.scrollTo(0,0);});
+  c.appendChild(nb);
+  return c;
+}
+function SkillReviewSection(){
+  if(!S.isAdmin)return null;
+  var pend=(S.skillMenus||[]).filter(function(m){return m.status==="pending";});
+  var c=d({class:"card",style:{margin:"0 0 14px",padding:"14px",border:"1.5px solid #FDE68A"}});
+  c.appendChild(d({style:{fontWeight:"900",fontSize:"15px",color:"#92400E",marginBottom:"8px"}}));c.lastChild.textContent="【運営】出品メニューの審査（"+pend.length+"件）";
+  if(!pend.length){c.appendChild(d({style:{fontSize:"12px",color:"#9CA3AF"}}));c.lastChild.textContent="審査待ちはありません";return c;}
+  var REASONS=["ゲレンデでのレッスン・ガイドにあたる","送迎・宿・旅行手配にあたる","物の販売にあたる","内容がわかりにくい（説明を詳しく）","料金が内容に合っていない","スノーと関係ない内容","その他のルール違反"];
+  pend.forEach(function(m){
+    var u=findRealUser(m.user_id);
+    var r=d({style:{border:"1px solid #F0F0F0",borderRadius:"12px",padding:"10px 12px",marginBottom:"8px"}});
+    r.appendChild(skillCard(m,u,false));
+    var ng=skillNgCheck(m.title+" "+(m.description||""));if(ng.length){var w=d({style:{fontSize:"11.5px",color:"#991B1B",margin:"4px 0"}});w.textContent="⚠️ 自動チェック："+ng.join(" / ");r.appendChild(w);}
+    var bt=d({style:{display:"flex",gap:"8px"}});
+    var ok=document.createElement("button");ok.textContent="承認して公開";ok.style.cssText="flex:1;padding:9px;border-radius:10px;border:none;background:#16A34A;color:#fff;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit";
+    ok.addEventListener("click",function(){sb.from("skill_menus").update({status:"approved",reject_reason:null}).eq("id",m.id).then(function(res){if(res.error){alert(res.error.message);return;}m.status="approved";render();});});
+    var ngb=document.createElement("button");ngb.textContent="却下";ngb.style.cssText="flex:1;padding:9px;border-radius:10px;border:1px solid #FECACA;background:#fff;color:#EF4444;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit";
+    ngb.addEventListener("click",function(){var msg="却下の理由の番号を入力してください\n"+REASONS.map(function(x,i){return (i+1)+"："+x;}).join("\n");var a=prompt(msg,"1");if(a==null)return;var reason=REASONS[parseInt(a,10)-1]||String(a);sb.from("skill_menus").update({status:"rejected",reject_reason:reason}).eq("id",m.id).then(function(res){if(res.error){alert(res.error.message);return;}m.status="rejected";m.reject_reason=reason;render();});});
+    bt.appendChild(ok);bt.appendChild(ngb);r.appendChild(bt);c.appendChild(r);
+  });
+  return c;
+}
+var SKILL_RULES_OK=["オンライン相談（上達の悩み、初めての人の相談など）","ギア選び・道具の揃え方・セッティングの相談","滑り動画の考察、動画編集","ワックス・チューンナップのやり方レクチャー（オンライン）","上達プラン・練習メニューの作成"];
+var SKILL_RULES_NG=["ゲレンデでのレッスン・指導・ガイド・コース案内","送迎・相乗りでお金を受け取ること（白タク）","宿の提供・旅行の手配","物の販売（中古品の売買など）","整体・マッサージなど資格が必要な行為","スノーと関係ないサービス・出会い目的","アプリの外での直接のお金のやり取り・連絡先の交換"];
+function renderSkillEditor(){
+  var f=S.skillEdit;var wrap=d({style:{padding:"16px 16px 100px"}});
+  var back=document.createElement("button");back.textContent="‹ マイページに戻る";back.style.cssText="background:none;border:none;color:#FF6B2B;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;padding:0;margin-bottom:10px";
+  back.addEventListener("click",function(){S.skillEdit=null;render();});wrap.appendChild(back);
+  var agreed=false;try{agreed=localStorage.getItem("sm_skill_rules_"+(currentUser?currentUser.id:""))==="1";}catch(e){}
+  if(!agreed){
+    var ht=d({style:{fontWeight:"900",fontSize:"19px",color:"#1A1A2E",marginBottom:"6px"}});ht.textContent="出品ルール";wrap.appendChild(ht);
+    var ex=d({style:{fontSize:"12.5px",color:"#6B7280",lineHeight:"1.7",marginBottom:"12px"}});ex.textContent="出品する前に、必ず読んでください。ルールに当たるメニューは公開されません。";wrap.appendChild(ex);
+    function box(title,items,col,bg,mark){var b=d({style:{background:bg,borderRadius:"14px",padding:"12px 14px",marginBottom:"12px"}});var t=d({style:{fontWeight:"900",fontSize:"14px",color:col,marginBottom:"6px"}});t.textContent=title;b.appendChild(t);items.forEach(function(x){var li=d({style:{fontSize:"12.5px",color:"#1A1A2E",lineHeight:"1.8"}});li.textContent=mark+" "+x;b.appendChild(li);});wrap.appendChild(b);}
+    box("出品できるもの（例）",SKILL_RULES_OK,"#166534","#F0FDF4","○");
+    box("出品できないもの",SKILL_RULES_NG,"#991B1B","#FEF2F2","×");
+    var checks=["ゲレンデでのレッスン・ガイドは出品しません","送迎・宿・旅行手配・物の販売は出品しません","お金のやり取りはアプリの中だけで行います","スキー場のルールと法律を守ります"];var st=[];
+    checks.forEach(function(t,i){var lb=document.createElement("label");lb.style.cssText="display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13px;color:#1A1A2E;cursor:pointer";var cb=document.createElement("input");cb.type="checkbox";cb.style.cssText="width:20px;height:20px;accent-color:#FF6B2B";cb.addEventListener("change",function(e){st[i]=e.target.checked;});lb.appendChild(cb);lb.appendChild(document.createTextNode(t));wrap.appendChild(lb);});
+    var ag=document.createElement("button");ag.textContent="同意して出品をはじめる";ag.style.cssText="width:100%;margin-top:12px;padding:13px;border-radius:14px;border:none;background:linear-gradient(135deg,#FF6B2B,#FF8C55);color:#fff;font-weight:900;font-size:15px;cursor:pointer;font-family:inherit";
+    ag.addEventListener("click",function(){if(st.filter(Boolean).length<checks.length){alert("すべての項目にチェックしてください");return;}try{localStorage.setItem("sm_skill_rules_"+currentUser.id,"1");}catch(e){}render();});
+    wrap.appendChild(ag);return wrap;
+  }
+  var ht2=d({style:{fontWeight:"900",fontSize:"19px",color:"#1A1A2E",marginBottom:"12px"}});ht2.textContent=f.id?"メニューを編集":"メニューを出品";wrap.appendChild(ht2);
+  var c=d({class:"card",style:{padding:"14px"}});
+  function lbl(t){var l=d({style:{fontSize:"12px",fontWeight:"800",color:"#6B7280",margin:"0 0 6px"}});l.textContent=t;c.appendChild(l);}
+  lbl("カテゴリ");
+  var cr=d({style:{display:"flex",flexWrap:"wrap",gap:"6px",marginBottom:"12px"}});
+  SKILL_CATS.forEach(function(x){var b=document.createElement("button");b.className="chip"+(f.category===x.id?" on":"");b.textContent=x.name;b.addEventListener("click",function(){f.category=x.id;render();});cr.appendChild(b);});c.appendChild(cr);
+  lbl("メニューの型（タップでタイトルに入ります）");
+  var tr=d({style:{display:"flex",flexWrap:"wrap",gap:"6px",marginBottom:"12px"}});
+  var cat=SKILL_CATS.filter(function(x){return x.id===f.category;})[0]||SKILL_CATS[0];
+  cat.items.forEach(function(t){var b=document.createElement("button");b.className="chip"+(f.title===t?" on":"");b.textContent=t;b.style.whiteSpace="normal";b.style.textAlign="left";b.addEventListener("click",function(){f.title=t;if(/1本/.test(t))f.unit="1本";else if(/作成/.test(t))f.unit="1回";render();});tr.appendChild(b);});c.appendChild(tr);
+  lbl("タイトル");
+  var ti=document.createElement("input");ti.className="inp";ti.id="ai_sk_title";ti.maxLength=40;ti.value=f.title||"";ti.placeholder="例：ギア選び相談（オンライン30分）";ti.style.cssText="width:100%;font-size:16px;margin-bottom:12px";ti.addEventListener("input",function(e){f.title=e.target.value;updNg();});c.appendChild(ti);
+  lbl("説明（どんなことをするか・進め方）");
+  var de=document.createElement("textarea");de.className="inp";de.id="ai_sk_desc";de.rows=5;de.maxLength=800;de.value=f.description||"";de.placeholder="例：身長・体重・レベル・よく行くスキー場を教えてもらい、ビデオ通話で30分、板・ブーツ・ビンディングの選び方を一緒に考えます。購入前の比較相談もOKです。";de.style.cssText="width:100%;resize:vertical;font-size:16px;margin-bottom:12px";de.addEventListener("input",function(e){f.description=e.target.value;updNg();});c.appendChild(de);
+  var ngBox=d({style:{display:"none",background:"#FEF2F2",border:"1.5px solid #FCA5A5",borderRadius:"12px",padding:"10px 12px",fontSize:"12px",color:"#991B1B",lineHeight:"1.7",marginBottom:"12px"}});c.appendChild(ngBox);
+  function updNg(){var ng=skillNgCheck((f.title||"")+" "+(f.description||""));if(ng.length){ngBox.style.display="block";ngBox.textContent="⚠️ この内容は出品できない可能性があります\n・"+ng.join("\n・");ngBox.style.whiteSpace="pre-line";}else ngBox.style.display="none";}
+  updNg();
+  lbl("料金（500円〜30,000円）");
+  var pr=d({style:{display:"flex",gap:"8px",alignItems:"center",marginBottom:"6px"}});
+  var pi=document.createElement("input");pi.className="inp";pi.id="ai_sk_price";pi.type="number";pi.inputMode="numeric";pi.min="500";pi.max="30000";pi.step="100";pi.value=f.price||"";pi.placeholder="1500";pi.style.cssText="flex:1;font-size:16px";
+  var us=document.createElement("select");us.className="inp";us.style.cssText="width:110px;font-size:16px";SKILL_UNITS.forEach(function(x){var o=document.createElement("option");o.value=x;o.textContent="／"+x;us.appendChild(o);});us.value=f.unit||"1時間";us.addEventListener("change",function(e){f.unit=e.target.value;});
+  pr.appendChild(pi);pr.appendChild(us);c.appendChild(pr);
+  var rv=d({style:{fontSize:"12px",color:"#6B7280",marginBottom:"14px"}});c.appendChild(rv);
+  function updRv(){var v=parseInt(f.price,10);rv.textContent=v>=500&&v<=30000?("受け取り目安：¥"+Math.floor(v*(1-SKILL_FEE)).toLocaleString()+"（手数料15%を引いた額）"):"500円〜30,000円で入力してください";}
+  pi.addEventListener("input",function(e){f.price=e.target.value;updRv();});updRv();
+  var nt=d({style:{fontSize:"11.5px",color:"#9CA3AF",lineHeight:"1.6",marginBottom:"12px"}});nt.textContent="出品できるのはオンラインで完結するメニューです。ゲレンデで一緒に滑る・撮影する場合は、プロフィールの「同行・撮影」の料金設定を使ってください。";c.appendChild(nt);
+  var sv=document.createElement("button");sv.textContent=f.id?"変更して審査に出す":"審査に出す";
+  sv.style.cssText="width:100%;padding:13px;border-radius:14px;border:none;background:linear-gradient(135deg,#FF6B2B,#FF8C55);color:#fff;font-weight:900;font-size:15px;cursor:pointer;font-family:inherit";
+  sv.addEventListener("click",function(){
+    var title=(f.title||"").trim(),desc=(f.description||"").trim(),price=parseInt(f.price,10);
+    if(title.length<4){alert("タイトルを入力してください");return;}
+    if(desc.length<20){alert("説明は20文字以上で、どんなことをするか具体的に書いてください");return;}
+    if(!(price>=500&&price<=30000)){alert("料金は500円〜30,000円で入力してください");return;}
+    var ng=skillNgCheck(title+" "+desc);if(ng.length){alert("この内容は出品できません。\n・"+ng.join("\n・")+"\n\n内容を見直してください。");return;}
+    sv.disabled=true;sv.textContent="送信中…";
+    var row={category:f.category,title:title,description:desc,price:price,unit:f.unit||"1時間",mode:"online"};
+    var q=f.id?sb.from("skill_menus").update(row).eq("id",f.id).select():sb.from("skill_menus").insert(Object.assign({user_id:currentUser.id},row)).select();
+    q.then(function(r){
+      if(r.error){sv.disabled=false;sv.textContent="審査に出す";alert("保存できませんでした: "+(String(r.error.message).indexOf("skill_limit")>=0?"出品できる数の上限です（無料会員は1つ、スノマ＋は5つまで）":r.error.message));return;}
+      S.skillEdit=null;window._skAt=0;loadSkillMenus(true);render();alert("審査に出しました！運営が確認したあと公開されます。");
+    });
+  });
+  c.appendChild(sv);wrap.appendChild(c);
+  return wrap;
+}
 function renderProfile(){
+  if(S.skillEdit)return renderSkillEditor();
   var wrap=d({style:{paddingBottom:"80px"}});
   var kycOk=!!(S.myProfile&&S.myProfile.ok===true);var postOk=true;
   var hero=d({style:{background:"linear-gradient(180deg,#FBF6EC,#F4E9D2)",padding:"0 20px 20px",position:"relative",borderBottom:"1px solid #E8D9B8"}});
@@ -5287,6 +5499,8 @@ function renderProfile(){
   }else{for(var pi2=0;pi2<S.myProfile.posts.length;pi2++){(function(pp){var pw=d({style:{position:"relative"}});pw.appendChild(PostCard(pp));var db=document.createElement("button");db.textContent="🗑 削除";db.style.cssText="position:absolute;top:8px;right:8px;padding:4px 10px;border-radius:10px;border:none;background:rgba(0,0,0,.55);color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;z-index:2";db.addEventListener("click",function(e){e.stopPropagation();deleteMyPost(pp);});pw.appendChild(db);if(!pp.server&&currentUser){var lb=d({style:{fontSize:"11px",color:"#B45309",margin:"-6px 0 10px"}});lb.textContent="⏳ まだこの端末にだけ保存されています（自動でアップロードします）";pw.appendChild(lb);}body.appendChild(pw);})(S.myProfile.posts[pi2]);}}
   // 同行料金の受け取り（Stripe Connect）
   var payoutCard=PayoutCard();if(payoutCard)body.appendChild(payoutCard);
+  var _msk=MySkillSection();if(_msk)body.appendChild(_msk);
+  var _srv=SkillReviewSection();if(_srv)body.appendChild(_srv);
   // お問い合わせ・退会
   var supportDiv=d({style:{padding:"16px 20px 4px",display:"flex",flexDirection:"column",gap:"8px"}});
   var pushBtn=document.createElement("button");
@@ -5736,7 +5950,7 @@ function WelcomeModal(){
 }
 
 
-function viewKey(){return [S.pg,S.tab,S.liveCamView?"lc":"",S.alertView?"al":"",S.aiView?"ai":"",S.openDetail||"",S.openRoom||"",S.selUser?S.selUser.id:"",S.chatUser?S.chatUser.id:"",S.bookUser?1:0,S.showEditProfile?1:0].join("|");}
+function viewKey(){return [S.pg,S.tab,S.skillEdit?"se":"",S.skillListView?"sl":"",S.liveCamView?"lc":"",S.alertView?"al":"",S.aiView?"ai":"",S.openDetail||"",S.openRoom||"",S.selUser?S.selUser.id:"",S.chatUser?S.chatUser.id:"",S.bookUser?1:0,S.showEditProfile?1:0].join("|");}
 function isTypingEl(t){return !!(t&&t.id&&(t.id==="chatinput"||t.id==="roominput"||t.id.indexOf("cmt_")===0||t.id.indexOf("ai_")===0));}
 var _lastViewKey="";
 // 日本語入力（変換中）の最中に画面を描き直すと、文字が勝手に確定したり消えたりするので、変換が終わるまで待つ
@@ -5829,6 +6043,7 @@ function _renderInner(){
           box.appendChild(pc);
           if(pv&&u.ok)box.appendChild(CostIncludedBox(u,false));
           if(!isPaidUser(u)){var fr=d({style:{background:"#F0FDF4",border:"1.5px solid #BBF7D0",borderRadius:"14px",padding:"10px 12px",margin:"-6px 0 14px",fontSize:"12px",color:"#14532D",lineHeight:"1.7"}});fr.textContent="お金のやり取りなしで、一緒に滑る仲間を募集しています。リフト券や交通費などはそれぞれ自分の分を払います。まずはメッセージで声をかけてみよう。";box.appendChild(fr);}
+          var _sk=SkillMenusBlock(u);if(_sk)box.appendChild(_sk);
           // 活動スキー場
           sec("⛰️ 活動スキー場");
           var rr=d({style:{marginBottom:"14px"}});
