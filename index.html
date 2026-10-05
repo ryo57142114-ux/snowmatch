@@ -1434,6 +1434,7 @@ function goBack(){
   if(S.invite){R({invite:null});return true;}
   if(S.postModal){R({postModal:null});return true;}
   if(S.bookUser){R({bookUser:null});return true;}
+  if(S.skillBook){R({skillBook:null});return true;}
   if(S.postDetail){S.postDetail=null;render();return true;}
   if(S.selUser){R({selUser:null});return true;}
   if(S.chatUser){R({chatUser:null});return true;}
@@ -4779,12 +4780,60 @@ function SkillMenusBlock(u){
   var h=document.createElement("div");h.style.cssText="font-size:12px;font-weight:800;color:#9CA3AF;margin:0 0 6px";h.textContent="出品メニュー";w.appendChild(h);
   list.forEach(function(m){
     var card=skillCard(m,null,false);card.style.cursor="default";
-    var b=document.createElement("button");b.textContent="このメニューについて相談する";
-    b.style.cssText="width:100%;margin-top:10px;padding:10px;border-radius:12px;border:none;background:linear-gradient(135deg,#FF6B2B,#FF8C55);color:#fff;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit";
-    b.addEventListener("click",function(e){e.stopPropagation();if(!currentUser||S.isGuest){alert("相談するには登録（ログイン）が必要です");return;}R({selUser:null,tab:"chat",chatUser:u,chatIn:"「"+m.title+"」（¥"+Number(m.price).toLocaleString()+"／"+(m.unit||"")+"）について相談したいです。"});});
-    card.appendChild(b);w.appendChild(card);
+    var br=document.createElement("div");br.style.cssText="display:flex;gap:8px;margin-top:10px";
+    var q=document.createElement("button");q.textContent="質問する";
+    q.style.cssText="flex:1;padding:10px;border-radius:12px;border:1.5px solid #FDBA74;background:#fff;color:#C2410C;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit";
+    q.addEventListener("click",function(e){e.stopPropagation();if(!currentUser||S.isGuest){alert("質問するには登録（ログイン）が必要です");return;}R({selUser:null,tab:"chat",chatUser:u,chatIn:"「"+m.title+"」について質問です。"});});
+    var b=document.createElement("button");b.textContent="申し込む";
+    b.style.cssText="flex:1.4;padding:10px;border-radius:12px;border:none;background:linear-gradient(135deg,#FF6B2B,#FF8C55);color:#fff;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit";
+    b.addEventListener("click",function(e){e.stopPropagation();if(!currentUser||S.isGuest){alert("申し込むには登録（ログイン）が必要です");return;}if(currentUser.id===u.uid){alert("自分のメニューには申し込めません");return;}R({selUser:null,skillBook:{menu:m,user:u,date:"",time:"20:00",note:""}});});
+    br.appendChild(q);br.appendChild(b);card.appendChild(br);w.appendChild(card);
   });
   return w;
+}
+// スキルメニューの申し込み（オンライン）。同行の予約とは別の、シンプルな画面
+function SkillBookModal(){
+  var st=S.skillBook,m=st.menu,u=st.user;var price=Number(m.price)||0;
+  var timed=/分|時間/.test(m.unit||"");
+  return Modal(false,function(){if(!st.sending)R({skillBook:null});},function(box){
+    var t=d({style:{fontWeight:"900",fontSize:"18px",color:"#1A1A2E",marginBottom:"12px"}});t.textContent="サービスの申し込み";box.appendChild(t);
+    var who=d({style:{display:"flex",alignItems:"center",gap:"10px",background:"#F9FAFB",borderRadius:"14px",padding:"12px",marginBottom:"12px"}});
+    who.appendChild(avU(40,20,u));var wi=d({style:{flex:"1",minWidth:"0"}});
+    var wn=d({style:{fontWeight:"900",fontSize:"14px",color:"#1A1A2E"}});wn.textContent=m.title;wi.appendChild(wn);
+    var wd=d({style:{fontSize:"12px",color:"#6B7280",marginTop:"2px"}});wd.textContent=(u.name||"")+"　・オンライン";wi.appendChild(wd);who.appendChild(wi);box.appendChild(who);
+    if(m.description){var ds=d({style:{fontSize:"12.5px",color:"#4B5563",lineHeight:"1.7",whiteSpace:"pre-wrap",marginBottom:"12px"}});ds.textContent=m.description;box.appendChild(ds);}
+    function lbl(x){var l=d({style:{fontWeight:"800",fontSize:"13px",color:"#1A1A2E",margin:"0 0 6px"}});l.textContent=x;box.appendChild(l);}
+    lbl(timed?"希望の日時（オンラインで話す日時）":"希望の受け取り日（任意）");
+    var r=d({style:{display:"flex",gap:"8px",marginBottom:"12px"}});
+    var di=document.createElement("input");di.type="date";di.className="inp";di.value=st.date||"";di.min=new Date().toISOString().slice(0,10);di.style.cssText="flex:1.4;font-size:16px";di.addEventListener("change",function(e){st.date=e.target.value;});r.appendChild(di);
+    if(timed){var ti=document.createElement("input");ti.type="time";ti.className="inp";ti.value=st.time||"20:00";ti.style.cssText="flex:1;font-size:16px";ti.addEventListener("change",function(e){st.time=e.target.value;});r.appendChild(ti);}
+    box.appendChild(r);
+    lbl("相談したいこと・伝えたいこと");
+    var ta=document.createElement("textarea");ta.className="inp";ta.id="ai_skb_note";ta.rows=3;ta.maxLength=400;ta.value=st.note||"";ta.placeholder=timed?"例：初心者で板選びに迷っています。身長170cm・体重65kgです":"例：動画はチャットで送ります。ターンの後半が気になっています";ta.style.cssText="width:100%;resize:none;font-size:16px;margin-bottom:12px";ta.addEventListener("input",function(e){st.note=e.target.value;});box.appendChild(ta);
+    var sm=d({style:{background:"#F5F7FA",borderRadius:"14px",padding:"12px 14px",marginBottom:"12px",fontSize:"13px"}});
+    function line(a,b,strong){var l=d({style:{display:"flex",justifyContent:"space-between",padding:"4px 0"}});l.appendChild(sp({style:{color:"#6B7280"}},a));l.appendChild(sp({style:{fontWeight:strong?"900":"700",color:strong?"#FF6B2B":"#1A1A2E",fontSize:strong?"17px":"13px"}},b));sm.appendChild(l);}
+    line("提供者",u.name||"");line("内容",(m.unit||"")+"・オンライン");line("合計","¥"+price.toLocaleString(),true);
+    box.appendChild(sm);
+    var nt=d({style:{fontSize:"11.5px",color:"#6B7280",lineHeight:"1.7",marginBottom:"12px"}});nt.textContent="申し込むと相手に通知が届きます。相手が承認すると確定し、やり取り（通話のリンクや動画の受け渡し）はチャットで行います。お支払いは承認後に行います。";box.appendChild(nt);
+    var br=d({style:{display:"flex",gap:"10px"}});
+    br.appendChild(obtn("閉じる",function(){R({skillBook:null});},"obtn-s"));
+    br.appendChild(obtn(st.sending?"送信中…":"申し込む",function(){
+      if(st.sending)return;
+      if(timed&&!st.date){alert("希望の日付を選んでください");return;}
+      st.sending=true;render();
+      var note="【オンライン】"+(st.note||"");
+      var row={customer:currentUser.id,provider:u.uid,plan:"skill",plan_label:m.title,hours:0,price_total:price,service_date:st.date||new Date().toISOString().slice(0,10),start_time:timed?(st.time||"20:00"):"00:00",note:note};
+      sb.from("reservations").insert(row).select().then(function(r){
+        if(r.error&&/check|plan/i.test(r.error.message)){row.plan="hour";return sb.from("reservations").insert(row).select();}
+        return r;
+      }).then(function(r){
+        st.sending=false;
+        if(r.error){render();alert("申し込めませんでした: "+r.error.message);return;}
+        loadReservations();R({skillBook:null,confirmed:{user:u,isRequest:true}});
+      },function(e){st.sending=false;render();alert("通信エラー: "+(e&&e.message?e.message:e));});
+    },""));
+    box.appendChild(br);
+  });
 }
 function SkillShelf(){
   loadSkillMenus(false);
@@ -6050,7 +6099,7 @@ function _renderInner(){
           function sec(title){var st=d({style:{fontSize:"12px",fontWeight:"800",color:"#9CA3AF",margin:"0 0 6px"}});st.textContent=title;box.appendChild(st);}
           // 料金
           var pc=d({style:{background:"linear-gradient(135deg,#FFF4EC,#FFE7D6)",borderRadius:"14px",padding:"12px 14px",marginBottom:"14px",display:"flex",justifyContent:"space-between",alignItems:"center"}});
-          pc.appendChild(sp({style:{fontSize:"12px",fontWeight:"800",color:"#9A5B34"}},"💰 同行料金"));
+          pc.appendChild(sp({style:{fontSize:"12px",fontWeight:"800",color:"#9A5B34"}},"💰 同行・撮影の料金（ゲレンデ）"));
           var pv=parseInt(u.price)||0;
           if(pv&&!u.ok)pc.appendChild(sp({style:{fontSize:"12px",fontWeight:"800",color:"#9CA3AF"}},"本人確認後に表示"));else if(planList(u).length){var pls=planList(u);pc.style.flexDirection="column";pc.style.alignItems="stretch";pc.style.gap="6px";for(var pli=0;pli<pls.length;pli++){(function(pk){var plr=d({style:{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",padding:"4px 0"}});plr.addEventListener("click",function(){R({selUser:null,bookUser:u,bkFor:u.id,bkPlan:pk,bkHours:1,bkDate:"",bkTime:"9:00",bkNote:""});});plr.appendChild(sp({style:{fontSize:"13px",fontWeight:"700",color:"#6B7280"}},pls[pli].lbl));plr.appendChild(sp({style:{fontSize:"18px",fontWeight:"900",color:"#FF6B2B"}},"¥"+pls[pli].p.toLocaleString()+" ›"));pc.appendChild(plr);})(pls[pli].k);}}else pc.appendChild(sp({style:{fontSize:pv?"18px":"14px",fontWeight:"900",color:pv?"#FF6B2B":"#15803D"}},pv?("¥"+pv.toLocaleString()+(u.unit?" / "+u.unit:"")):"🤝 無料で一緒に滑れます"));
           box.appendChild(pc);
@@ -6117,6 +6166,7 @@ function _renderInner(){
     }
   }
   if(S.bookUser)app.appendChild(BookModal(S.bookUser));
+  if(S.skillBook)app.appendChild(SkillBookModal());
   if(S.postModal)app.appendChild(PostModal());
   if(S.reqPay)app.appendChild(ReqPayModal());
   if(S.invite)app.appendChild(RideInviteModal());
