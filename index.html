@@ -1227,9 +1227,90 @@ function loadSnowReports(){
   });
 }
 setInterval(function(){if(!document.hidden&&S.tab==="market"&&S.marketTab==="snow")loadSnowReports();},45000);
+// ===== 新雪アラート（プラス会員）：お気に入りのスキー場にパウダー報告が入ったら自動で通知 =====
+function loadSnowAlertPrefs(){
+  if(!sb||!currentUser||window._saLoading)return;window._saLoading=true;
+  sb.from("snow_alert_prefs").select("*").eq("user_id",currentUser.id).maybeSingle().then(function(r){
+    window._saLoading=false;
+    S.saPrefs=(r&&r.data)?{resorts:r.data.resorts||[],on_powder:r.data.on_powder!==false,on_snowing:!!r.data.on_snowing,saved:true}:{resorts:((S.myProfile&&S.myProfile.resorts)||[]).slice(0,3),on_powder:true,on_snowing:false,saved:false};
+    render();
+  },function(){window._saLoading=false;});
+}
+function SnowAlertHero(){
+  var card=document.createElement("div");
+  card.style.cssText="background:linear-gradient(135deg,#0C4A6E,#0369A1 55%,#38BDF8);border-radius:20px;padding:16px;margin-bottom:16px;cursor:pointer;position:relative;overflow:hidden";
+  card.addEventListener("click",function(){S.alertView=true;render();var ap=document.getElementById("app");if(ap)ap.scrollTop=0;window.scrollTo(0,0);});
+  var row=document.createElement("div");row.style.cssText="display:flex;align-items:center;gap:10px";
+  var tx=document.createElement("div");tx.style.cssText="flex:1;min-width:0";
+  var t1=document.createElement("div");t1.style.cssText="font-weight:900;font-size:16px;color:#fff;display:flex;align-items:center;gap:8px";t1.appendChild(document.createTextNode("新雪アラート"));
+  var tag=document.createElement("span");tag.textContent="プラス会員";tag.style.cssText="font-size:10px;font-weight:800;background:linear-gradient(135deg,#FBE38E,#E6B325);color:#5A4521;border-radius:8px;padding:2px 7px";t1.appendChild(tag);
+  var t2=document.createElement("div");t2.style.cssText="font-size:11.5px;color:#BAE6FD;margin-top:3px;line-height:1.5";
+  var pr=S.saPrefs;
+  t2.textContent=(pr&&pr.saved&&pr.resorts.length)?("お知らせ中："+pr.resorts.join("・")):"お気に入りのスキー場にパウダー報告が入ったら、自動でお知らせ";
+  tx.appendChild(t1);tx.appendChild(t2);
+  var ar=document.createElement("div");ar.style.cssText="color:rgba(255,255,255,.7);font-size:22px";ar.textContent="›";
+  row.appendChild(tx);row.appendChild(ar);card.appendChild(row);
+  if(currentUser&&S.saPrefs===undefined){S.saPrefs=null;loadSnowAlertPrefs();}
+  return card;
+}
+function renderSnowAlert(wrap){
+  var back=document.createElement("button");back.textContent="‹ ゲレンデ速報に戻る";
+  back.style.cssText="background:none;border:none;color:#FF6B2B;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;padding:0;margin-bottom:10px";
+  back.addEventListener("click",function(){S.alertView=false;render();});wrap.appendChild(back);
+  var ht=d({style:{fontWeight:"900",fontSize:"19px",color:"#1A1A2E",marginBottom:"4px"}});ht.textContent="新雪アラート";wrap.appendChild(ht);
+  var ex=d({style:{color:"#6B7280",fontSize:"12.5px",lineHeight:"1.7",marginBottom:"14px"}});
+  ex.textContent="お気に入りのスキー場に、ゲレンデ速報で「パウダー」の報告が入った瞬間に、自動でプッシュ通知が届きます。設定しておけば、あとは何もしなくてOKです。";wrap.appendChild(ex);
+  if(!currentUser||S.isGuest){var g=d({class:"card",style:{padding:"14px",fontSize:"13px",color:"#4B5563",textAlign:"center"}});g.textContent="使うにはログインが必要です";wrap.appendChild(g);return wrap;}
+  if(!isPlus(currentUser.id)){
+    var lk=d({class:"card",style:{padding:"16px",textAlign:"center",border:"1.5px solid #FDE68A",background:"#FFFBEB"}});
+    var l1=d({style:{fontWeight:"900",fontSize:"15px",color:"#92400E",marginBottom:"6px"}});l1.textContent="スノマ プラス会員限定の機能です";lk.appendChild(l1);
+    var l2=d({style:{fontSize:"12.5px",color:"#92400E",lineHeight:"1.7"}});l2.textContent="プラス会員（月額）になると、新雪アラートや金色バッジなどが使えるようになります。申し込みは準備中です。もうしばらくお待ちください。";lk.appendChild(l2);
+    wrap.appendChild(lk);return wrap;
+  }
+  if(!S.saPrefs){if(S.saPrefs===undefined){S.saPrefs=null;loadSnowAlertPrefs();}var ld=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"13px",padding:"20px"}});ld.textContent="読み込み中…";wrap.appendChild(ld);return wrap;}
+  var pr=S.saPrefs;
+  var c=d({class:"card",style:{padding:"14px",marginBottom:"12px"}});
+  var lb=d({style:{fontSize:"12px",fontWeight:"800",color:"#6B7280",marginBottom:"8px"}});lb.textContent="お知らせするスキー場（3か所まで）";c.appendChild(lb);
+  var chips=d({style:{display:"flex",flexWrap:"wrap",gap:"6px",marginBottom:"10px"}});
+  if(!pr.resorts.length){var em=d({style:{fontSize:"12px",color:"#9CA3AF"}});em.textContent="まだ選ばれていません";chips.appendChild(em);}
+  pr.resorts.forEach(function(r){var ch=document.createElement("button");ch.textContent=r+" ×";ch.style.cssText="border:none;border-radius:14px;padding:6px 12px;background:#E0F2FE;color:#075985;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit";ch.addEventListener("click",function(){pr.resorts=pr.resorts.filter(function(x){return x!==r;});render();});chips.appendChild(ch);});
+  c.appendChild(chips);
+  if(pr.resorts.length<3){
+    var sel=document.createElement("select");sel.className="inp";sel.style.cssText="width:100%;font-size:16px;margin-bottom:12px";
+    var o0=document.createElement("option");o0.value="";o0.textContent="＋ スキー場を追加";sel.appendChild(o0);
+    AREAS.forEach(function(a){var og=document.createElement("optgroup");og.label=a.area;a.resorts.forEach(function(r){if(pr.resorts.indexOf(r)>=0)return;var o=document.createElement("option");o.value=r;o.textContent=r;og.appendChild(o);});sel.appendChild(og);});
+    sel.addEventListener("change",function(e){var v=e.target.value;if(v&&pr.resorts.indexOf(v)<0&&pr.resorts.length<3){pr.resorts.push(v);render();}});
+    c.appendChild(sel);
+  }
+  var lb2=d({style:{fontSize:"12px",fontWeight:"800",color:"#6B7280",margin:"4px 0 8px"}});lb2.textContent="こんなときにお知らせ";c.appendChild(lb2);
+  [["on_powder","「パウダー」の報告が入ったとき"],["on_snowing","「雪（降っている）」の報告が入ったとき"]].forEach(function(o){
+    var row=document.createElement("label");row.style.cssText="display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13.5px;color:#1A1A2E;cursor:pointer";
+    var cb=document.createElement("input");cb.type="checkbox";cb.checked=!!pr[o[0]];cb.style.cssText="width:20px;height:20px;accent-color:#0284C7";cb.addEventListener("change",function(e){pr[o[0]]=e.target.checked;});
+    row.appendChild(cb);row.appendChild(document.createTextNode(o[1]));c.appendChild(row);
+  });
+  var sv=document.createElement("button");sv.textContent=pr.saved?"設定を保存する":"アラートを開始する";
+  sv.style.cssText="width:100%;margin-top:10px;padding:13px;border-radius:14px;border:none;background:linear-gradient(135deg,#0369A1,#38BDF8);color:#fff;font-weight:900;font-size:15px;cursor:pointer;font-family:inherit";
+  sv.addEventListener("click",function(){
+    if(!pr.resorts.length){alert("スキー場を1つ以上選んでください");return;}
+    sv.textContent="保存中…";
+    sb.from("snow_alert_prefs").upsert({user_id:currentUser.id,resorts:pr.resorts,on_powder:!!pr.on_powder,on_snowing:!!pr.on_snowing,updated_at:new Date().toISOString()}).then(function(r){
+      if(r.error){alert("保存できませんでした: "+r.error.message);sv.textContent="設定を保存する";return;}
+      pr.saved=true;render();alert("新雪アラートを設定しました！\n"+pr.resorts.join("・")+"にパウダー報告が入ったらお知らせします。");
+    });
+  });
+  c.appendChild(sv);wrap.appendChild(c);
+  if(!S.pushOn){
+    var pn=d({class:"card",style:{padding:"12px 14px",border:"1.5px solid #FCD34D",background:"#FFFBEB",fontSize:"12.5px",color:"#92400E",lineHeight:"1.7"}});
+    pn.textContent="⚠️ このスマホの通知がオフになっています。お知らせを受け取るには、マイページの「通知をオンにする」を押してください。";wrap.appendChild(pn);
+  }
+  var nt=d({style:{fontSize:"11px",color:"#9CA3AF",lineHeight:"1.6",marginTop:"10px"}});nt.textContent="※ 同じスキー場のお知らせは3時間に1回までです。天気予報からの自動お知らせは今後追加予定です。";wrap.appendChild(nt);
+  return wrap;
+}
 function renderSnowBoard(wrap){
   if(S.liveCamView)return renderLiveCams(wrap);
+  if(S.alertView)return renderSnowAlert(wrap);
   wrap.appendChild(LiveCamHero());
+  wrap.appendChild(SnowAlertHero());
   if(S.snowReports===undefined){S.snowReports=null;loadSnowReports();}
   var now=new Date();
   var top=d({style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"4px"}});
@@ -2815,7 +2896,7 @@ function renderMarket(){
   if(!S.marketTab||S.marketTab==="room"&&!S._mtInit){S._mtInit=true;S.marketTab="open";}
   // 上のタブ：つぶやきは誰でも、ほかは本人確認済みの会員だけ
   var mt=d({style:{display:"flex",background:"#EEF0F3",borderRadius:"14px",padding:"4px",marginBottom:"14px"}});
-  [["open","タイムライン"],["snow","ゲレンデ速報"],["member","会員ページ"]].forEach(function(o){var on=o[0]==="member"?(S.marketTab!=="open"&&S.marketTab!=="snow"):S.marketTab===o[0];var x=document.createElement("button");x.textContent=o[1];x.style.cssText="flex:1;padding:10px 6px;border-radius:11px;border:none;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;background:"+(on?"#fff":"transparent")+";color:"+(on?"#FF6B2B":"#6B7280")+";box-shadow:"+(on?"0 1px 4px rgba(0,0,0,.08)":"none");x.addEventListener("click",function(){if(o[0]==="open"){loadOpenPosts();R({marketTab:"open",openDetail:null});}else if(o[0]==="snow"){loadSnowReports();R({marketTab:"snow",liveCamView:false});}else R({marketTab:"room",openRoom:null,aiView:false});});mt.appendChild(x);});
+  [["open","タイムライン"],["snow","ゲレンデ速報"],["member","会員ページ"]].forEach(function(o){var on=o[0]==="member"?(S.marketTab!=="open"&&S.marketTab!=="snow"):S.marketTab===o[0];var x=document.createElement("button");x.textContent=o[1];x.style.cssText="flex:1;padding:10px 6px;border-radius:11px;border:none;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;background:"+(on?"#fff":"transparent")+";color:"+(on?"#FF6B2B":"#6B7280")+";box-shadow:"+(on?"0 1px 4px rgba(0,0,0,.08)":"none");x.addEventListener("click",function(){if(o[0]==="open"){loadOpenPosts();R({marketTab:"open",openDetail:null});}else if(o[0]==="snow"){loadSnowReports();R({marketTab:"snow",liveCamView:false,alertView:false});}else R({marketTab:"room",openRoom:null,aiView:false});});mt.appendChild(x);});
   wrap.appendChild(mt);
   if(S.marketTab==="open")return renderOpenBoard(wrap);
   if(S.marketTab==="snow")return renderSnowBoard(wrap);
@@ -5563,7 +5644,7 @@ function WelcomeModal(){
 }
 
 
-function viewKey(){return [S.pg,S.tab,S.liveCamView?"lc":"",S.aiView?"ai":"",S.openDetail||"",S.openRoom||"",S.selUser?S.selUser.id:"",S.chatUser?S.chatUser.id:"",S.bookUser?1:0,S.showEditProfile?1:0].join("|");}
+function viewKey(){return [S.pg,S.tab,S.liveCamView?"lc":"",S.alertView?"al":"",S.aiView?"ai":"",S.openDetail||"",S.openRoom||"",S.selUser?S.selUser.id:"",S.chatUser?S.chatUser.id:"",S.bookUser?1:0,S.showEditProfile?1:0].join("|");}
 function isTypingEl(t){return !!(t&&t.id&&(t.id==="chatinput"||t.id==="roominput"||t.id.indexOf("cmt_")===0||t.id.indexOf("ai_")===0));}
 var _lastViewKey="";
 // 日本語入力（変換中）の最中に画面を描き直すと、文字が勝手に確定したり消えたりするので、変換が終わるまで待つ
