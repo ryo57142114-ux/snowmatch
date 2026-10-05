@@ -3379,13 +3379,16 @@ function showRoomActions(m,nm){
   var sh=document.createElement("div");sh.style.cssText="width:100%;max-width:480px;background:#fff;border-radius:18px 18px 0 0;padding:8px 12px calc(12px + env(safe-area-inset-bottom,0px))";
   var pv=document.createElement("div");pv.style.cssText="font-size:12px;color:#6B7280;padding:10px 6px 8px;border-bottom:1px solid #F0F0F0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis";
   pv.textContent=nm+"："+(m.media_url?(m.media_type==="video"?"動画":"写真"):String(m.body||""));sh.appendChild(pv);
+  // 長押しの指を離したときのタップで、すぐ閉じたり項目が押されたりしないよう、開いてすぐのタップは無視する
+  var openedAt=Date.now();function tooSoon(){return Date.now()-openedAt<600;}
   function close(){if(ov.parentNode)ov.parentNode.removeChild(ov);}
-  function item(label,color,fn){var b=document.createElement("button");b.textContent=label;b.style.cssText="display:block;width:100%;padding:15px 6px;border:none;background:none;text-align:center;font-size:16px;font-weight:700;font-family:inherit;cursor:pointer;color:"+color+";border-bottom:1px solid #F5F5F5";b.addEventListener("click",function(){close();fn();});sh.appendChild(b);}
+  function item(label,color,fn){var b=document.createElement("button");b.textContent=label;b.style.cssText="display:block;width:100%;padding:15px 6px;border:none;background:none;text-align:center;font-size:16px;font-weight:700;font-family:inherit;cursor:pointer;color:"+color+";border-bottom:1px solid #F5F5F5";b.addEventListener("click",function(e){if(tooSoon()){e.preventDefault();return;}close();fn();});sh.appendChild(b);}
   item("返信する","#1A1A2E",function(){setRoomReply(m,nm);var i=document.getElementById("roominput");if(i)i.focus();});
   if(!m.media_url&&m.body){item("コピー","#1A1A2E",function(){try{navigator.clipboard.writeText(String(m.body));}catch(e){}});}
   if(isMe||S.isAdmin){item("削除","#EF4444",function(){deleteRoomMsg(m);});}
-  var cb=document.createElement("button");cb.textContent="キャンセル";cb.style.cssText="display:block;width:100%;margin-top:6px;padding:14px;border:none;border-radius:14px;background:#F3F4F6;font-size:15px;font-weight:800;font-family:inherit;cursor:pointer;color:#4B5563";cb.addEventListener("click",close);sh.appendChild(cb);
-  ov.addEventListener("click",function(e){if(e.target===ov)close();});
+  var cb=document.createElement("button");cb.textContent="キャンセル";cb.style.cssText="display:block;width:100%;margin-top:6px;padding:14px;border:none;border-radius:14px;background:#F3F4F6;font-size:15px;font-weight:800;font-family:inherit;cursor:pointer;color:#4B5563";cb.addEventListener("click",function(){if(tooSoon())return;close();});sh.appendChild(cb);
+  ov.addEventListener("click",function(e){if(tooSoon())return;if(e.target===ov)close();});
+  ov.addEventListener("touchend",function(e){if(tooSoon())e.preventDefault();});
   ov.appendChild(sh);document.body.appendChild(ov);
 }
 function setRoomReply(m,nm){S.roomReply=m?{id:m.id,nick:nm,body:String(m.body||"").slice(0,80)}:null;updateReplyBar();}
