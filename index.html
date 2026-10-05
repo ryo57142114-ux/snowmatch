@@ -4688,6 +4688,14 @@ function showMyQR(){
   ov.addEventListener("click",function(e){if(e.target===ov&&ov.parentNode)ov.parentNode.removeChild(ov);});
   ov.appendChild(cd);document.body.appendChild(ov);
 }
+// 友だちを招待（SnowMatch自体を紹介する）。招待した人がわかるよう ref を付けておく（将来の招待特典用）
+function inviteFriends(){
+  var link=location.origin+"/?ref="+encodeURIComponent(currentUser?currentUser.id:"");
+  var text="スキー・スノボの仲間が見つかるアプリ「SnowMatch」使ってるよ！一緒に滑ろう\n";
+  if(navigator.share){navigator.share({title:"SnowMatch",text:text,url:link}).catch(function(){});return;}
+  try{navigator.clipboard.writeText(text+link).then(function(){alert("招待文とリンクをコピーしました。LINEなどに貼り付けて送ってください");});}catch(e){prompt("このリンクを送ってください",link);}
+}
+try{(function(){var m=location.search.match(/[?&]ref=([0-9a-fA-F-]{20,})/);if(m&&!localStorage.getItem("sm_ref"))localStorage.setItem("sm_ref",decodeURIComponent(m[1]));})();}catch(e){}
 // QRやリンクから開いたとき（?u=ユーザーID）、その人のプロフィールを表示
 try{(function(){var m=location.search.match(/[?&]u=([0-9a-fA-F-]{20,})/);if(m)window._openUid=decodeURIComponent(m[1]);})();}catch(e){}
 function handleDeepLink(){
@@ -4697,6 +4705,7 @@ function handleDeepLink(){
   else{var u=findRealUser(uid);if(!u)return;window._openUid=null;S.selUser=u;}
   try{history.replaceState(null,"",location.pathname);}catch(e){}
 }
+try{if(/[?&]ref=/.test(location.search)&&!/[?&]u=/.test(location.search))history.replaceState(null,"",location.pathname);}catch(e){}
 function renderProfile(){
   var wrap=d({style:{paddingBottom:"80px"}});
   var kycOk=!!(S.myProfile&&S.myProfile.ok===true);var postOk=true;
@@ -4753,8 +4762,12 @@ function renderProfile(){
   frBtn.addEventListener("click",function(){S.showFollowList=true;S.followListType="followers";render();});
   followRow.appendChild(fwBtn);followRow.appendChild(frBtn);
   if(currentUser){var qrB=document.createElement("button");qrB.textContent="QRコード";
-    qrB.style.cssText="align-self:center;margin-left:auto;background:#fff;border:1px solid #E8D9B8;border-radius:16px;padding:6px 12px;font-size:12px;font-weight:800;color:#8A6A2E;cursor:pointer;font-family:inherit";
-    qrB.addEventListener("click",showMyQR);followRow.appendChild(qrB);}
+    qrB.style.cssText="background:#fff;border:1px solid #E8D9B8;border-radius:16px;padding:6px 12px;font-size:12px;font-weight:800;color:#8A6A2E;cursor:pointer;font-family:inherit";
+    qrB.addEventListener("click",showMyQR);
+    var bw=document.createElement("div");bw.style.cssText="margin-left:auto;align-self:center;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end";bw.appendChild(qrB);followRow.appendChild(bw);
+    var invB=document.createElement("button");invB.textContent="友だちを招待";
+    invB.style.cssText="background:linear-gradient(135deg,#FF6B2B,#FF8C55);border:none;border-radius:16px;padding:7px 12px;font-size:12px;font-weight:800;color:#fff;cursor:pointer;font-family:inherit";
+    invB.addEventListener("click",inviteFriends);bw.appendChild(invB);}
   hi.appendChild(followRow);
 
   hr.appendChild(hi);hero.appendChild(hr);wrap.appendChild(hero);
