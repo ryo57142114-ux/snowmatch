@@ -1435,6 +1435,7 @@ function goBack(){
   if(S.postModal){R({postModal:null});return true;}
   if(S.bookUser){R({bookUser:null});return true;}
   if(S.skillBook){R({skillBook:null});return true;}
+  if(S.reviewFor){R({reviewFor:null});return true;}
   if(S.postDetail){S.postDetail=null;render();return true;}
   if(S.selUser){R({selUser:null});return true;}
   if(S.chatUser){R({chatUser:null});return true;}
@@ -3614,7 +3615,12 @@ function renderResvList(){
         bt.appendChild(obtn("お断りする",function(){if(confirm("この予約をお断りしますか？"))setResvStatus(x.id,"declined");},"obtn-s"));
         bt.appendChild(obtn("✅ 承認する",function(){if(confirm("この予約を承認しますか？"))setResvStatus(x.id,"approved",x.plan==="skill"?"確定しました！メッセージで通話のリンク（Zoom・Google Meetなど）や、動画の受け渡し方法を決めましょう":"予約が確定しました！メッセージで集合場所などを決めましょう");},""));
       }
-      if(!meProv&&(x.status==="pending"||x.status==="approved")){
+      if(x.plan==="skill"){loadSkillReviews(false);var _rv=reviewOf(x.id);
+        if(_rv){var rvl=d({style:{marginTop:"8px",background:"#FFFBEB",borderRadius:"10px",padding:"8px 12px",fontSize:"12.5px",color:"#78350F",lineHeight:"1.6",whiteSpace:"pre-wrap"}});rvl.textContent="完了・評価："+starsText(_rv.rating)+(_rv.comment?"\n「"+_rv.comment+"」":"");card.appendChild(rvl);}
+        else if(!meProv&&x.status==="approved"){bt.appendChild(obtn("✅ 完了して評価する",function(){R({reviewFor:{x:x,rating:0,comment:""}});},""));}
+        else if(meProv&&x.status==="approved"){var wt=d({style:{marginTop:"8px",fontSize:"12px",color:"#6B7280"}});wt.textContent="相談が終わったら、相手が「完了して評価する」を押すと取引が完了します";card.appendChild(wt);}
+      }
+      if(!meProv&&(x.status==="pending"||x.status==="approved")&&!(x.plan==="skill"&&reviewOf(x.id))){
         bt.appendChild(obtn("キャンセル",function(){
           var td=new Date();var ts=td.getFullYear()+"-"+String(td.getMonth()+1).padStart(2,"0")+"-"+String(td.getDate()).padStart(2,"0");
           var sameDay=String(x.service_date)<=ts;
@@ -4755,7 +4761,9 @@ function loadSkillMenus(force){
     var key=JSON.stringify(r.data||[]);if(key===window._skKey)return;window._skKey=key;
     S.skillMenus=r.data||[];render();
   },function(){window._skLoading=false;});
+  loadSkillReviews(force);
 }
+function sellerOf(uid){var u=findRealUser(uid);if(u)return u;if(currentUser&&uid===currentUser.id){var me=S.myProfile||{};return {uid:uid,name:me.nick||me.name||"あなた",icon:me.icon||"🏂",profileImg:me.profileImg,isReal:true,_me:true};}return null;}
 function skillsOf(uid,approvedOnly){return (S.skillMenus||[]).filter(function(m){return m.user_id===uid&&(!approvedOnly||m.status==="approved");});}
 function skillCard(m,u,compact){
   var c=document.createElement("div");
@@ -4770,8 +4778,9 @@ function skillCard(m,u,compact){
   var who=document.createElement("div");who.style.cssText="font-size:12.5px;font-weight:800;color:#1A1A2E;display:flex;align-items:center;gap:6px;min-width:0";
   if(u){var wa=avU(28,14,u);wa.style.flexShrink="0";who.appendChild(wa);who.appendChild(sp({style:{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},u.name||""));addPlus(who,u.uid,13);}
   var pr=document.createElement("div");pr.style.cssText="font-weight:900;font-size:15px;color:#FF6B2B;flex-shrink:0";pr.textContent="¥"+Number(m.price).toLocaleString()+"／"+(m.unit||"");
+  var _rt=menuRating(m.id);if(_rt){var rtl=document.createElement("div");rtl.style.cssText="font-size:12px;color:#B45309;font-weight:800;margin-top:4px";rtl.textContent=starsText(_rt.avg)+" "+_rt.avg.toFixed(1)+"（"+_rt.n+"件）";c.appendChild(rtl);}
   bt.appendChild(who);bt.appendChild(pr);c.appendChild(bt);
-  c.addEventListener("click",function(){if(u)R({selUser:u});});
+  c.addEventListener("click",function(){if(u&&!u._me)R({selUser:u});});
   return c;
 }
 function SkillMenusBlock(u){
@@ -4788,7 +4797,10 @@ function SkillMenusBlock(u){
     var b=document.createElement("button");b.textContent="申し込む";
     b.style.cssText="flex:1.4;padding:10px;border-radius:12px;border:none;background:linear-gradient(135deg,#FF6B2B,#FF8C55);color:#fff;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit";
     b.addEventListener("click",function(e){e.stopPropagation();if(!currentUser||S.isGuest){alert("申し込むには登録（ログイン）が必要です");return;}if(currentUser.id===u.uid){alert("自分のメニューには申し込めません");return;}R({selUser:null,skillBook:{menu:m,user:u,date:"",time:"20:00",note:""}});});
-    br.appendChild(q);br.appendChild(b);card.appendChild(br);w.appendChild(card);
+    br.appendChild(q);br.appendChild(b);card.appendChild(br);
+    var _rt2=menuRating(m.id);
+    if(_rt2){_rt2.list.slice(0,3).forEach(function(rv){var rr=d({style:{marginTop:"8px",background:"#FFFBEB",borderRadius:"10px",padding:"8px 10px",fontSize:"12px",color:"#78350F",lineHeight:"1.6"}});var cu=findRealUser(rv.customer);rr.textContent=starsText(rv.rating)+"　"+((cu&&cu.name)||"利用者")+(rv.comment?"\n"+rv.comment:"");rr.style.whiteSpace="pre-wrap";card.appendChild(rr);});}
+    w.appendChild(card);
   });
   return w;
 }
@@ -4833,6 +4845,43 @@ function SkillBookModal(){
     box.appendChild(br);
   });
 }
+// ===== スキルの完了・評価 =====
+function loadSkillReviews(force){
+  if(typeof sb==="undefined"||!sb)return;
+  if(!force&&window._srAt&&Date.now()-window._srAt<60000)return;
+  if(window._srLoading)return;window._srLoading=true;window._srAt=Date.now();
+  sb.from("skill_reviews").select("*").order("created_at",{ascending:false}).limit(1000).then(function(r){
+    window._srLoading=false;if(r.error){return;}
+    var key=JSON.stringify(r.data||[]);if(key===window._srKey)return;window._srKey=key;
+    S.skillReviews=r.data||[];render();
+  },function(){window._srLoading=false;});
+}
+function reviewOf(resvId){var l=S.skillReviews||[];for(var i=0;i<l.length;i++)if(l[i].reservation_id===resvId)return l[i];return null;}
+function menuRating(menuId){var l=(S.skillReviews||[]).filter(function(r){return r.menu_id===menuId;});if(!l.length)return null;var s=0;l.forEach(function(r){s+=r.rating;});return {avg:Math.round(s/l.length*10)/10,n:l.length,list:l};}
+function starsText(n){var s="";for(var i=1;i<=5;i++)s+=i<=Math.round(n)?"★":"☆";return s;}
+function ReviewModal(){
+  var st=S.reviewFor,x=st.x;
+  return Modal(false,function(){if(!st.sending)R({reviewFor:null});},function(box){
+    var t=d({style:{fontWeight:"900",fontSize:"18px",color:"#1A1A2E",marginBottom:"6px"}});t.textContent="完了して評価する";box.appendChild(t);
+    var ex=d({style:{fontSize:"12.5px",color:"#6B7280",lineHeight:"1.7",marginBottom:"14px"}});ex.textContent="「"+(x.plan_label||"")+"」が終わったら評価してください。評価すると取引が完了になります。";box.appendChild(ex);
+    var sr=d({style:{display:"flex",justifyContent:"center",gap:"6px",marginBottom:"14px"}});
+    [1,2,3,4,5].forEach(function(i){var b=document.createElement("button");b.textContent=i<=(st.rating||0)?"★":"☆";b.setAttribute("aria-label",i+"つ星");b.style.cssText="background:none;border:none;font-size:36px;line-height:1;color:"+(i<=(st.rating||0)?"#F59E0B":"#D1D5DB")+";cursor:pointer;padding:2px";b.addEventListener("click",function(){st.rating=i;render();});sr.appendChild(b);});
+    box.appendChild(sr);
+    var ta=document.createElement("textarea");ta.className="inp";ta.id="ai_rv_c";ta.rows=3;ta.maxLength=300;ta.value=st.comment||"";ta.placeholder="例：ギアの選び方がよくわかりました！ありがとうございました";ta.style.cssText="width:100%;resize:none;font-size:16px;margin-bottom:12px";ta.addEventListener("input",function(e){st.comment=e.target.value;});box.appendChild(ta);
+    var br=d({style:{display:"flex",gap:"10px"}});
+    br.appendChild(obtn("閉じる",function(){R({reviewFor:null});},"obtn-s"));
+    br.appendChild(obtn(st.sending?"送信中…":"完了して評価を送る",function(){
+      if(st.sending)return;if(!st.rating){alert("★を選んでください");return;}
+      st.sending=true;render();
+      sb.from("skill_reviews").insert({reservation_id:x.id,menu_id:parseInt(String(x.post_id||"").replace("skill:",""),10)||null,provider:x.provider,customer:currentUser.id,rating:st.rating,comment:(st.comment||"").trim()||null}).select().then(function(r){
+        st.sending=false;
+        if(r.error){render();alert("送れませんでした: "+r.error.message);return;}
+        S.skillReviews=[r.data[0]].concat(S.skillReviews||[]);R({reviewFor:null});alert("評価を送りました。ありがとうございました！");
+      },function(e){st.sending=false;render();alert("通信エラー: "+(e&&e.message?e.message:e));});
+    },""));
+    box.appendChild(br);
+  });
+}
 function SkillShelf(){
   loadSkillMenus(false);
   var list=(S.skillMenus||[]).filter(function(m){return m.status==="approved";});
@@ -4843,7 +4892,7 @@ function SkillShelf(){
   sec.appendChild(hd);
   if(!list.length){var em=document.createElement("div");em.style.cssText="background:#fff;border:1.5px dashed #FDBA74;border-radius:14px;padding:14px;font-size:12.5px;color:#9A3412;line-height:1.7";em.textContent="ギア選び相談・滑り動画の考察など、自分のスキルを販売できます。マイページの「スキル販売」から出品してみよう！";sec.appendChild(em);return sec;}
   var row=document.createElement("div");row.style.cssText="display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:4px";
-  list.slice(0,10).forEach(function(m){row.appendChild(skillCard(m,findRealUser(m.user_id),true));});
+  list.slice(0,10).forEach(function(m){row.appendChild(skillCard(m,sellerOf(m.user_id),true));});
   sec.appendChild(row);return sec;
 }
 function renderSkillList(wrap){
@@ -4856,7 +4905,7 @@ function renderSkillList(wrap){
   var list=(S.skillMenus||[]).filter(function(m){return m.status==="approved"&&(!S.skillCat||m.category===S.skillCat);});
   list.sort(function(a,b){var pa=isPlus(a.user_id)?1:0,pb=isPlus(b.user_id)?1:0;if(pa!==pb)return pb-pa;return String(b.created_at)>String(a.created_at)?1:-1;});
   if(!list.length){var em=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"13px",padding:"30px 0"}});em.textContent="まだこのカテゴリの出品はありません";wrap.appendChild(em);}
-  list.forEach(function(m){wrap.appendChild(skillCard(m,findRealUser(m.user_id),false));});
+  list.forEach(function(m){wrap.appendChild(skillCard(m,sellerOf(m.user_id),false));});
   return wrap;
 }
 var SKILL_STATUS={pending:["審査中","#92400E","#FEF3C7"],approved:["公開中","#166534","#DCFCE7"],rejected:["却下","#991B1B","#FEE2E2"],paused:["停止中","#4B5563","#F3F4F6"]};
@@ -6165,6 +6214,7 @@ function _renderInner(){
   }
   if(S.bookUser)app.appendChild(BookModal(S.bookUser));
   if(S.skillBook)app.appendChild(SkillBookModal());
+  if(S.reviewFor)app.appendChild(ReviewModal());
   if(S.postModal)app.appendChild(PostModal());
   if(S.reqPay)app.appendChild(ReqPayModal());
   if(S.invite)app.appendChild(RideInviteModal());
