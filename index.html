@@ -4822,11 +4822,8 @@ function SkillBookModal(){
       if(timed&&!st.date){alert("希望の日付を選んでください");return;}
       st.sending=true;render();
       var note="【オンライン】"+(st.note||"");
-      var row={customer:currentUser.id,provider:u.uid,plan:"skill",plan_label:m.title,hours:0,price_total:price,service_date:st.date||new Date().toISOString().slice(0,10),start_time:timed?(st.time||"20:00"):"00:00",note:note};
+      var row={customer:currentUser.id,provider:u.uid,plan:"skill",plan_label:m.title,hours:1,price_total:price,service_date:st.date||new Date().toISOString().slice(0,10),start_time:timed?(st.time||"20:00"):"00:00",note:note,post_id:"skill:"+m.id};
       sb.from("reservations").insert(row).select().then(function(r){
-        if(r.error&&/check|plan/i.test(r.error.message)){row.plan="hour";return sb.from("reservations").insert(row).select();}
-        return r;
-      }).then(function(r){
         st.sending=false;
         if(r.error){render();alert("申し込めませんでした: "+r.error.message);return;}
         loadReservations();R({skillBook:null,confirmed:{user:u,isRequest:true}});
