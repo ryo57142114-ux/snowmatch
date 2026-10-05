@@ -3598,7 +3598,8 @@ function renderResvList(){
       var det=d({style:{background:"#F9FAFB",borderRadius:"12px",padding:"10px 14px",fontSize:"13px",color:"#374151",lineHeight:"1.7"}});
       var pl=x.plan==="hour"?("1時間 × "+x.hours+"時間"):(x.plan_label||"");
       if(x.plan==="request"){var _fp=calcF(Number(x.price_total||0));det.textContent=(x.note?("⛰️ "+x.note+"\n"):"")+"お支払い額：¥"+Number(x.price_total||0).toLocaleString()+(x.status==="approved"&&!meProv?"（支払い済み・デモ）":"")+(meProv?"\n受け取り予定：¥"+_fp.payout.toLocaleString()+"（手数料15%を引いた額）":"");}
-      else det.textContent="プラン："+pl+"　合計：¥"+Number(x.price_total||0).toLocaleString()+(x.note?("\n💬 "+x.note):"");
+      else if(x.plan==="skill"){var _fs=calcF(Number(x.price_total||0));var _nt=String(x.note||"").replace(/^【オンライン】/,"");det.textContent="オンライン：「"+(x.plan_label||"")+"」\n"+(x.start_time&&String(x.start_time).slice(0,5)!=="00:00"?"話す日時："+String(x.service_date||"").replace(/-/g,"/")+" "+String(x.start_time).slice(0,5)+"\n":"")+"料金：¥"+Number(x.price_total||0).toLocaleString()+(meProv?"（受け取り予定：¥"+_fs.payout.toLocaleString()+"）":"")+(_nt?("\n相談内容："+_nt):"")+(x.status==="approved"?"\n通話のリンクや動画のやり取りはメッセージで行ってください":"");}
+       else det.textContent="プラン："+pl+"　合計：¥"+Number(x.price_total||0).toLocaleString()+(x.note?("\n💬 "+x.note):"");
       det.style.whiteSpace="pre-wrap";card.appendChild(det);
       var bt=d({style:{display:"flex",gap:"8px",marginTop:"10px",flexWrap:"wrap"}});
       if(mode==="apps"){
