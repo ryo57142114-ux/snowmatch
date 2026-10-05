@@ -2815,7 +2815,7 @@ function renderMarket(){
   if(!S.marketTab||S.marketTab==="room"&&!S._mtInit){S._mtInit=true;S.marketTab="open";}
   // 上のタブ：つぶやきは誰でも、ほかは本人確認済みの会員だけ
   var mt=d({style:{display:"flex",background:"#EEF0F3",borderRadius:"14px",padding:"4px",marginBottom:"14px"}});
-  [["open","タイムライン"],["snow","ゲレンデ速報"],["member","会員ページ"]].forEach(function(o){var on=o[0]==="member"?(S.marketTab!=="open"&&S.marketTab!=="snow"):S.marketTab===o[0];var x=document.createElement("button");x.textContent=o[1];x.style.cssText="flex:1;padding:10px 6px;border-radius:11px;border:none;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;background:"+(on?"#fff":"transparent")+";color:"+(on?"#FF6B2B":"#6B7280")+";box-shadow:"+(on?"0 1px 4px rgba(0,0,0,.08)":"none");x.addEventListener("click",function(){if(o[0]==="open"){loadOpenPosts();R({marketTab:"open",openDetail:null});}else if(o[0]==="snow"){loadSnowReports();R({marketTab:"snow",liveCamView:false});}else R({marketTab:"room",openRoom:null});});mt.appendChild(x);});
+  [["open","タイムライン"],["snow","ゲレンデ速報"],["member","会員ページ"]].forEach(function(o){var on=o[0]==="member"?(S.marketTab!=="open"&&S.marketTab!=="snow"):S.marketTab===o[0];var x=document.createElement("button");x.textContent=o[1];x.style.cssText="flex:1;padding:10px 6px;border-radius:11px;border:none;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;background:"+(on?"#fff":"transparent")+";color:"+(on?"#FF6B2B":"#6B7280")+";box-shadow:"+(on?"0 1px 4px rgba(0,0,0,.08)":"none");x.addEventListener("click",function(){if(o[0]==="open"){loadOpenPosts();R({marketTab:"open",openDetail:null});}else if(o[0]==="snow"){loadSnowReports();R({marketTab:"snow",liveCamView:false});}else R({marketTab:"room",openRoom:null,aiView:false});});mt.appendChild(x);});
   wrap.appendChild(mt);
   if(S.marketTab==="open")return renderOpenBoard(wrap);
   if(S.marketTab==="snow")return renderSnowBoard(wrap);
@@ -2830,8 +2830,11 @@ function renderMarket(){
   var ht=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"4px"}});ht.textContent="スノマラウンジ";
   var hs=d({style:{color:"#6B7280",fontSize:"13px"}});hs.textContent="会員限定 · 仲間と語ろう・悩み相談・Q&A";
   hd.appendChild(ht);hd.appendChild(hs);wrap.appendChild(hd);
+  if(S.aiView)return renderAiDiag(wrap);
+  wrap.appendChild(AiHero());
   var tabs=d({style:{display:"flex",gap:"0",marginBottom:"16px",background:"#F5F7FA",borderRadius:"16px",padding:"4px",overflowX:"auto",webkitOverflowScrolling:"touch"}});
-  var tabDefs=[["room","雑談部屋"],["nayami","悩み相談"],["qa","Q&A"],["ai","AI診断"]];
+  var tabDefs=[["room","雑談部屋"],["nayami","悩み相談"],["qa","Q&A"]];
+  if(S.marketTab==="ai")S.marketTab="room";
   if(S.marketTab==="checkin")S.marketTab="room";
   for(var ti=0;ti<tabDefs.length;ti++){
     (function(id,lbl){
@@ -2846,7 +2849,6 @@ function renderMarket(){
   wrap.appendChild(tabs);
 
   loadRoomSummary(false);
-  if(S.marketTab==="ai")return renderAiDiag(wrap);
   if(S.openRoom&&(S.marketTab==="room"||S.marketTab==="nayami")){markRoomSeen(S.openRoom);var _rc=renderRoomChat();if(_rc)return _rc;}
   if(S.marketTab==="nayami"){
     var nyNote=d({style:{color:"#6B7280",fontSize:"12.5px",lineHeight:"1.7",marginBottom:"12px"}});nyNote.textContent="滑りの悩み、道具選び、仲間づくりのことなど、気軽に相談できる部屋です。";wrap.appendChild(nyNote);
@@ -3048,7 +3050,31 @@ function runAiDiag(){
     render();setTimeout(function(){var el=document.getElementById("ai_result");if(el&&el.scrollIntoView)el.scrollIntoView({behavior:"smooth",block:"start"});},50);
   }).catch(function(e){a.busy=false;a.err="AIの準備に失敗しました（通信環境を確認して、もう一度お試しください）"+(e&&e.message?"\n"+e.message:"");render();});
 }
+function AiHero(){
+  var card=document.createElement("div");
+  card.style.cssText="background:linear-gradient(135deg,#7C2D12,#C2410C 55%,#F97316);border-radius:20px;padding:16px;margin-bottom:16px;position:relative;overflow:hidden";
+  var top=document.createElement("div");top.style.cssText="margin-bottom:12px";
+  var t1=document.createElement("div");t1.style.cssText="font-weight:900;font-size:16px;color:#fff";t1.textContent="AI診断";
+  var t2=document.createElement("div");t2.style.cssText="font-size:11.5px;color:#FED7AA;margin-top:2px";t2.textContent="会員限定・写真や体格からAIがアドバイス";
+  top.appendChild(t1);top.appendChild(t2);card.appendChild(top);
+  var grid=document.createElement("div");grid.style.cssText="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px";
+  [["form","フォーム診断","滑りの写真から姿勢をチェック"],["gear","ギア診断","体格とスタイルから道具選び"]].forEach(function(o){
+    var b=document.createElement("button");
+    b.style.cssText="border:none;font-family:inherit;cursor:pointer;text-align:left;border-radius:12px;padding:12px;background:rgba(255,255,255,.14);color:#fff";
+    var n=document.createElement("div");n.style.cssText="font-size:14px;font-weight:900;display:flex;justify-content:space-between;align-items:center";n.appendChild(document.createTextNode(o[1]));var ar=document.createElement("span");ar.textContent="›";ar.style.cssText="color:rgba(255,255,255,.7);font-size:18px";n.appendChild(ar);
+    var ds=document.createElement("div");ds.style.cssText="font-size:11px;color:#FFEDD5;margin-top:4px;line-height:1.5";ds.textContent=o[2];
+    b.appendChild(n);b.appendChild(ds);
+    b.addEventListener("click",function(){var a=aiState();a.mode=o[0];a.result=null;a.err=null;S.aiView=true;render();var ap=document.getElementById("app");if(ap)ap.scrollTop=0;window.scrollTo(0,0);});
+    grid.appendChild(b);
+  });
+  card.appendChild(grid);
+  return card;
+}
 function renderAiDiag(wrap){
+  var back=document.createElement("button");back.textContent="‹ 会員ページに戻る";
+  back.style.cssText="background:none;border:none;color:#FF6B2B;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;padding:0;margin-bottom:10px";
+  back.addEventListener("click",function(){S.aiView=false;render();});wrap.appendChild(back);
+  var aht=d({style:{fontWeight:"900",fontSize:"19px",color:"#1A1A2E",marginBottom:"6px"}});aht.textContent="AI診断";wrap.appendChild(aht);
   var a=aiState();
   var intro=d({style:{color:"#6B7280",fontSize:"12.5px",lineHeight:"1.7",marginBottom:"12px"}});
   intro.textContent="フォーム診断は、スマホの中で動くAIが写真から関節の位置を見つけて姿勢を測ります（写真はサーバーに送られません）。ギア診断は、体格と滑りのスタイルから道具選びの目安を出します。";wrap.appendChild(intro);
@@ -5535,7 +5561,7 @@ function WelcomeModal(){
 }
 
 
-function viewKey(){return [S.pg,S.tab,S.liveCamView?"lc":"",S.openDetail||"",S.openRoom||"",S.selUser?S.selUser.id:"",S.chatUser?S.chatUser.id:"",S.bookUser?1:0,S.showEditProfile?1:0].join("|");}
+function viewKey(){return [S.pg,S.tab,S.liveCamView?"lc":"",S.aiView?"ai":"",S.openDetail||"",S.openRoom||"",S.selUser?S.selUser.id:"",S.chatUser?S.chatUser.id:"",S.bookUser?1:0,S.showEditProfile?1:0].join("|");}
 function isTypingEl(t){return !!(t&&t.id&&(t.id==="chatinput"||t.id==="roominput"||t.id.indexOf("cmt_")===0||t.id.indexOf("ai_")===0));}
 var _lastViewKey="";
 // 日本語入力（変換中）の最中に画面を描き直すと、文字が勝手に確定したり消えたりするので、変換が終わるまで待つ
