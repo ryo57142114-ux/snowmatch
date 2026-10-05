@@ -3883,6 +3883,7 @@ function loadUsersFromSupabase(){
     loadMessagesFromSupabase();
     startRealtime();
     refreshPushState();
+    handleDeepLink();
     if(S.pg==="main")render();
   }).catch(function(e){console.error("Users load error:",e);});
 }
@@ -4660,6 +4661,42 @@ function stripLabelEmoji(root){
   }catch(e){}
   return root;
 }
+// ===== マイQRコード（読み取ると自分のプロフィールが開く） =====
+function myProfileLink(){return location.origin+"/?u="+encodeURIComponent(currentUser.id);}
+function loadQrLib(){
+  if(window.qrcode)return Promise.resolve(window.qrcode);
+  if(window._qrP)return window._qrP;
+  window._qrP=new Promise(function(res,rej){var sc=document.createElement("script");sc.src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js";sc.onload=function(){window.qrcode?res(window.qrcode):rej(new Error("QR"));};sc.onerror=function(){window._qrP=null;rej(new Error("QRの準備に失敗しました"));};document.head.appendChild(sc);});
+  return window._qrP;
+}
+function showMyQR(){
+  if(!currentUser)return;
+  var old=document.getElementById("myQrSheet");if(old&&old.parentNode)old.parentNode.removeChild(old);
+  var link=myProfileLink();var me=S.myProfile||{};
+  var ov=document.createElement("div");ov.id="myQrSheet";
+  ov.style.cssText="position:fixed;left:0;right:0;top:0;bottom:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px";
+  var cd=document.createElement("div");cd.style.cssText="width:100%;max-width:340px;background:#fff;border-radius:22px;padding:20px;text-align:center";
+  var av=avU(56,28,{profileImg:me.profileImg,icon:me.icon||"🏂"});av.style.margin="0 auto 8px";cd.appendChild(av);
+  var nm=document.createElement("div");nm.style.cssText="font-weight:900;font-size:17px;color:#1A1A2E";nm.textContent=me.nick||me.name||"";cd.appendChild(nm);
+  var sb2=document.createElement("div");sb2.style.cssText="font-size:12px;color:#6B7280;margin:4px 0 14px";sb2.textContent="読み取ると、あなたのプロフィールが開きます";cd.appendChild(sb2);
+  var box=document.createElement("div");box.style.cssText="width:220px;height:220px;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid #F0F0F0;border-radius:14px;padding:10px;box-sizing:border-box";box.textContent="作成中…";cd.appendChild(box);
+  loadQrLib().then(function(qrcode){var q=qrcode(0,"M");q.addData(link);q.make();box.innerHTML=q.createSvgTag({cellSize:5,margin:0,scalable:true});var sv=box.querySelector("svg");if(sv){sv.style.width="100%";sv.style.height="100%";}}).catch(function(e){box.textContent=(e&&e.message)||"QRを作れませんでした";});
+  function btn(t,bg,col,fn){var b=document.createElement("button");b.textContent=t;b.style.cssText="display:block;width:100%;margin-top:8px;padding:12px;border-radius:14px;border:none;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;background:"+bg+";color:"+col;b.addEventListener("click",fn);cd.appendChild(b);return b;}
+  if(navigator.share)btn("リンクを送る（LINEなど）","linear-gradient(135deg,#FF6B2B,#FF8C55)","#fff",function(){navigator.share({title:"SnowMatch",text:(me.nick||"")+"のプロフィール",url:link}).catch(function(){});});
+  var cp=btn("リンクをコピー","#FFF0E8","#FF6B2B",function(){try{navigator.clipboard.writeText(link).then(function(){cp.textContent="コピーしました";});}catch(e){prompt("このリンクをコピーしてください",link);}});
+  btn("閉じる","#F3F4F6","#4B5563",function(){if(ov.parentNode)ov.parentNode.removeChild(ov);});
+  ov.addEventListener("click",function(e){if(e.target===ov&&ov.parentNode)ov.parentNode.removeChild(ov);});
+  ov.appendChild(cd);document.body.appendChild(ov);
+}
+// QRやリンクから開いたとき（?u=ユーザーID）、その人のプロフィールを表示
+try{(function(){var m=location.search.match(/[?&]u=([0-9a-fA-F-]{20,})/);if(m)window._openUid=decodeURIComponent(m[1]);})();}catch(e){}
+function handleDeepLink(){
+  if(!window._openUid)return;
+  var uid=window._openUid;
+  if(currentUser&&currentUser.id===uid){window._openUid=null;}
+  else{var u=findRealUser(uid);if(!u)return;window._openUid=null;S.selUser=u;}
+  try{history.replaceState(null,"",location.pathname);}catch(e){}
+}
 function renderProfile(){
   var wrap=d({style:{paddingBottom:"80px"}});
   var kycOk=!!(S.myProfile&&S.myProfile.ok===true);var postOk=true;
@@ -4714,7 +4751,11 @@ function renderProfile(){
   var frLbl=document.createElement("div");frLbl.style.cssText="font-size:11px;color:#8A6A2E;margin-top:2px";frLbl.textContent="フォロワー";
   frBtn.appendChild(frNum);frBtn.appendChild(frLbl);
   frBtn.addEventListener("click",function(){S.showFollowList=true;S.followListType="followers";render();});
-  followRow.appendChild(fwBtn);followRow.appendChild(frBtn);hi.appendChild(followRow);
+  followRow.appendChild(fwBtn);followRow.appendChild(frBtn);
+  if(currentUser){var qrB=document.createElement("button");qrB.textContent="QRコード";
+    qrB.style.cssText="align-self:center;margin-left:auto;background:#fff;border:1px solid #E8D9B8;border-radius:16px;padding:6px 12px;font-size:12px;font-weight:800;color:#8A6A2E;cursor:pointer;font-family:inherit";
+    qrB.addEventListener("click",showMyQR);followRow.appendChild(qrB);}
+  hi.appendChild(followRow);
 
   hr.appendChild(hi);hero.appendChild(hr);wrap.appendChild(hero);
   var body=d({style:{padding:"16px 16px 0"}});
