@@ -3612,7 +3612,7 @@ function renderResvList(){
       }
       else if(meProv&&x.status==="pending"){
         bt.appendChild(obtn("お断りする",function(){if(confirm("この予約をお断りしますか？"))setResvStatus(x.id,"declined");},"obtn-s"));
-        bt.appendChild(obtn("✅ 承認する",function(){if(confirm("この予約を承認しますか？"))setResvStatus(x.id,"approved","予約が確定しました！メッセージで集合場所などを決めましょう");},""));
+        bt.appendChild(obtn("✅ 承認する",function(){if(confirm("この予約を承認しますか？"))setResvStatus(x.id,"approved",x.plan==="skill"?"確定しました！メッセージで通話のリンク（Zoom・Google Meetなど）や、動画の受け渡し方法を決めましょう":"予約が確定しました！メッセージで集合場所などを決めましょう");},""));
       }
       if(!meProv&&(x.status==="pending"||x.status==="approved")){
         bt.appendChild(obtn("キャンセル",function(){
