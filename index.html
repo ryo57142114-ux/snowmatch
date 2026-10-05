@@ -2831,7 +2831,7 @@ function renderMarket(){
   var hs=d({style:{color:"#6B7280",fontSize:"13px"}});hs.textContent="会員限定 · 仲間と語ろう・悩み相談・Q&A";
   hd.appendChild(ht);hd.appendChild(hs);wrap.appendChild(hd);
   var tabs=d({style:{display:"flex",gap:"0",marginBottom:"16px",background:"#F5F7FA",borderRadius:"16px",padding:"4px",overflowX:"auto",webkitOverflowScrolling:"touch"}});
-  var tabDefs=[["room","雑談部屋"],["nayami","悩み相談"],["qa","Q&A"]];
+  var tabDefs=[["room","雑談部屋"],["nayami","悩み相談"],["qa","Q&A"],["ai","AI診断"]];
   if(S.marketTab==="checkin")S.marketTab="room";
   for(var ti=0;ti<tabDefs.length;ti++){
     (function(id,lbl){
@@ -2846,6 +2846,7 @@ function renderMarket(){
   wrap.appendChild(tabs);
 
   loadRoomSummary(false);
+  if(S.marketTab==="ai")return renderAiDiag(wrap);
   if(S.openRoom&&(S.marketTab==="room"||S.marketTab==="nayami")){markRoomSeen(S.openRoom);var _rc=renderRoomChat();if(_rc)return _rc;}
   if(S.marketTab==="nayami"){
     var nyNote=d({style:{color:"#6B7280",fontSize:"12.5px",lineHeight:"1.7",marginBottom:"12px"}});nyNote.textContent="滑りの悩み、道具選び、仲間づくりのことなど、気軽に相談できる部屋です。";wrap.appendChild(nyNote);
@@ -2933,6 +2934,189 @@ function renderMarket(){
 function roomOpenNow(){return S.tab==="market"&&!!S.openRoom&&(S.marketTab==="room"||S.marketTab==="nayami")&&!!(S.myProfile&&S.myProfile.ok);}
 function findRoom(id){for(var i=0;i<ROOMS_SAMPLE.length;i++){if(ROOMS_SAMPLE[i].id===id)return ROOMS_SAMPLE[i];}return null;}
 function qaCatLabel(c){var p=String(c).split(" ");return (p.length>1&&!/[A-Za-z0-9ぁ-んァ-ヶ一-龠]/.test(p[0]))?p.slice(1).join(" "):String(c);}
+// ===== AI診断（フォーム診断・ギア診断） =====
+function aiState(){if(!S.ai)S.ai={mode:"form",sport:"スノーボード",level:"中級",concern:"",img:null,preview:null,busy:false,result:null,err:null,remaining:{},gear:{sport:"スノーボード",level:"中級",height:"",weight:"",foot:"",styles:[],snow:"",budget:"",now:""}};return S.ai;}
+// ---- ギア診断：身長・体重・レベル・スタイルから計算（AI APIなし・無料） ----
+function gearCalc(g){
+  var h=parseFloat(g.height)||0,w=parseFloat(g.weight)||0,ft=parseFloat(g.foot)||0,lv=g.level,st=g.styles||[];
+  var lvIdx={"初級":0,"中級":1,"上級":2,"エキスパート":3}[lv];if(lvIdx==null)lvIdx=1;
+  var std=(h-105);var wd=w-std;                 // 体格の目安との差（＋なら重め）
+  var heavy=wd>8,light=wd<-8;
+  function has(x){return st.indexOf(x)>=0;}
+  var r={summary:"",board:[],boots:"",binding:"",points:[],avoid:[]};
+  if(g.sport==="スキー"){
+    var adj=[-12,-7,-3,0][lvIdx];
+    if(has("カービング"))adj-=3;if(has("パウダー"))adj+=5;if(has("パーク")||has("グラトリ"))adj-=2;if(has("フリーラン"))adj+=2;
+    if(heavy)adj+=3;if(light)adj-=3;
+    var L=Math.round(h+adj);
+    var waist=has("パウダー")?"100〜115mm":has("カービング")&&st.length===1?"68〜76mm":has("パーク")||has("グラトリ")?"85〜95mm":has("フリーラン")?"88〜98mm":"78〜88mm";
+    var rad=has("カービング")?"12〜15m（小回りしやすい）":has("パウダー")||has("フリーラン")?"18m以上（高速で安定）":"15〜18m（オールラウンド）";
+    var shape=has("パーク")||has("グラトリ")?"ツインチップ（後ろ向きでも滑れる）":has("パウダー")?"ロッカー入り（先端が浮きやすい）":"キャンバー寄り（エッジがしっかり効く）";
+    r.summary=lv+"・"+(st.join("・")||"オールラウンド")+"なら、長さは"+(L-3)+"〜"+(L+3)+"cmあたりが目安。"+(has("パウダー")?"太めの板で浮力を重視しましょう。":has("カービング")?"細めでターンのしやすい板が合います。":"扱いやすさとのバランスで選びましょう。");
+    r.board=[{label:"長さ",value:(L-3)+"〜"+(L+3)+"cm"},{label:"センター幅",value:waist},{label:"ラディウス",value:rad},{label:"形・キャンバー",value:shape},{label:"硬さ",value:["やわらかめ（操作しやすい）","ミッド","やや硬め","硬め（高速安定）"][lvIdx]+(heavy?"／体重があるので一段硬めも◎":light?"／軽めなので一段やわらかめも◎":"")}];
+    r.boots="フレックスの目安は"+["60〜80","80〜100","100〜120","120〜130"][lvIdx]+"（女性や体重が軽い人は−10〜20が目安）。足の幅と甲の高さが合うかを一番大事にしてください。";
+    r.binding="解放値（DIN）は体重・身長・レベル・ブーツのソール長で決まるので、必ずショップで設定してもらいましょう。";
+    r.points=["長さは迷ったら短めの方が扱いやすい","ブーツは板より先に、足に合うものを選ぶ","試乗会でラディウスの違いを体感すると選びやすい"];
+    r.avoid=[lvIdx<=1?"上級者向けの硬くて長いレース系の板":"やわらかすぎる初心者向けの板（高速でバタつく）",has("パウダー")?"細すぎる板（パウダーで沈みやすい）":"太すぎる板（圧雪で切り返しが重い）"];
+  }else{
+    var adj2=-15+[-3,0,1,2][lvIdx];var sa=0,sn=0;
+    var stA={"グラトリ":-3,"パーク":-3,"カービング":2,"パウダー":4,"フリーラン":1,"オールラウンド":0};
+    st.forEach(function(x){if(stA[x]!=null){sa+=stA[x];sn++;}});if(sn)adj2+=Math.round(sa/sn);
+    if(heavy)adj2+=3;if(light)adj2-=3;
+    var L2=Math.round(h+adj2);
+    var flexIdx=lvIdx+(has("カービング")||has("パウダー")?1:0)-(has("グラトリ")||has("パーク")?1:0)+(heavy?1:0)-(light?1:0);flexIdx=Math.max(0,Math.min(4,flexIdx));
+    var flex=["とてもやわらかめ（2〜3/10）","やわらかめ（3〜4/10）","ミッド（5〜6/10）","やや硬め（6〜7/10）","硬め（7〜9/10）"][flexIdx];
+    var shape2=has("パウダー")?"ディレクショナル（セットバック・テーパー）":(has("グラトリ")||has("パーク"))&&!has("カービング")?"ツイン（前後対称、スイッチもしやすい）":has("カービング")?"ディレクショナル寄り（ノーズが少し長い）":"ディレクショナルツイン（オールラウンド）";
+    var camber=lvIdx===0?"ロッカーかハイブリッド（エッジが引っかかりにくい）":has("グラトリ")&&!has("カービング")?"フラット〜ロッカー寄り（乗りやすく回しやすい）":has("パウダー")?"ロッカー入りハイブリッド（先端が浮きやすい）":has("カービング")?"キャンバー（エッジグリップと反発が強い）":"ハイブリッド（扱いやすさと反発のバランス）";
+    var waist2=ft>=28.5?"ワイド（足がはみ出しにくい）を検討":ft>=27.5?"レギュラーかミッドワイド、ブーツのはみ出しを店で確認":"レギュラー";
+    r.summary=lv+"・"+(st.join("・")||"オールラウンド")+"なら、長さは"+(L2-2)+"〜"+(L2+2)+"cmあたりが目安。"+(has("グラトリ")&&!has("カービング")?"短めでやわらかい板の方が回しやすいです。":has("カービング")?"張りのあるキャンバーで、エッジに乗る楽しさを伸ばしましょう。":has("パウダー")?"長め＋セットバックで浮力を重視しましょう。":"扱いやすいハイブリッドが無難です。");
+    r.board=[{label:"長さ",value:(L2-2)+"〜"+(L2+2)+"cm"},{label:"硬さ",value:flex},{label:"形",value:shape2},{label:"キャンバー",value:camber},{label:"板の幅",value:waist2}];
+    r.boots=["やわらかめで足首が曲げやすいもの","ミッドの硬さで、かかとが浮かないもの","ミッド〜やや硬めで反応のいいもの","硬めで力がダイレクトに伝わるもの"][lvIdx]+"が目安。サイズは普段の靴と同じかやや小さめで、つま先が軽く当たるくらいがよくあります（店で必ず試し履きを）。";
+    r.binding="硬さは板とブーツに合わせるのが基本。角度の目安は"+((has("グラトリ")||has("パーク"))&&!has("カービング")?"ダック（前+15°／後ろ−15°前後）":has("カービング")?"前振り（前+21°／後ろ+6°前後）":"前+15°／後ろ−6°前後")+"。スタンス幅は肩幅くらいから調整しましょう。";
+    r.points=["長さは迷ったら短めの方がコントロールしやすい","ブーツ→ビンディング→板の順に、足に合うものから選ぶ","試乗会でキャンバーとロッカーの違いを体感すると失敗しにくい"];
+    r.avoid=[lvIdx<=1?"硬すぎる上級者向けのフルキャンバー":"やわらかすぎる初心者向けの板（スピードを出すとバタつく）",ft>=28.5?"足のはみ出す細い板（ブーツが雪に引っかかる）":"体格に対して長すぎる板（取り回しが重い）"];
+  }
+  return r;
+}
+// ---- フォーム診断：スマホの中で動く姿勢推定AI（MediaPipe・無料・写真はサーバーに送らない） ----
+var MP_VER="0.10.14";
+function loadPoseModel(){
+  if(window._poseP)return window._poseP;
+  var dynImport=new Function("u","return import(u)");
+  window._poseP=dynImport("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@"+MP_VER).then(function(vision){
+    return vision.FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@"+MP_VER+"/wasm").then(function(fs){
+      return vision.PoseLandmarker.createFromOptions(fs,{baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",delegate:"CPU"},runningMode:"IMAGE",numPoses:1});
+    });
+  });
+  window._poseP.catch(function(){window._poseP=null;});
+  return window._poseP;
+}
+function angAt(a,b,c){var v1x=a.x-b.x,v1y=a.y-b.y,v2x=c.x-b.x,v2y=c.y-b.y;var d=Math.sqrt(v1x*v1x+v1y*v1y)*Math.sqrt(v2x*v2x+v2y*v2y);if(!d)return null;return Math.acos(Math.max(-1,Math.min(1,(v1x*v2x+v1y*v2y)/d)))*180/Math.PI;}
+function formAnalyze(lm,sport){
+  var P=function(i){return lm[i];};var vis=function(i){return (lm[i].visibility==null?1:lm[i].visibility)>0.5;};
+  var need=[23,24,25,26,27,28,11,12];
+  if(need.filter(vis).length<6)return {ok:false,summary:"全身（肩・腰・膝・足首）がはっきり写っていないため、うまく測れませんでした。体全体が写った写真で試してください。"};
+  function mid(a,b){return {x:(P(a).x+P(b).x)/2,y:(P(a).y+P(b).y)/2};}
+  var kL=angAt(P(23),P(25),P(27)),kR=angAt(P(24),P(26),P(28));
+  var knee=Math.round(((kL||0)+(kR||0))/((kL?1:0)+(kR?1:0)||1));
+  var hip=mid(23,24),sh=mid(11,12),kn=mid(25,26),an=mid(27,28);
+  var shinX=kn.x-an.x,shinY=an.y-kn.y;var shin=Math.round(Math.atan2(Math.abs(shinX),shinY)*180/Math.PI);
+  var dir=shinX>=0?1:-1;                                   // 膝が出ている方向＝進行方向（前）とみなす
+  var torsoX=(sh.x-hip.x)*dir,torsoY=hip.y-sh.y;var torso=Math.round(Math.atan2(torsoX,torsoY)*180/Math.PI); // ＋で前傾、−で後傾
+  var hipBack=((hip.x-an.x)*dir)/(Math.abs(an.y-hip.y)||1); // −が大きいほどお尻が後ろ
+  var wristUp=(vis(15)&&P(15).y<sh.y-0.02)||(vis(16)&&P(16).y<sh.y-0.02);
+  var shTilt=Math.round(Math.abs(Math.atan2(P(11).y-P(12).y,P(11).x-P(12).x)*180/Math.PI)%180);var hipTilt=Math.round(Math.abs(Math.atan2(P(23).y-P(24).y,P(23).x-P(24).x)*180/Math.PI)%180);
+  var tiltDiff=Math.abs((shTilt>90?180-shTilt:shTilt)-(hipTilt>90?180-hipTilt:hipTilt));
+  var good=[],issues=[],tips=[];
+  if(knee<=160&&knee>=105)good.push("膝がしっかり曲がっていて安定した姿勢（約"+knee+"°）");
+  else if(knee>160){issues.push("膝が伸びぎみで棒立ちに近い（約"+knee+"°）");tips.push("膝と足首を同時に軽く曲げ、低めの姿勢をキープ");}
+  else{issues.push("膝がかなり深く曲がっている（約"+knee+"°）");tips.push("曲げすぎると動きにくいので、少し高さに余裕を");}
+  if(shin>=12)good.push("すねが前に倒れていて足首を使えている");
+  else{issues.push("すねが立っていて足首があまり使えていない");tips.push("すねをブーツのベロに押し当てる意識で前へ");}
+  if(torso<-5||hipBack<-0.15){issues.push("上半身やお尻が後ろに残りぎみ（後傾）");tips.push("目線を先に送り、おへそを進行方向へ向ける");}
+  else if(torso>45){issues.push("上半身が前に倒れすぎている");tips.push("背すじは保ったまま、膝と足首で低くなる");}
+  else good.push("上半身の傾きがほどよく、重心が板の上にある");
+  if(wristUp){issues.push("腕が肩より上がっていてバランスが乱れやすい");tips.push("両手は腰〜胸の高さで、体の前に軽く構える");}
+  else good.push("腕の高さが落ち着いていてバランスがいい");
+  if(tiltDiff>15)issues.push("肩と腰のラインの傾きがずれている（上半身のひねり・傾き）");
+  if(!issues.length)tips.push("今の姿勢を保ったまま、スピードや斜度を少しずつ上げてみる");
+  var drill=sport==="スキー"?(issues.some(function(t){return t.indexOf("後傾")>=0;})?"緩斜面で、すねをブーツのタンに押し付けたままターンする練習を。手を前に出して、ストックを前につく意識を持つと前に乗りやすくなります。":"緩斜面で、両手を前に出したまま外足に乗り込むターンを繰り返しましょう。上半身を谷側に向け続ける意識がポイントです。"):(issues.some(function(t){return t.indexOf("後傾")>=0;})?"緩斜面のサイドスリップ（木の葉）で、前足に体重を乗せたまま止まる・動くを繰り返す練習を。前足のひざを曲げる意識が後傾を直す近道です。":"緩斜面で、低い姿勢をキープしたまま大きめのターンを繰り返しましょう。ターンの前半から板に乗り込む意識を持つと安定します。");
+  var summ=issues.length===0?"全体的にバランスのいい姿勢です！":issues.length===1?"いい姿勢ですが、1つだけ意識するとさらに安定します。":"いくつか直すとグッと安定しそうです。まずは1つずつ意識してみましょう。";
+  return {ok:true,summary:summ,good:good.slice(0,3),issues:issues.slice(0,3),tips:tips.slice(0,3),drill:drill,metrics:{knee:knee,shin:shin,torso:torso},lm:lm,dir:dir};
+}
+function drawPoseOverlay(canvas,img,lm){
+  var W=img.naturalWidth,H=img.naturalHeight,scale=Math.min(1,720/Math.max(W,H));canvas.width=Math.round(W*scale);canvas.height=Math.round(H*scale);
+  var c=canvas.getContext("2d");c.drawImage(img,0,0,canvas.width,canvas.height);
+  var pairs=[[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28]];
+  c.lineWidth=Math.max(3,canvas.width/150);c.strokeStyle="rgba(255,107,43,.95)";c.lineCap="round";
+  pairs.forEach(function(p){var a=lm[p[0]],b=lm[p[1]];c.beginPath();c.moveTo(a.x*canvas.width,a.y*canvas.height);c.lineTo(b.x*canvas.width,b.y*canvas.height);c.stroke();});
+  c.fillStyle="#fff";[11,12,13,14,15,16,23,24,25,26,27,28].forEach(function(i){var p=lm[i];c.beginPath();c.arc(p.x*canvas.width,p.y*canvas.height,Math.max(4,canvas.width/110),0,Math.PI*2);c.fill();});
+}
+function runAiDiag(){
+  var a=aiState();if(a.busy)return;
+  if(a.mode==="gear"){var g=a.gear;if(!g.height||!g.weight){alert("身長と体重を入れてください");return;}a.err=null;a.result={mode:"gear",data:gearCalc(g)};render();setTimeout(function(){var el=document.getElementById("ai_result");if(el&&el.scrollIntoView)el.scrollIntoView({behavior:"smooth",block:"start"});},50);return;}
+  if(!a.preview){alert("滑っている写真を選んでください");return;}
+  a.busy=true;a.err=null;a.result=null;render();
+  loadPoseModel().then(function(lmk){
+    return new Promise(function(res,rej){var im=new Image();im.onload=function(){res({lmk:lmk,im:im});};im.onerror=function(){rej(new Error("写真を読み込めませんでした"));};im.src=a.preview;});
+  }).then(function(o){
+    var out=o.lmk.detect(o.im);var lm=out&&out.landmarks&&out.landmarks[0];
+    a.busy=false;
+    if(!lm){a.result={mode:"form",data:{ok:false,summary:"写真から人の姿勢を見つけられませんでした。体全体が大きめに写った写真で試してください。"}};render();return;}
+    var r=formAnalyze(lm,a.sport);a.result={mode:"form",data:r};
+    var cv=document.createElement("canvas");try{drawPoseOverlay(cv,o.im,lm);a.overlay=cv.toDataURL("image/jpeg",0.8);}catch(e){a.overlay=null;}
+    render();setTimeout(function(){var el=document.getElementById("ai_result");if(el&&el.scrollIntoView)el.scrollIntoView({behavior:"smooth",block:"start"});},50);
+  }).catch(function(e){a.busy=false;a.err="AIの準備に失敗しました（通信環境を確認して、もう一度お試しください）"+(e&&e.message?"\n"+e.message:"");render();});
+}
+function renderAiDiag(wrap){
+  var a=aiState();
+  var intro=d({style:{color:"#6B7280",fontSize:"12.5px",lineHeight:"1.7",marginBottom:"12px"}});
+  intro.textContent="フォーム診断は、スマホの中で動くAIが写真から関節の位置を見つけて姿勢を測ります（写真はサーバーに送られません）。ギア診断は、体格と滑りのスタイルから道具選びの目安を出します。";wrap.appendChild(intro);
+  var mr=d({style:{display:"flex",gap:"8px",marginBottom:"14px"}});
+  [["form","フォーム診断"],["gear","ギア診断"]].forEach(function(o){var on=a.mode===o[0];var b=document.createElement("button");b.textContent=o[1];
+    b.style.cssText="flex:1;padding:11px;border-radius:14px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;border:1.5px solid "+(on?"#FF6B2B":"#E5E7EB")+";background:"+(on?"#FFF0E8":"#fff")+";color:"+(on?"#FF6B2B":"#4B5563");
+    b.addEventListener("click",function(){if(a.busy)return;a.mode=o[0];a.result=null;a.err=null;render();});mr.appendChild(b);});
+  wrap.appendChild(mr);
+  var c=d({class:"card",style:{padding:"14px",marginBottom:"12px"}});
+  function lbl(t){var l=d({style:{fontSize:"12px",fontWeight:"800",color:"#6B7280",margin:"0 0 6px"}});l.textContent=t;c.appendChild(l);}
+  function chips(list,get,set,multi){var r=d({style:{display:"flex",flexWrap:"wrap",gap:"6px",marginBottom:"12px"}});list.forEach(function(x){var on=multi?get().indexOf(x)>=0:get()===x;var b=document.createElement("button");b.className="chip"+(on?" on":"");b.textContent=x;b.addEventListener("click",function(){if(multi){var arr=get();var k=arr.indexOf(x);if(k>=0)arr.splice(k,1);else arr.push(x);}else set(x);render();});r.appendChild(b);});c.appendChild(r);}
+  function inp(id,ph,val,onv,type){var e=document.createElement("input");e.className="inp";e.id=id;e.type=type||"text";e.placeholder=ph;e.value=val||"";e.style.marginBottom="12px";e.style.fontSize="16px";e.addEventListener("input",function(ev){onv(ev.target.value);});c.appendChild(e);return e;}
+  if(a.mode==="form"){
+    lbl("種目");chips(["スノーボード","スキー"],function(){return a.sport;},function(v){a.sport=v;});
+    lbl("レベル");chips(["初級","中級","上級","エキスパート"],function(){return a.level;},function(v){a.level=v;});
+    lbl("滑っている写真（1枚）");
+    var fi=document.createElement("input");fi.type="file";fi.accept="image/*";fi.style.display="none";
+    fi.addEventListener("change",function(e){var f=e.target.files&&e.target.files[0];e.target.value="";if(!f)return;shrinkImage(f,1024,function(blob,prev){a.preview=prev;a.img=null;a.overlay=null;a.result=null;render();});});
+    c.appendChild(fi);
+    if(a.preview){var pv=document.createElement("img");pv.src=a.preview;pv.alt="選んだ写真";pv.style.cssText="display:block;width:100%;max-height:260px;object-fit:cover;border-radius:12px;margin-bottom:8px";c.appendChild(pv);}
+    var pb=document.createElement("button");pb.textContent=a.preview?"写真を変える":"写真を選ぶ";pb.style.cssText="width:100%;padding:11px;border-radius:12px;border:1.5px dashed #FDBA74;background:#FFF7ED;color:#C2410C;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;margin-bottom:12px";pb.addEventListener("click",function(){fi.click();});c.appendChild(pb);
+    lbl("気になっていること（任意）");
+    var ta=document.createElement("textarea");ta.className="inp";ta.id="ai_concern";ta.rows=2;ta.maxLength=200;ta.placeholder="例：ターンの後半で板がずれる／怖くて後ろ重心になる";ta.style.cssText="width:100%;resize:none;margin-bottom:12px;font-size:16px";ta.value=a.concern||"";ta.addEventListener("input",function(e){a.concern=e.target.value;});c.appendChild(ta);
+    var hint=d({style:{fontSize:"11px",color:"#9CA3AF",lineHeight:"1.6",marginBottom:"12px"}});hint.textContent="体全体と板（スキー）が写っている、横か斜め前からの写真がおすすめです。";c.appendChild(hint);
+  }else{
+    var g=a.gear;
+    lbl("種目");chips(["スノーボード","スキー"],function(){return g.sport;},function(v){g.sport=v;});
+    lbl("レベル");chips(["初級","中級","上級","エキスパート"],function(){return g.level;},function(v){g.level=v;});
+    lbl("身長（cm）");inp("ai_h","例：170",g.height,function(v){g.height=v;},"number");
+    lbl("体重（kg）");inp("ai_w","例：65",g.weight,function(v){g.weight=v;},"number");
+    lbl("足のサイズ（cm・任意）");inp("ai_f","例：26.5",g.foot,function(v){g.foot=v;},"number");
+    lbl("滑りのスタイル（複数OK）");chips(["カービング","グラトリ","パーク","パウダー","フリーラン","オールラウンド"],function(){return g.styles;},null,true);
+    lbl("よく行く雪質・スキー場（任意）");inp("ai_snow","例：ニセコのパウダー、圧雪が多い",g.snow,function(v){g.snow=v;});
+    lbl("予算の目安（任意）");inp("ai_budget","例：板とビンディングで8万円くらい",g.budget,function(v){g.budget=v;});
+    lbl("今使っている道具・悩み（任意）");
+    var ta2=document.createElement("textarea");ta2.className="inp";ta2.id="ai_now";ta2.rows=2;ta2.maxLength=200;ta2.placeholder="例：今の板は柔らかすぎてスピードを出すとバタつく";ta2.style.cssText="width:100%;resize:none;margin-bottom:12px;font-size:16px";ta2.value=g.now||"";ta2.addEventListener("input",function(e){g.now=e.target.value;});c.appendChild(ta2);
+  }
+  var go=document.createElement("button");go.textContent=a.busy?"AIが姿勢を解析中…（初回は20秒ほど）":(a.mode==="form"?"フォームを診断する":"ギアを診断する");
+  go.style.cssText="width:100%;padding:13px;border-radius:14px;border:none;background:"+(a.busy?"#FDBA74":"linear-gradient(135deg,#FF6B2B,#FF8C55)")+";color:#fff;font-weight:900;font-size:15px;cursor:pointer;font-family:inherit";
+  go.addEventListener("click",runAiDiag);c.appendChild(go);
+  wrap.appendChild(c);
+  if(a.err){var er=d({style:{background:"#FEF2F2",border:"1.5px solid #FCA5A5",borderRadius:"12px",padding:"10px 12px",fontSize:"12.5px",color:"#991B1B",lineHeight:"1.6",marginBottom:"12px"}});er.textContent=a.err;wrap.appendChild(er);}
+  if(a.result&&a.result.mode===a.mode){
+    var r=a.result.data||{};
+    var rc=d({class:"card",style:{padding:"14px",marginBottom:"12px",border:"1.5px solid #FFE1CF"}});rc.id="ai_result";
+    var rt=d({style:{fontWeight:"900",fontSize:"16px",color:"#1A1A2E",marginBottom:"8px"}});rt.textContent=a.mode==="form"?"フォーム診断の結果":"ギア診断の結果";rc.appendChild(rt);
+    if(a.mode==="form"&&a.overlay&&r.ok!==false){var ov=document.createElement("img");ov.src=a.overlay;ov.alt="AIが見つけた関節の位置";ov.style.cssText="display:block;width:100%;border-radius:12px;margin-bottom:10px";rc.appendChild(ov);}
+    if(r.summary){var sm=d({style:{fontSize:"13.5px",color:"#1A1A2E",lineHeight:"1.75",marginBottom:"10px",whiteSpace:"pre-wrap"}});sm.textContent=r.summary;rc.appendChild(sm);}
+    if(a.mode==="form"&&r.metrics){var mt=d({style:{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:"6px",marginBottom:"8px"}});
+      [["膝の曲がり",r.metrics.knee+"°"],["すねの前傾",r.metrics.shin+"°"],["上半身",(r.metrics.torso>=0?"前傾 ":"後傾 ")+Math.abs(r.metrics.torso)+"°"]].forEach(function(x){var cc=d({style:{background:"#F5F7FA",borderRadius:"10px",padding:"8px",textAlign:"center"}});cc.appendChild(d({style:{fontSize:"10.5px",color:"#6B7280"}}));cc.firstChild.textContent=x[0];var vv=d({style:{fontSize:"15px",fontWeight:"900",color:"#1A1A2E"}});vv.textContent=x[1];cc.appendChild(vv);mt.appendChild(cc);});
+      rc.appendChild(mt);}
+    function sec(title,items,color){if(!items||!items.length)return;var h=d({style:{fontSize:"12.5px",fontWeight:"900",color:color,margin:"10px 0 4px"}});h.textContent=title;rc.appendChild(h);items.forEach(function(t){var li=d({style:{fontSize:"13px",color:"#374151",lineHeight:"1.7",paddingLeft:"12px",position:"relative"}});li.textContent="・"+t;rc.appendChild(li);});}
+    if(a.mode==="form"){
+      sec("良いところ",r.good,"#15803D");sec("気になるところ",r.issues,"#C2410C");sec("次に意識すること",r.tips,"#1D4ED8");
+      if(r.drill){var dh=d({style:{fontSize:"12.5px",fontWeight:"900",color:"#7C3AED",margin:"10px 0 4px"}});dh.textContent="おすすめの練習";rc.appendChild(dh);var dd=d({style:{fontSize:"13px",color:"#374151",lineHeight:"1.7"}});dd.textContent=r.drill;rc.appendChild(dd);}
+    }else{
+      if(r.board&&r.board.length){var bh=d({style:{fontSize:"12.5px",fontWeight:"900",color:"#1D4ED8",margin:"10px 0 4px"}});bh.textContent=g2label();rc.appendChild(bh);
+        r.board.forEach(function(x){var row=d({style:{display:"flex",gap:"10px",fontSize:"13px",padding:"5px 0",borderBottom:"1px solid #F3F4F6"}});row.appendChild(sp({style:{color:"#6B7280",flexShrink:"0",minWidth:"80px"}},x.label||""));row.appendChild(sp({style:{color:"#1A1A2E",fontWeight:"700"}},x.value||""));rc.appendChild(row);});}
+      if(r.boots){sec("ブーツ",[r.boots],"#0F766E");}
+      if(r.binding){sec(a.gear.sport==="スキー"?"ビンディング":"ビンディング",[r.binding],"#0F766E");}
+      sec("選ぶときのポイント",r.points,"#15803D");sec("避けた方がいいもの",r.avoid,"#C2410C");
+    }
+    var dc=d({style:{fontSize:"10.5px",color:"#9CA3AF",lineHeight:"1.6",marginTop:"12px"}});dc.textContent=a.mode==="form"?"※ 写真1枚の姿勢を測った参考のコメントです。撮る角度で数値は変わり、レッスンの代わりではありません。練習はコース内で無理のない範囲で行ってください。":"※ 一般的な選び方の目安です。実際に購入する前に、ショップで試したり相談したりしてください。";rc.appendChild(dc);
+    wrap.appendChild(rc);
+  }
+  function g2label(){return a.gear.sport==="スキー"?"板（スキー）の目安":"板の目安";}
+  return wrap;
+}
 // ===== ラウンジの部屋：新着の数・最新メッセージ =====
 function roomSeenKey(){return "sm_room_seen_"+(currentUser?currentUser.id:"");}
 function roomSeenMap(){try{return JSON.parse(localStorage.getItem(roomSeenKey())||"{}");}catch(e){return {};}}
@@ -5352,7 +5536,7 @@ function WelcomeModal(){
 
 
 function viewKey(){return [S.pg,S.tab,S.liveCamView?"lc":"",S.openDetail||"",S.openRoom||"",S.selUser?S.selUser.id:"",S.chatUser?S.chatUser.id:"",S.bookUser?1:0,S.showEditProfile?1:0].join("|");}
-function isTypingEl(t){return !!(t&&t.id&&(t.id==="chatinput"||t.id==="roominput"||t.id.indexOf("cmt_")===0));}
+function isTypingEl(t){return !!(t&&t.id&&(t.id==="chatinput"||t.id==="roominput"||t.id.indexOf("cmt_")===0||t.id.indexOf("ai_")===0));}
 var _lastViewKey="";
 // 日本語入力（変換中）の最中に画面を描き直すと、文字が勝手に確定したり消えたりするので、変換が終わるまで待つ
 window._imeOn=false;window._renderPending=false;
