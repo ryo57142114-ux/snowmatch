@@ -1289,9 +1289,7 @@ function renderSnowAlert(wrap){
   }
   var lb2=d({style:{fontSize:"12px",fontWeight:"800",color:"#6B7280",margin:"4px 0 8px"}});lb2.textContent="こんなときにお知らせ";c.appendChild(lb2);
   [["on_forecast","前日の夜、天気予報で雪・大雪注意報のとき"],["on_powder","「パウダー」の報告が入ったとき"],["on_snowing","「雪（降っている）」の報告が入ったとき"]].forEach(function(o){
-    var row=document.createElement("label");row.style.cssText="display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13.5px;color:#1A1A2E;cursor:pointer";
-    var cb=document.createElement("input");cb.type="checkbox";cb.checked=!!pr[o[0]];cb.style.cssText="width:20px;height:20px;accent-color:#0284C7";cb.addEventListener("change",function(e){pr[o[0]]=e.target.checked;});
-    row.appendChild(cb);row.appendChild(document.createTextNode(o[1]));c.appendChild(row);
+    c.appendChild(makeCheck(o[1],!!pr[o[0]],function(v){pr[o[0]]=v;},"#0284C7"));
   });
   var sv=document.createElement("button");sv.textContent=pr.saved?"設定を保存する":"アラートを開始する";
   sv.style.cssText="width:100%;margin-top:10px;padding:13px;border-radius:14px;border:none;background:linear-gradient(135deg,#0369A1,#38BDF8);color:#fff;font-weight:900;font-size:15px;cursor:pointer;font-family:inherit";
@@ -4708,6 +4706,20 @@ function handleDeepLink(){
   try{history.replaceState(null,"",location.pathname);}catch(e){}
 }
 try{if(/[?&]ref=/.test(location.search)&&!/[?&]u=/.test(location.search))history.replaceState(null,"",location.pathname);}catch(e){}
+// 自前のチェックボックス（iPhoneで標準のチェックが見えない問題を避ける）
+function makeCheck(text,checked,onToggle,color){
+  color=color||"#FF6B2B";var on=!!checked;
+  var row=document.createElement("div");row.setAttribute("role","checkbox");row.tabIndex=0;
+  row.style.cssText="display:flex;align-items:center;gap:10px;padding:9px 0;font-size:13.5px;color:#1A1A2E;cursor:pointer;-webkit-user-select:none;user-select:none";
+  var bx=document.createElement("span");bx.style.cssText="flex-shrink:0;width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;color:#fff";
+  function paint(){bx.style.background=on?color:"#fff";bx.style.border="2px solid "+(on?color:"#D1D5DB");bx.textContent=on?"✓":"";row.setAttribute("aria-checked",on?"true":"false");}
+  paint();
+  var tx=document.createElement("span");tx.textContent=text;tx.style.lineHeight="1.5";
+  row.appendChild(bx);row.appendChild(tx);
+  function tog(){on=!on;paint();if(onToggle)onToggle(on);}
+  row.addEventListener("click",tog);row.addEventListener("keydown",function(e){if(e.key===" "||e.key==="Enter"){e.preventDefault();tog();}});
+  return row;
+}
 // ===================== スキル販売（出品メニュー） =====================
 var SKILL_FEE=0.15;
 var SKILL_CATS=[
@@ -4867,7 +4879,7 @@ function renderSkillEditor(){
     box("出品できるもの（例）",SKILL_RULES_OK,"#166534","#F0FDF4","○");
     box("出品できないもの",SKILL_RULES_NG,"#991B1B","#FEF2F2","×");
     var checks=["ゲレンデでのレッスン・ガイドは出品しません","送迎・宿・旅行手配・物の販売は出品しません","お金のやり取りはアプリの中だけで行います","スキー場のルールと法律を守ります"];var st=[];
-    checks.forEach(function(t,i){var lb=document.createElement("label");lb.style.cssText="display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13px;color:#1A1A2E;cursor:pointer";var cb=document.createElement("input");cb.type="checkbox";cb.style.cssText="width:20px;height:20px;accent-color:#FF6B2B";cb.addEventListener("change",function(e){st[i]=e.target.checked;});lb.appendChild(cb);lb.appendChild(document.createTextNode(t));wrap.appendChild(lb);});
+    checks.forEach(function(t,i){wrap.appendChild(makeCheck(t,false,function(v){st[i]=v;}));});
     var ag=document.createElement("button");ag.textContent="同意して出品をはじめる";ag.style.cssText="width:100%;margin-top:12px;padding:13px;border-radius:14px;border:none;background:linear-gradient(135deg,#FF6B2B,#FF8C55);color:#fff;font-weight:900;font-size:15px;cursor:pointer;font-family:inherit";
     ag.addEventListener("click",function(){if(st.filter(Boolean).length<checks.length){alert("すべての項目にチェックしてください");return;}try{localStorage.setItem("sm_skill_rules_"+currentUser.id,"1");}catch(e){}render();});
     wrap.appendChild(ag);return wrap;
