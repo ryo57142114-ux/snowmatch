@@ -1232,9 +1232,13 @@ function loadSnowAlertPrefs(){
   if(!sb||!currentUser||window._saLoading)return;window._saLoading=true;
   sb.from("snow_alert_prefs").select("*").eq("user_id",currentUser.id).maybeSingle().then(function(r){
     window._saLoading=false;
-    S.saPrefs=(r&&r.data)?{resorts:r.data.resorts||[],on_powder:r.data.on_powder!==false,on_snowing:!!r.data.on_snowing,saved:true}:{resorts:((S.myProfile&&S.myProfile.resorts)||[]).slice(0,3),on_powder:true,on_snowing:false,saved:false};
+    S.saPrefs=(r&&r.data)?{resorts:r.data.resorts||[],on_powder:r.data.on_powder!==false,on_snowing:!!r.data.on_snowing,on_forecast:r.data.on_forecast!==false,saved:true}:{resorts:((S.myProfile&&S.myProfile.resorts)||[]).slice(0,3),on_powder:true,on_snowing:false,on_forecast:true,saved:false};
     render();
   },function(){window._saLoading=false;});
+}
+function loadForecastResorts(){
+  if(!sb||window._frLoading||S.fcResorts)return;window._frLoading=true;
+  sb.from("resort_places").select("resort").then(function(r){window._frLoading=false;S.fcResorts=(r&&r.data||[]).map(function(x){return x.resort;});render();},function(){window._frLoading=false;});
 }
 function SnowAlertHero(){
   var card=document.createElement("div");
@@ -1246,7 +1250,7 @@ function SnowAlertHero(){
   var tag=document.createElement("span");tag.textContent="プラス会員";tag.style.cssText="font-size:10px;font-weight:800;background:linear-gradient(135deg,#FBE38E,#E6B325);color:#5A4521;border-radius:8px;padding:2px 7px";t1.appendChild(tag);
   var t2=document.createElement("div");t2.style.cssText="font-size:11.5px;color:#BAE6FD;margin-top:3px;line-height:1.5";
   var pr=S.saPrefs;
-  t2.textContent=(pr&&pr.saved&&pr.resorts.length)?("お知らせ中："+pr.resorts.join("・")):"お気に入りのスキー場にパウダー報告が入ったら、自動でお知らせ";
+  t2.textContent=(pr&&pr.saved&&pr.resorts.length)?("お知らせ中："+pr.resorts.join("・")):"雪の予報やパウダー報告を、自動でお知らせ";
   tx.appendChild(t1);tx.appendChild(t2);
   var ar=document.createElement("div");ar.style.cssText="color:rgba(255,255,255,.7);font-size:22px";ar.textContent="›";
   row.appendChild(tx);row.appendChild(ar);card.appendChild(row);
@@ -1259,7 +1263,7 @@ function renderSnowAlert(wrap){
   back.addEventListener("click",function(){S.alertView=false;render();});wrap.appendChild(back);
   var ht=d({style:{fontWeight:"900",fontSize:"19px",color:"#1A1A2E",marginBottom:"4px"}});ht.textContent="新雪アラート";wrap.appendChild(ht);
   var ex=d({style:{color:"#6B7280",fontSize:"12.5px",lineHeight:"1.7",marginBottom:"14px"}});
-  ex.textContent="お気に入りのスキー場に、ゲレンデ速報で「パウダー」の報告が入った瞬間に、自動でプッシュ通知が届きます。設定しておけば、あとは何もしなくてOKです。";wrap.appendChild(ex);
+  ex.textContent="お気に入りのスキー場について、①前日の夜に気象庁の予報で雪・大雪注意報が出ていたとき、②ゲレンデ速報で「パウダー」の報告が入ったときに、自動でプッシュ通知が届きます。当たればラッキーくらいの気持ちでどうぞ。";wrap.appendChild(ex);
   if(!currentUser||S.isGuest){var g=d({class:"card",style:{padding:"14px",fontSize:"13px",color:"#4B5563",textAlign:"center"}});g.textContent="使うにはログインが必要です";wrap.appendChild(g);return wrap;}
   if(!isPlus(currentUser.id)){
     var lk=d({class:"card",style:{padding:"16px",textAlign:"center",border:"1.5px solid #FDE68A",background:"#FFFBEB"}});
@@ -1273,7 +1277,8 @@ function renderSnowAlert(wrap){
   var lb=d({style:{fontSize:"12px",fontWeight:"800",color:"#6B7280",marginBottom:"8px"}});lb.textContent="お知らせするスキー場（3か所まで）";c.appendChild(lb);
   var chips=d({style:{display:"flex",flexWrap:"wrap",gap:"6px",marginBottom:"10px"}});
   if(!pr.resorts.length){var em=d({style:{fontSize:"12px",color:"#9CA3AF"}});em.textContent="まだ選ばれていません";chips.appendChild(em);}
-  pr.resorts.forEach(function(r){var ch=document.createElement("button");ch.textContent=r+" ×";ch.style.cssText="border:none;border-radius:14px;padding:6px 12px;background:#E0F2FE;color:#075985;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit";ch.addEventListener("click",function(){pr.resorts=pr.resorts.filter(function(x){return x!==r;});render();});chips.appendChild(ch);});
+  if(!S.fcResorts)loadForecastResorts();
+  pr.resorts.forEach(function(r){var ch=document.createElement("button");ch.textContent=r+((S.fcResorts&&S.fcResorts.indexOf(r)<0)?"（予報は未対応）":"")+" ×";ch.style.cssText="border:none;border-radius:14px;padding:6px 12px;background:#E0F2FE;color:#075985;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit";ch.addEventListener("click",function(){pr.resorts=pr.resorts.filter(function(x){return x!==r;});render();});chips.appendChild(ch);});
   c.appendChild(chips);
   if(pr.resorts.length<3){
     var sel=document.createElement("select");sel.className="inp";sel.style.cssText="width:100%;font-size:16px;margin-bottom:12px";
@@ -1283,7 +1288,7 @@ function renderSnowAlert(wrap){
     c.appendChild(sel);
   }
   var lb2=d({style:{fontSize:"12px",fontWeight:"800",color:"#6B7280",margin:"4px 0 8px"}});lb2.textContent="こんなときにお知らせ";c.appendChild(lb2);
-  [["on_powder","「パウダー」の報告が入ったとき"],["on_snowing","「雪（降っている）」の報告が入ったとき"]].forEach(function(o){
+  [["on_forecast","前日の夜、天気予報で雪・大雪注意報のとき"],["on_powder","「パウダー」の報告が入ったとき"],["on_snowing","「雪（降っている）」の報告が入ったとき"]].forEach(function(o){
     var row=document.createElement("label");row.style.cssText="display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13.5px;color:#1A1A2E;cursor:pointer";
     var cb=document.createElement("input");cb.type="checkbox";cb.checked=!!pr[o[0]];cb.style.cssText="width:20px;height:20px;accent-color:#0284C7";cb.addEventListener("change",function(e){pr[o[0]]=e.target.checked;});
     row.appendChild(cb);row.appendChild(document.createTextNode(o[1]));c.appendChild(row);
@@ -1293,9 +1298,9 @@ function renderSnowAlert(wrap){
   sv.addEventListener("click",function(){
     if(!pr.resorts.length){alert("スキー場を1つ以上選んでください");return;}
     sv.textContent="保存中…";
-    sb.from("snow_alert_prefs").upsert({user_id:currentUser.id,resorts:pr.resorts,on_powder:!!pr.on_powder,on_snowing:!!pr.on_snowing,updated_at:new Date().toISOString()}).then(function(r){
+    sb.from("snow_alert_prefs").upsert({user_id:currentUser.id,resorts:pr.resorts,on_powder:!!pr.on_powder,on_snowing:!!pr.on_snowing,on_forecast:!!pr.on_forecast,updated_at:new Date().toISOString()}).then(function(r){
       if(r.error){alert("保存できませんでした: "+r.error.message);sv.textContent="設定を保存する";return;}
-      pr.saved=true;render();alert("新雪アラートを設定しました！\n"+pr.resorts.join("・")+"にパウダー報告が入ったらお知らせします。");
+      pr.saved=true;render();alert("新雪アラートを設定しました！\n"+pr.resorts.join("・")+"に雪の予報やパウダー報告があったらお知らせします。");
     });
   });
   c.appendChild(sv);wrap.appendChild(c);
@@ -1303,7 +1308,7 @@ function renderSnowAlert(wrap){
     var pn=d({class:"card",style:{padding:"12px 14px",border:"1.5px solid #FCD34D",background:"#FFFBEB",fontSize:"12.5px",color:"#92400E",lineHeight:"1.7"}});
     pn.textContent="⚠️ このスマホの通知がオフになっています。お知らせを受け取るには、マイページの「通知をオンにする」を押してください。";wrap.appendChild(pn);
   }
-  var nt=d({style:{fontSize:"11px",color:"#9CA3AF",lineHeight:"1.6",marginTop:"10px"}});nt.textContent="※ 同じスキー場のお知らせは3時間に1回までです。天気予報からの自動お知らせは今後追加予定です。";wrap.appendChild(nt);
+  var nt=d({style:{fontSize:"11px",color:"#9CA3AF",lineHeight:"1.6",marginTop:"10px"}});nt.textContent="※ 天気予報のお知らせは毎晩8時ごろ、出典：気象庁。予報なので外れることもあります。速報のお知らせは同じスキー場につき3時間に1回までです。「予報は未対応」のスキー場は、速報のお知らせだけ届きます。";wrap.appendChild(nt);
   return wrap;
 }
 function renderSnowBoard(wrap){
