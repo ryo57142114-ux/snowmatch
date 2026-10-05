@@ -1434,6 +1434,7 @@ function goBack(){
   if(S.invite){R({invite:null});return true;}
   if(S.postModal){R({postModal:null});return true;}
   if(S.bookUser){R({bookUser:null});return true;}
+  if(S.skillDetail){R({skillDetail:null});return true;}
   if(S.skillBook){R({skillBook:null});return true;}
   if(S.reviewFor){R({reviewFor:null});return true;}
   if(S.postDetail){S.postDetail=null;render();return true;}
@@ -4780,7 +4781,7 @@ function skillCard(m,u,compact){
   var pr=document.createElement("div");pr.style.cssText="font-weight:900;font-size:15px;color:#FF6B2B;flex-shrink:0";pr.textContent="¥"+Number(m.price).toLocaleString()+"／"+(m.unit||"");
   var _rt=menuRating(m.id);if(_rt){var rtl=document.createElement("div");rtl.style.cssText="font-size:12px;color:#B45309;font-weight:800;margin-top:4px";rtl.textContent=starsText(_rt.avg)+" "+_rt.avg.toFixed(1)+"（"+_rt.n+"件）";c.appendChild(rtl);}
   bt.appendChild(who);bt.appendChild(pr);c.appendChild(bt);
-  c.addEventListener("click",function(){if(u&&!u._me)R({selUser:u});});
+  c.addEventListener("click",function(){if(u)R({skillDetail:{menu:m,user:u}});});
   return c;
 }
 function SkillMenusBlock(u){
@@ -4880,6 +4881,35 @@ function ReviewModal(){
       },function(e){st.sending=false;render();alert("通信エラー: "+(e&&e.message?e.message:e));});
     },""));
     box.appendChild(br);
+  });
+}
+// スキルのメニュー詳細（同行の料金などは出さず、そのメニューのことだけ）
+function SkillDetailModal(){
+  var st=S.skillDetail,m=st.menu,u=st.user;var mine=!!(currentUser&&u&&u.uid===currentUser.id);
+  return Modal(false,function(){R({skillDetail:null});},function(box){
+    var top=d({style:{display:"flex",gap:"6px",marginBottom:"8px"}});
+    top.appendChild(sp({style:{fontSize:"11px",fontWeight:"800",background:"#FFF0E8",color:"#C2410C",borderRadius:"8px",padding:"3px 9px"}},skillCatName(m.category)));
+    top.appendChild(sp({style:{fontSize:"11px",fontWeight:"800",background:"#E0F2FE",color:"#075985",borderRadius:"8px",padding:"3px 9px"}},"オンライン"));
+    box.appendChild(top);
+    var t=d({style:{fontWeight:"900",fontSize:"19px",color:"#1A1A2E",lineHeight:"1.5",marginBottom:"6px"}});t.textContent=m.title;box.appendChild(t);
+    var pr=d({style:{fontWeight:"900",fontSize:"20px",color:"#FF6B2B",marginBottom:"8px"}});pr.textContent="¥"+Number(m.price).toLocaleString()+"／"+(m.unit||"");box.appendChild(pr);
+    var rt=menuRating(m.id);if(rt){var rl=d({style:{fontSize:"13px",color:"#B45309",fontWeight:"800",marginBottom:"10px"}});rl.textContent=starsText(rt.avg)+" "+rt.avg.toFixed(1)+"（"+rt.n+"件の評価）";box.appendChild(rl);}
+    var sl=d({style:{display:"flex",alignItems:"center",gap:"10px",background:"#F9FAFB",borderRadius:"14px",padding:"10px 12px",marginBottom:"12px"}});
+    sl.appendChild(avU(40,20,u));var sn=d({style:{flex:"1",minWidth:"0"}});var snn=d({style:{fontWeight:"900",fontSize:"14px",color:"#1A1A2E",display:"flex",alignItems:"center",gap:"4px"}});snn.appendChild(sp({},(u.name||"")+(mine?"（あなた）":"")));addPlus(snn,u.uid,14);sn.appendChild(snn);
+    var sd=d({style:{fontSize:"11.5px",color:"#6B7280"}});sd.textContent="出品者";sn.appendChild(sd);sl.appendChild(sn);
+    if(!mine){var pb=document.createElement("button");pb.textContent="プロフィール";pb.style.cssText="background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:6px 10px;font-size:12px;font-weight:800;color:#374151;cursor:pointer;font-family:inherit";pb.addEventListener("click",function(){R({skillDetail:null,selUser:u});});sl.appendChild(pb);}
+    box.appendChild(sl);
+    if(m.description){var dh=d({style:{fontSize:"12px",fontWeight:"800",color:"#9CA3AF",marginBottom:"4px"}});dh.textContent="内容";box.appendChild(dh);var ds=d({style:{fontSize:"14px",color:"#374151",lineHeight:"1.8",whiteSpace:"pre-wrap",marginBottom:"12px"}});ds.textContent=m.description;box.appendChild(ds);}
+    var nt=d({style:{fontSize:"11.5px",color:"#6B7280",lineHeight:"1.7",background:"#F0F9FF",borderRadius:"12px",padding:"10px 12px",marginBottom:"12px"}});nt.textContent="オンラインで行うサービスです。申し込み→相手が承認→チャットで通話のリンクや動画をやり取り→終わったら「完了して評価する」の流れです。";box.appendChild(nt);
+    if(rt){var rh=d({style:{fontSize:"12px",fontWeight:"800",color:"#9CA3AF",marginBottom:"6px"}});rh.textContent="評価";box.appendChild(rh);
+      rt.list.slice(0,5).forEach(function(rv){var rr=d({style:{marginBottom:"6px",background:"#FFFBEB",borderRadius:"10px",padding:"8px 10px",fontSize:"12.5px",color:"#78350F",lineHeight:"1.6",whiteSpace:"pre-wrap"}});var cu=findRealUser(rv.customer);rr.textContent=starsText(rv.rating)+"　"+((cu&&cu.name)||"利用者")+(rv.comment?"\n"+rv.comment:"");box.appendChild(rr);});}
+    if(mine){var mn=d({style:{fontSize:"12px",color:"#9CA3AF",textAlign:"center",padding:"8px 0"}});mn.textContent="あなたのメニューです（編集はマイページの「スキル販売」から）";box.appendChild(mn);return;}
+    var br=d({style:{display:"flex",gap:"8px",marginTop:"6px"}});
+    var q=document.createElement("button");q.textContent="質問する";q.style.cssText="flex:1;padding:12px;border-radius:14px;border:1.5px solid #FDBA74;background:#fff;color:#C2410C;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit";
+    q.addEventListener("click",function(){if(!currentUser||S.isGuest){alert("質問するには登録（ログイン）が必要です");return;}R({skillDetail:null,tab:"chat",chatUser:u,chatIn:"「"+m.title+"」について質問です。"});});
+    var b=document.createElement("button");b.textContent="申し込む";b.style.cssText="flex:1.4;padding:12px;border-radius:14px;border:none;background:linear-gradient(135deg,#FF6B2B,#FF8C55);color:#fff;font-weight:900;font-size:14px;cursor:pointer;font-family:inherit";
+    b.addEventListener("click",function(){if(!currentUser||S.isGuest){alert("申し込むには登録（ログイン）が必要です");return;}R({skillDetail:null,skillBook:{menu:m,user:u,date:"",time:"20:00",note:""}});});
+    br.appendChild(q);br.appendChild(b);box.appendChild(br);
   });
 }
 function SkillShelf(){
@@ -6213,6 +6243,7 @@ function _renderInner(){
     }
   }
   if(S.bookUser)app.appendChild(BookModal(S.bookUser));
+  if(S.skillDetail)app.appendChild(SkillDetailModal());
   if(S.skillBook)app.appendChild(SkillBookModal());
   if(S.reviewFor)app.appendChild(ReviewModal());
   if(S.postModal)app.appendChild(PostModal());
