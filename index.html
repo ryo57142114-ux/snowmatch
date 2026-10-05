@@ -3342,10 +3342,25 @@ function roomMsgRow(m){
   if(roomMediaOnly(m)&&!m.reply_to){bub.style.padding="4px";bub.style.background=isMe?"#FF8C55":"#fff";}
   bub.setAttribute("data-bub","1");
   roomLongPress(bub,m,nm);
-  var tm=d({style:{fontSize:"10px",color:"#9CA3AF",flexShrink:"0"}});tm.textContent=hmOf(m.created_at);
+  var tm=d({style:{fontSize:"10px",color:"#9CA3AF",flexShrink:"0",display:"flex",flexDirection:"column",alignItems:isMe?"flex-end":"flex-start",gap:"2px"}});
+  if(isMe||S.isAdmin){var dl=document.createElement("button");dl.textContent="削除";dl.setAttribute("aria-label","このメッセージを削除");
+    dl.style.cssText="background:none;border:none;padding:0;color:#9CA3AF;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:underline";
+    dl.addEventListener("click",function(ev){ev.stopPropagation();deleteRoomMsg(m);});tm.appendChild(dl);}
+  tm.appendChild(sp({},hmOf(m.created_at)));
   line.appendChild(bub);line.appendChild(tm);box.appendChild(line);row.appendChild(box);
   row.id="rm_"+m.id;
   return row;
+}
+function deleteRoomMsg(m){
+  if(!sb||!currentUser)return;
+  if(!confirm(m.media_url?(m.media_type==="video"?"この動画を削除しますか？":"この写真を削除しますか？"):"このメッセージを削除しますか？"))return;
+  sb.from("lounge_messages").delete().eq("id",m.id).select().then(function(r){
+    if(r.error){alert("削除できませんでした: "+r.error.message);return;}
+    if(!r.data||!r.data.length){alert("削除できませんでした（権限がありません）");return;}
+    if(S.roomMsgs&&S.roomMsgs[m.room_id])S.roomMsgs[m.room_id]=S.roomMsgs[m.room_id].filter(function(x){return x.id!==m.id;});
+    var el=document.getElementById("rm_"+m.id);if(el&&el.parentNode)el.parentNode.removeChild(el);
+    try{if(m.media_url&&m.user_id===currentUser.id){var pth=String(m.media_url).split("/object/public/posts/")[1];if(pth)sb.storage.from("posts").remove([decodeURIComponent(pth.split("?")[0])]).then(function(){},function(){});}}catch(e){}
+  });
 }
 function roomDaySep(iso){var w=d({style:{textAlign:"center",margin:"6px 0 12px"}});var t=d({style:{display:"inline-block",background:"rgba(0,0,0,0.08)",color:"#4B5563",fontSize:"11px",fontWeight:"700",padding:"3px 10px",borderRadius:"10px"}});t.textContent=roomDayLbl(iso);w.appendChild(t);return w;}
 function roomLongPress(el,m,nm){
