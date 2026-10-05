@@ -4740,6 +4740,7 @@ var SKILL_NG=[
   [/マッサージ|整体|施術|治療/,"資格が必要な行為は出品できません"],
   [/LINE交換|直接振込|現金で|振り込み/,"アプリの外での直接のお金のやり取り・連絡先の交換はできません"]
 ];
+function isSkillTemplate(t){t=String(t||"").trim();for(var i=0;i<SKILL_CATS.length;i++){if(SKILL_CATS[i].items.indexOf(t)>=0)return true;}return false;}
 function skillNgCheck(t){var out=[];SKILL_NG.forEach(function(x){if(x[0].test(t||""))out.push(x[1]);});return out;}
 function skillCatName(id){for(var i=0;i<SKILL_CATS.length;i++)if(SKILL_CATS[i].id===id)return SKILL_CATS[i].name;return id;}
 function skillLimit(){return (currentUser&&isPlus(currentUser.id))?5:1;}
@@ -4821,7 +4822,7 @@ function MySkillSection(){
   hd.appendChild(sp({style:{fontWeight:"900",fontSize:"16px",color:"#1A1A2E"}},"スキル販売"));
   hd.appendChild(sp({style:{fontSize:"11.5px",color:"#6B7280"}},"出品 "+used+"／"+lim+(lim===1?"（スノマ＋なら5つ）":"")));
   c.appendChild(hd);
-  var ex=d({style:{fontSize:"12px",color:"#6B7280",lineHeight:"1.7",marginBottom:"10px"}});ex.textContent="オンライン相談・ギア選び相談・滑り動画の考察など、自分のスキルをメニューにして販売できます。運営の確認後に公開されます。";c.appendChild(ex);
+  var ex=d({style:{fontSize:"12px",color:"#6B7280",lineHeight:"1.7",marginBottom:"10px"}});ex.textContent="オンライン相談・ギア選び相談・滑り動画の考察など、自分のスキルをメニューにして販売できます。用意された「メニューの型」はすぐ公開、自分で考えたタイトルは運営の確認後に公開されます。";c.appendChild(ex);
   mine.forEach(function(m){
     var r=d({style:{border:"1px solid #F0F0F0",borderRadius:"12px",padding:"10px 12px",marginBottom:"8px"}});
     var tp=d({style:{display:"flex",justifyContent:"space-between",gap:"8px",alignItems:"flex-start"}});
@@ -4890,7 +4891,7 @@ function renderSkillEditor(){
   lbl("カテゴリ");
   var cr=d({style:{display:"flex",flexWrap:"wrap",gap:"6px",marginBottom:"12px"}});
   SKILL_CATS.forEach(function(x){var b=document.createElement("button");b.className="chip"+(f.category===x.id?" on":"");b.textContent=x.name;b.addEventListener("click",function(){f.category=x.id;render();});cr.appendChild(b);});c.appendChild(cr);
-  lbl("メニューの型（タップでタイトルに入ります）");
+  lbl("メニューの型（タップでタイトルに入ります・型のままなら審査なしですぐ公開）");
   var tr=d({style:{display:"flex",flexWrap:"wrap",gap:"6px",marginBottom:"12px"}});
   var cat=SKILL_CATS.filter(function(x){return x.id===f.category;})[0]||SKILL_CATS[0];
   cat.items.forEach(function(t){var b=document.createElement("button");b.className="chip"+(f.title===t?" on":"");b.textContent=t;b.style.whiteSpace="normal";b.style.textAlign="left";b.addEventListener("click",function(){f.title=t;if(/1本/.test(t))f.unit="1本";else if(/作成/.test(t))f.unit="1回";render();});tr.appendChild(b);});c.appendChild(tr);
@@ -4910,7 +4911,7 @@ function renderSkillEditor(){
   function updRv(){var v=parseInt(f.price,10);rv.textContent=v>=500&&v<=30000?("受け取り目安：¥"+Math.floor(v*(1-SKILL_FEE)).toLocaleString()+"（手数料15%を引いた額）"):"500円〜30,000円で入力してください";}
   pi.addEventListener("input",function(e){f.price=e.target.value;updRv();});updRv();
   var nt=d({style:{fontSize:"11.5px",color:"#9CA3AF",lineHeight:"1.6",marginBottom:"12px"}});nt.textContent="出品できるのはオンラインで完結するメニューです。ゲレンデで一緒に滑る・撮影する場合は、プロフィールの「同行・撮影」の料金設定を使ってください。";c.appendChild(nt);
-  var sv=document.createElement("button");sv.textContent=f.id?"変更して審査に出す":"審査に出す";
+  var sv=document.createElement("button");sv.textContent=isSkillTemplate(f.title)?(f.id?"変更して公開する":"公開する"):(f.id?"変更して審査に出す":"審査に出す");
   sv.style.cssText="width:100%;padding:13px;border-radius:14px;border:none;background:linear-gradient(135deg,#FF6B2B,#FF8C55);color:#fff;font-weight:900;font-size:15px;cursor:pointer;font-family:inherit";
   sv.addEventListener("click",function(){
     var title=(f.title||"").trim(),desc=(f.description||"").trim(),price=parseInt(f.price,10);
@@ -4923,7 +4924,7 @@ function renderSkillEditor(){
     var q=f.id?sb.from("skill_menus").update(row).eq("id",f.id).select():sb.from("skill_menus").insert(Object.assign({user_id:currentUser.id},row)).select();
     q.then(function(r){
       if(r.error){sv.disabled=false;sv.textContent="審査に出す";alert("保存できませんでした: "+(String(r.error.message).indexOf("skill_limit")>=0?"出品できる数の上限です（無料会員は1つ、スノマ＋は5つまで）":r.error.message));return;}
-      S.skillEdit=null;window._skAt=0;loadSkillMenus(true);render();alert("審査に出しました！運営が確認したあと公開されます。");
+      S.skillEdit=null;window._skAt=0;loadSkillMenus(true);render();alert(isSkillTemplate(title)?"公開しました！プロフィールとホームのスキル一覧に表示されます。":"審査に出しました！運営が確認したあと公開されます。\n（メニューの型をそのまま使うと、審査なしですぐ公開されます）");
     });
   });
   c.appendChild(sv);wrap.appendChild(c);
