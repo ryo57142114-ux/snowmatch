@@ -3725,6 +3725,7 @@ function loadReservations(){
   sb.from("reservations").select("*").or("customer.eq."+currentUser.id+",provider.eq."+currentUser.id).order("created_at",{ascending:false}).then(function(r){
     if(r.error){console.error("reservations load error",r.error);return;}
     S.resv=r.data||[];
+    if(S.resv.some(function(x){return x.plan==="skill";}))loadSkillReviews(false);
     if(!S.notifs)S.notifs=[];
     var readMap={};S.notifs.forEach(function(n){if(String(n.id).indexOf("rv_")===0&&n.read)readMap[n.id]=true;});
     S.notifs=S.notifs.filter(function(n){return String(n.id).indexOf("rv_")!==0;});
@@ -3745,6 +3746,9 @@ function loadReservations(){
       else if(!meProv&&x.status==="declined"){msg=nm+"さんは今回の予約をお断りしました";ic="🙏";}
       else if(meProv&&x.status==="cancelled"){msg=nm+"さんが予約をキャンセルしました";ic="↩️";}
       if(msg){var nid="rv_"+x.id+"_"+x.status+(isPaidResv(x)?"_paid":"");S.notifs.unshift({id:nid,uid:meProv?x.customer:x.provider,type:"book",icon:ic,msg:msg,time:"",read:!!readMap[nid]||isNotifRead(nid)});}
+      // 提供した側へ：評価が届いた／売上を送金した
+      if(meProv&&x.plan==="skill"){var _rv=reviewOf(x.id);if(_rv){var rid="rv_"+x.id+"_review";S.notifs.unshift({id:rid,uid:x.customer,type:"book",icon:"⭐",msg:nm+"さんが「"+(x.plan_label||"")+"」を完了し、"+starsText(_rv.rating)+" の評価をつけました"+(_rv.comment?"「"+_rv.comment+"」":""),time:"",read:!!readMap[rid]||isNotifRead(rid)});}}
+      if(meProv&&x.pay_status==="transferred"){var tid="rv_"+x.id+"_transferred";S.notifs.unshift({id:tid,uid:x.customer,type:"book",icon:"💴",msg:(x.plan==="skill"?"「"+(x.plan_label||"")+"」":String(x.service_date).replace(/-/g,"/")+"の同行")+"の売上 ¥"+calcF(Number(x.price_total||0)).payout.toLocaleString()+" を、受け取り口座（Stripe）に送金しました",time:"",read:!!readMap[tid]||isNotifRead(tid)});}
     }
     render();
   });
@@ -5066,7 +5070,8 @@ function loadSkillReviews(force){
   sb.from("skill_reviews").select("*").order("created_at",{ascending:false}).limit(1000).then(function(r){
     window._srLoading=false;if(r.error){return;}
     var key=JSON.stringify(r.data||[]);if(key===window._srKey)return;window._srKey=key;
-    S.skillReviews=r.data||[];render();
+    S.skillReviews=r.data||[];
+    if(currentUser&&S.resv&&(S.resv||[]).some(function(x){return x.plan==="skill";}))loadReservations();else render();
   },function(){window._srLoading=false;});
 }
 function reviewOf(resvId){var l=S.skillReviews||[];for(var i=0;i<l.length;i++)if(l[i].reservation_id===resvId)return l[i];return null;}
@@ -5090,6 +5095,7 @@ function ReviewModal(){
         st.sending=false;
         if(r.error){render();alert("送れませんでした: "+r.error.message);return;}
         S.skillReviews=[r.data[0]].concat(S.skillReviews||[]);R({reviewFor:null});alert("評価を送りました。ありがとうございました！");
+        try{sb.functions.invoke("resv-pay",{body:{action:"payout"}}).then(function(){setTimeout(loadReservations,1500);},function(){});}catch(e){}
       },function(e){st.sending=false;render();alert("通信エラー: "+(e&&e.message?e.message:e));});
     },""));
     box.appendChild(br);
