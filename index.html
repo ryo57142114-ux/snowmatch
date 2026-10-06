@@ -287,12 +287,40 @@ function renderTerms(){
   }
   var links=[["利用規約（全文）を読む","/terms.html"],["プライバシーポリシーを読む","/privacy.html"],["特定商取引法に基づく表記","/tokushoho.html"]];
   for(var j=0;j<links.length;j++){
-    var a=document.createElement("a");a.href=links[j][1];a.target="_blank";a.rel="noopener";a.textContent=links[j][0];
+    var a=document.createElement("a");a.href=links[j][1];(function(u){a.addEventListener("click",function(ev){ev.preventDefault();openDocPage(u);});})(links[j][1]);a.textContent=links[j][0];
     a.style.cssText="display:block;text-align:center;padding:13px 0;margin-top:10px;border-radius:14px;border:1.5px solid #FF6B2B;color:#FF6B2B;font-weight:800;font-size:14px;text-decoration:none";
     wrap.appendChild(a);
   }
   return wrap;
 }
+// ===== 規約などのページをアプリの中で開く（閉じるとそのまま元の画面に戻る）=====
+function openDocPage(url){
+  closeDocPage();
+  var ov=document.createElement("div");ov.id="docpage";
+  ov.style.cssText="position:fixed;inset:0;z-index:9999;background:#fff;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)";
+  var bar=document.createElement("div");bar.style.cssText="display:flex;align-items:center;padding:10px 12px;border-bottom:1px solid #EEF0F3;flex-shrink:0;background:#fff";
+  var bk=document.createElement("button");bk.textContent="‹ 戻る";bk.style.cssText="color:#FF6B2B;font-weight:900;font-size:16px;padding:8px 10px;min-height:44px";
+  bk.addEventListener("click",function(){
+    var fr=document.getElementById("docframe");
+    try{if(fr&&fr.contentWindow&&window._docDepth>0){window._docDepth-=2;fr.contentWindow.history.back();return;}}catch(e){}
+    closeDocPage();
+  });
+  var cl=document.createElement("button");cl.textContent="閉じる";cl.style.cssText="margin-left:auto;color:#6B7280;font-weight:800;font-size:14px;padding:8px 10px;min-height:44px";
+  cl.addEventListener("click",closeDocPage);
+  bar.appendChild(bk);bar.appendChild(cl);ov.appendChild(bar);
+  var fr=document.createElement("iframe");fr.id="docframe";fr.src=url;fr.style.cssText="flex:1;width:100%;border:none";
+  window._docDepth=-1;
+  fr.addEventListener("load",function(){
+    window._docDepth++;
+    // ページ内の「SnowMatchに戻る」などアプリへのリンクは、この画面を閉じるだけにする
+    try{var as=fr.contentDocument.querySelectorAll("a");for(var i=0;i<as.length;i++){(function(a){var h=a.getAttribute("href")||"";
+      if(h==="/"||h==="/index.html"||h==="./"||h==="index.html"||/^https?:\/\/[^\/]+\/?$/.test(h)&&a.host===location.host){a.addEventListener("click",function(ev){ev.preventDefault();closeDocPage();});}
+      else if(a.target==="_blank"&&a.host===location.host)a.removeAttribute("target");
+    })(as[i]);}}catch(e){}
+  });
+  ov.appendChild(fr);document.body.appendChild(ov);
+}
+function closeDocPage(){var o=document.getElementById("docpage");if(o&&o.parentNode)o.parentNode.removeChild(o);}
 // ===== Stripe Connect：同行料金の受け取り =====
 function stripeCall(action){
   return sb.functions.invoke("stripe-connect",{body:{action:action}}).then(function(r){
@@ -1709,13 +1737,17 @@ function renderPlusPage(){
   items.push("お支払いはStripe（決済サービス）の画面で行います。SnowMatchはカード番号を保存しません。");
   items.forEach(function(t){var r=d({style:{display:"flex",gap:"6px",fontSize:"12.5px",color:"#374151",lineHeight:"1.7",marginTop:"2px"}});r.appendChild(sp({style:{flexShrink:"0",color:"#9CA3AF"}},"・"));r.appendChild(sp(null,t));cf.appendChild(r);});
   var lk=d({style:{display:"flex",gap:"14px",marginTop:"8px",flexWrap:"wrap"}});
-  [["利用規約","/terms.html"],["特定商取引法に基づく表記","/tokushoho.html"]].forEach(function(x){var a=document.createElement("a");a.href=x[1];a.target="_blank";a.rel="noopener";a.textContent=x[0];a.style.cssText="font-size:12px;font-weight:800;color:#FF6B2B";lk.appendChild(a);});
+  [["利用規約","/terms.html"],["特定商取引法に基づく表記","/tokushoho.html"]].forEach(function(x){var a=document.createElement("a");a.href=x[1];a.addEventListener("click",function(ev){ev.preventDefault();openDocPage(x[1]);});a.textContent=x[0];a.style.cssText="font-size:12px;font-weight:800;color:#FF6B2B";lk.appendChild(a);});
   cf.appendChild(lk);
   wrap.appendChild(cf);
-  var ag=document.createElement("label");ag.style.cssText="display:flex;align-items:center;gap:10px;padding:4px 2px 0;font-size:13px;font-weight:800;color:#1A1A2E;cursor:pointer";
-  var cb=document.createElement("input");cb.type="checkbox";cb.checked=!!S.plusAgree;cb.style.cssText="width:20px;height:20px;accent-color:#FF6B2B;flex-shrink:0";
-  cb.addEventListener("change",function(){R({plusAgree:cb.checked});});
-  ag.appendChild(cb);ag.appendChild(document.createTextNode("上の内容と利用規約に同意します"));wrap.appendChild(ag);
+  var ag=document.createElement("button");ag.type="button";
+  ag.style.cssText="display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:14px;margin-top:2px;border-radius:14px;cursor:pointer;font-family:inherit;font-size:13.5px;font-weight:800;color:#1A1A2E;"+(S.plusAgree?"background:#FFF4EC;border:1.5px solid #FF6B2B":"background:#fff;border:1.5px solid #D1D5DB");
+  var box=document.createElement("span");
+  box.style.cssText="width:24px;height:24px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;box-sizing:border-box;"+(S.plusAgree?"background:#FF6B2B;border:none":"background:#fff;border:2px solid #9CA3AF");
+  if(S.plusAgree)box.innerHTML='<svg width="14" height="14" viewBox="0 0 14 14"><path d="M2.5 7.5l3 3 6-7" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  ag.appendChild(box);ag.appendChild(sp(null,"上の内容と利用規約に同意します"));
+  ag.addEventListener("click",function(){R({plusAgree:!S.plusAgree});});
+  wrap.appendChild(ag);
   var go=bigBtn(wrap,p.name+"でお支払いへ進む",true,function(){return plusCall("checkout",p.id);});
   if(!S.plusAgree){go.disabled=true;go.style.opacity=".45";go.style.cursor="default";}
   return wrap;
