@@ -321,6 +321,45 @@ function openDocPage(url){
   ov.appendChild(fr);document.body.appendChild(ov);
 }
 function closeDocPage(){var o=document.getElementById("docpage");if(o&&o.parentNode)o.parentNode.removeChild(o);}
+// ===== 同行・スキル販売のお支払い（Edge Function：resv-pay）=====
+function resvCall(action,id){
+  return sb.functions.invoke("resv-pay",{body:{action:action,id:id}}).then(function(r){
+    if(r.error){
+      var ctx=r.error.context;
+      if(ctx&&typeof ctx.json==="function")return ctx.json().then(function(j){throw new Error((j&&j.error)||r.error.message);},function(){throw new Error(r.error.message);});
+      throw new Error(r.error.message||String(r.error));
+    }
+    if(r.data&&r.data.error)throw new Error(r.data.error);
+    return r.data||{};
+  });
+}
+function payResv(x,btn){
+  if(btn){if(btn.disabled)return;btn.disabled=true;btn._t=btn.textContent;btn.textContent="処理中...";}
+  resvCall("checkout",x.id).then(function(dt){if(!dt.url)throw new Error("お支払い画面を開けませんでした");location.href=dt.url;})
+    .catch(function(e){if(btn){btn.disabled=false;btn.textContent=btn._t;}alert("お支払いに進めませんでした: "+(e&&e.message?e.message:e));});
+}
+function isPaidResv(x){return !!x&&(x.pay_status==="paid"||x.pay_status==="transferred");}
+function cancelResv(x,meProv){
+  var amt="¥"+Number(x.price_total||0).toLocaleString();
+  var paid=x.pay_status==="paid";
+  var msg;
+  if(!paid)msg=meProv?"この予約をキャンセルしますか？\n（お支払い前のため、お金のやり取りはありません）":"この予約をキャンセルしますか？";
+  else if(meProv)msg="この予約をキャンセルしますか？\n\n相手には支払った金額（"+amt+"）が全額返金されます。";
+  else{
+    var td=new Date(Date.now()+9*3600000).toISOString().slice(0,10);
+    msg=String(x.service_date)>td?"前日までのキャンセルのため、"+amt+" が全額返金されます。\n\nキャンセルしますか？":"当日のキャンセルのため、キャンセル料として料金の100%（"+amt+"）がかかり、返金されません。\n\n悪天候・リフト運休・スキー場の営業中止の場合は、キャンセルしたあとに「お問い合わせ」から運営に知らせてください（確認のうえ返金します）。\n\nキャンセルしますか？";
+  }
+  if(!confirm(msg))return;
+  resvCall("cancel",x.id).then(function(dt){alert(dt.refunded?"キャンセルしました。返金はカード会社によって、反映まで数日〜2週間ほどかかることがあります。":"キャンセルしました。");loadReservations();})
+    .catch(function(e){alert(e&&e.message?e.message:e);});
+}
+// お支払い画面から戻ってきたとき：反映されるまで少し待つ
+function resvAfterReturn(paid){
+  if(!paid){return;}
+  var n=0;function tick(){n++;if(currentUser)loadReservations();if(n<6)setTimeout(tick,3000);}
+  setTimeout(tick,1500);
+  setTimeout(function(){alert("お支払いありがとうございます！予約が確定しました。\nメッセージで当日の集合場所や、通話のリンクなどを決めましょう。");},400);
+}
 // ===== Stripe Connect：同行料金の受け取り =====
 function stripeCall(action){
   return sb.functions.invoke("stripe-connect",{body:{action:action}}).then(function(r){
@@ -654,27 +693,14 @@ function ReqPayModal(){
     line("お支払い合計","¥"+price.toLocaleString(),true);
     var sn=d({style:{fontSize:"11px",color:"#9A3412",marginTop:"6px",lineHeight:"1.6"}});sn.textContent="追加の手数料はかかりません（運営手数料は受け取る側の金額から差し引かれます）。";sum.appendChild(sn);
     box.appendChild(sum);
-    var pt=d({style:{fontWeight:"800",color:"#1A1A2E",fontSize:"14px",marginBottom:"8px"}});pt.textContent="支払い方法";box.appendChild(pt);
-    if(!S.selPayment)S.selPayment="card";
-    [["card","💳","クレジットカード"],["applepay","🍎","Apple Pay"],["googlepay","🔵","Google Pay"],["paypay","🔴","PayPay"]].forEach(function(m){
-      var on=S.selPayment===m[0];
-      var r=d({style:{display:"flex",alignItems:"center",gap:"10px",padding:"11px 14px",borderRadius:"14px",border:"2px solid "+(on?"#FF6B2B":"#E5E7EB"),background:on?"#FFF0E8":"#fff",marginBottom:"8px",cursor:"pointer"}});
-      r.addEventListener("click",function(){S.selPayment=m[0];render();});
-      r.appendChild(sp({style:{fontSize:"20px"}},m[1]));r.appendChild(sp({style:{flex:"1",fontWeight:"800",fontSize:"14px",color:"#1A1A2E"}},m[2]));
-      var ck=d({style:{width:"20px",height:"20px",borderRadius:"10px",border:"2px solid "+(on?"#FF6B2B":"#D1D5DB"),background:on?"#FF6B2B":"#fff",color:"#fff",fontSize:"11px",fontWeight:"900",display:"flex",alignItems:"center",justifyContent:"center"}});if(on)ck.textContent="✓";r.appendChild(ck);
-      box.appendChild(r);
-    });
+    var pt=d({style:{fontSize:"12px",color:"#4B5563",lineHeight:"1.7",marginBottom:"8px"}});pt.textContent="次の画面（Stripe）で、クレジットカード・Apple Pay などでお支払いいただけます。";box.appendChild(pt);
     var flow=d({style:{background:"#F0F7FF",borderRadius:"12px",padding:"10px 12px",margin:"6px 0 12px",fontSize:"11.5px",color:"#1565C0",lineHeight:"1.8"}});
-    flow.textContent="🔒 お支払いはStripeが安全に預かります\n① いま支払う → ② 当日一緒に滑る → ③ 滑走日のあとに相手へ送金";flow.style.whiteSpace="pre-line";box.appendChild(flow);
+    flow.textContent="🔒 お支払いはStripeが安全に預かります\n① いま支払う → ② 当日一緒に滑る → ③ 滑走日の2日後に相手へ送金";flow.style.whiteSpace="pre-line";box.appendChild(flow);
     var cp=d({style:{fontSize:"11.5px",color:"#7C2D12",background:"#FFF7ED",borderRadius:"12px",padding:"10px 12px",marginBottom:"12px",lineHeight:"1.7",whiteSpace:"pre-line"}});
     cp.textContent="📅 キャンセルポリシー\n・前日までのキャンセル：全額返金\n・当日のキャンセル：料金の100%\n・悪天候・リフト運休・相手側の都合の場合は全額返金";box.appendChild(cp);
-    var dm=d({style:{fontSize:"11px",color:"#9CA3AF",textAlign:"center",marginBottom:"10px"}});dm.textContent="※現在はデモのため、実際の請求は行われません";box.appendChild(dm);
     var br=d({style:{display:"flex",gap:"10px"}});
     br.appendChild(obtn("戻る",function(){if(!st.sending)R({reqPay:null});},"obtn-s"));
-    var pb=obtn(st.sending?"処理中...":"¥"+price.toLocaleString()+" を支払って確定",function(){
-      if(st.sending)return;st.sending=true;pb.textContent="処理中...";
-      confirmApplicant(x,o,function(ok){st.sending=false;if(ok){R({reqPay:null});alert("お支払いが完了し、予約が確定しました！（デモ）\nメッセージで集合場所などを決めましょう");}else{pb.textContent="¥"+price.toLocaleString()+" を支払って確定";}});
-    },"");
+    var pb=obtn("¥"+price.toLocaleString()+" を支払って確定",function(){payResv(x,pb);},"");
     br.appendChild(pb);box.appendChild(br);
   });
 }
@@ -1848,7 +1874,7 @@ var FAQ=[
   ["お金をもらうこともできる？","できます。自分のプロフィールに同行・撮影の料金を設定しておくと、予約が入ったときに受け取れます。また「同行・撮影お願いします」の投稿に応募して参加した場合も、募集者が出した金額を受け取れます（受け取るには本人確認が必要です）。"],
   ["キャンセルしたらどうなる？","・前日までのキャンセル：全額返金\n・当日のキャンセル：料金の100%\n・悪天候・リフト運休・相手側の都合の場合：全額返金"],
   ["当日なにかトラブルがあったら？","マイページの「お問い合わせ」から、できるだけ早く運営に知らせてください。相手への送金前であれば、運営が双方に確認して対応します。"],
-  ["今はお金がかかる？","現在、決済はテスト（デモ）中のため、実際の請求は行われません。本番の決済が始まるときは、アプリ内でお知らせします。"]
+  ["お支払いはいつ？","有料の同行・撮影やスキル販売は、相手が予約を承認した後に「予約」タブからお支払いすると確定します（クレジットカード・Apple Payなど）。募集に応募があった場合は、お願いする人を選ぶときにお支払いします。無料で一緒に滑る場合は、お金はかかりません。"]
  ]},
  {sec:"🛡 安全に使うために",items:[
   ["スキー場で撮影してもいいの？","スキー場ごとに撮影や営利活動のルールがあります。必ず各スキー場のルールをご確認のうえご利用ください。\n\n【許可のない有償の撮影・営利活動を公式に禁止しているスキー場】\nサッポロテイネ、ルスツリゾート、サホロリゾート、たんばらスキーパーク、ハンターマウンテン塩原、タングラムスキーサーカス、スキージャム勝山、グランデコスノーリゾート、ホワイトワールド尾瀬岩鞍\n→ これらのスキー場では、お金を受け取る撮影の依頼・引き受けはしないでください。\n\n【撮影に事前の登録・申請が必要なスキー場】\nニセコ（グラン・ヒラフ、アンヌプリ、ビレッジ、HANAZONO）、戸隠スキー場\n→ 撮影する前に、公式サイトで手続きを確認してください。\n\nここに載っていないスキー場も、ルールが変わることがあります。撮影する前に公式サイトで確認しましょう。"],
@@ -2082,74 +2108,11 @@ function BookModal(u){
     box.appendChild(sm);
     var esc=d({style:{background:"#F0F7FF",border:"1.5px solid #90CAF9",borderRadius:"14px",padding:"14px",marginBottom:"12px"}});
     var et=d({style:{fontWeight:"800",color:"#1565C0",fontSize:"13px",marginBottom:"8px"}});et.textContent="🔐 エスクロー決済の流れ";esc.appendChild(et);
-    var steps=["① Stripeが安全に決済・預かり","② 同行・撮影サービス実施後に完了確認","③ Stripeが自動振込（"+nm+"予定）"];
+    var steps=["① 相手の承認後にお支払い（Stripeが安全に預かり）","② 当日一緒に滑る・撮影する","③ 滑走日の2日後に相手へ自動で送金"];
     for(var si=0;si<steps.length;si++){var sd=d({style:{fontSize:"12.5px",color:"#1A237E",lineHeight:"1.8"}});sd.textContent=steps[si];esc.appendChild(sd);}
     box.appendChild(esc);
-    // 支払い方法選択
-    var pmTitle=document.createElement("div");pmTitle.style.cssText="font-weight:800;color:#1A1A2E;font-size:14px;margin-bottom:10px";pmTitle.textContent="💳 支払い方法を選択";box.appendChild(pmTitle);
-    if(!S.selPayment)S.selPayment="card";
-    var pmMethods=[
-      {id:"card",icon:"💳",name:"クレジットカード",sub:"Visa / Master / JCB / Amex",color:"#1A1A2E",bg:"#F5F7FA",border:"#E8E8E8"},
-      {id:"paypay",icon:"🔴",name:"PayPay",sub:"残高・クレジット・銀行口座",color:"#FF0033",bg:"#FFF0F0",border:"#FF9999"},
-      {id:"applepay",icon:"🍎",name:"Apple Pay",sub:"Touch ID / Face IDで支払い",color:"#1A1A2E",bg:"#F5F7FA",border:"#E8E8E8"},
-      {id:"googlepay",icon:"🔵",name:"Google Pay",sub:"Googleアカウントで支払い",color:"#4285F4",bg:"#F0F4FF",border:"#A8C4FF"}
-    ];
-    var pmGrid=document.createElement("div");pmGrid.style.cssText="display:flex;flex-direction:column;gap:8px;margin-bottom:14px";
-    for(var pmi=0;pmi<pmMethods.length;pmi++){
-      (function(pm){
-        var isSelected=(S.selPayment===pm.id);
-        var pmRow=document.createElement("div");
-        pmRow.style.cssText="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;border:2px solid "+(isSelected?"#FF6B2B":pm.border)+";background:"+(isSelected?"#FFF0E8":pm.bg)+";cursor:pointer";
-        pmRow.addEventListener("click",function(){S.selPayment=pm.id;render();});
-        var pmIcon=document.createElement("div");pmIcon.style.cssText="font-size:24px;flex-shrink:0";pmIcon.textContent=pm.icon;
-        var pmInfo=document.createElement("div");pmInfo.style.cssText="flex:1";
-        var pmName=document.createElement("div");pmName.style.cssText="font-weight:800;font-size:14px;color:"+pm.color;pmName.textContent=pm.name;
-        var pmSub=document.createElement("div");pmSub.style.cssText="font-size:11px;color:#9CA3AF;margin-top:2px";pmSub.textContent=pm.sub;
-        pmInfo.appendChild(pmName);pmInfo.appendChild(pmSub);
-        var pmCheck=document.createElement("div");pmCheck.style.cssText="width:20px;height:20px;border-radius:10px;border:2px solid "+(isSelected?"#FF6B2B":"#D1D5DB")+";background:"+(isSelected?"#FF6B2B":"#fff")+";display:flex;align-items:center;justify-content:center;flex-shrink:0";
-        if(isSelected){var chk=document.createElement("span");chk.style.cssText="color:#fff;font-size:11px;font-weight:900";chk.textContent="✓";pmCheck.appendChild(chk);}
-        pmRow.appendChild(pmIcon);pmRow.appendChild(pmInfo);pmRow.appendChild(pmCheck);
-        pmGrid.appendChild(pmRow);
-      })(pmMethods[pmi]);
-    }
-    box.appendChild(pmGrid);
-
-    // カード入力フォーム
-    if(S.selPayment==="card"){
-      var cardForm=document.createElement("div");cardForm.style.cssText="background:#F5F7FA;border-radius:14px;padding:14px;margin-bottom:14px";
-      var cardLbl=document.createElement("div");cardLbl.style.cssText="font-size:12px;font-weight:700;color:#6B7280;margin-bottom:10px";cardLbl.textContent="カード情報（デモ用）";cardForm.appendChild(cardLbl);
-      var cardNum=document.createElement("input");cardNum.type="text";cardNum.className="inp";cardNum.placeholder="1234 5678 9012 3456";cardNum.style.marginBottom="8px";cardNum.maxLength=19;
-      cardNum.addEventListener("input",function(e){var v=e.target.value.replace(/[^0-9]/g,"").replace(/(.{4})/g,"$1 ").trim();e.target.value=v;});
-      cardForm.appendChild(cardNum);
-      var cardRow=document.createElement("div");cardRow.style.cssText="display:flex;gap:8px";
-      var cardExp=document.createElement("input");cardExp.type="text";cardExp.className="inp";cardExp.placeholder="MM/YY";cardExp.style.flex="1";cardExp.maxLength=5;
-      cardExp.addEventListener("input",function(e){var v=e.target.value.replace(/[^0-9]/g,"");if(v.length>=2)v=v.slice(0,2)+"/"+v.slice(2);e.target.value=v;});
-      var cardCvc=document.createElement("input");cardCvc.type="text";cardCvc.className="inp";cardCvc.placeholder="CVC";cardCvc.style.flex="1";cardCvc.maxLength=4;
-      cardRow.appendChild(cardExp);cardRow.appendChild(cardCvc);cardForm.appendChild(cardRow);box.appendChild(cardForm);
-    }
-    // PayPay
-    if(S.selPayment==="paypay"){
-      var ppBox=document.createElement("div");ppBox.style.cssText="background:#FFF0F0;border:1.5px solid #FF0033;border-radius:14px;padding:16px;margin-bottom:14px;text-align:center";
-      var ppT=document.createElement("div");ppT.style.cssText="font-size:36px;margin-bottom:6px";ppT.textContent="🔴";
-      var ppN=document.createElement("div");ppN.style.cssText="font-weight:800;color:#FF0033;font-size:14px;margin-bottom:4px";ppN.textContent="PayPayで支払う";
-      var ppS=document.createElement("div");ppS.style.cssText="font-size:12px;color:#9CA3AF";ppS.textContent="決済ボタンを押すとPayPayアプリが起動します";
-      ppBox.appendChild(ppT);ppBox.appendChild(ppN);ppBox.appendChild(ppS);box.appendChild(ppBox);
-    }
-    // Apple Pay
-    if(S.selPayment==="applepay"){
-      var apBox=document.createElement("div");apBox.style.cssText="background:#F5F7FA;border:1.5px solid #1A1A2E;border-radius:14px;padding:16px;margin-bottom:14px;text-align:center";
-      var apN=document.createElement("div");apN.style.cssText="font-weight:800;color:#1A1A2E;font-size:15px;margin-bottom:4px";apN.textContent="🍎 Apple Pay";
-      var apS=document.createElement("div");apS.style.cssText="font-size:12px;color:#9CA3AF";apS.textContent="Touch ID / Face IDで認証して支払います";
-      apBox.appendChild(apN);apBox.appendChild(apS);box.appendChild(apBox);
-    }
-    // Google Pay
-    if(S.selPayment==="googlepay"){
-      var gpBox=document.createElement("div");gpBox.style.cssText="background:#F0F4FF;border:1.5px solid #4285F4;border-radius:14px;padding:16px;margin-bottom:14px;text-align:center";
-      var gpN=document.createElement("div");gpN.style.cssText="font-weight:800;color:#4285F4;font-size:15px;margin-bottom:4px";gpN.textContent="🔵 Google Pay";
-      var gpS=document.createElement("div");gpS.style.cssText="font-size:12px;color:#9CA3AF";gpS.textContent="Googleアカウントで安全に支払います";
-      gpBox.appendChild(gpN);gpBox.appendChild(gpS);box.appendChild(gpBox);
-    }
-
+    var payWhen=d({style:{background:"#FFFBEB",border:"1.5px solid #FDE68A",borderRadius:"14px",padding:"12px 14px",marginBottom:"14px",fontSize:"12.5px",color:"#92400E",lineHeight:"1.7"}});
+    payWhen.textContent="💳 お支払いは、相手が予約を承認した後です。承認されると通知が届くので、「予約」タブからお支払いすると確定します（クレジットカード・Apple Payなど）。";box.appendChild(payWhen);
     var pmNote=document.createElement("div");pmNote.style.cssText="background:#F0F7FF;border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:11px;color:#1565C0;line-height:1.7";pmNote.textContent="🔒 決済・資金管理はStripeが行います。SnowMatchはお金を預かりません。";box.appendChild(pmNote);
 
     box.appendChild(CostIncludedBox(u,true));
@@ -2160,7 +2123,7 @@ function BookModal(u){
     var br=document.createElement("div");br.style.cssText="display:flex;gap:10px";
     br.appendChild(obtn("閉じる",function(){R({bookUser:null});},"obtn-s"));
     var payLabels={card:"💳 カードで支払う",paypay:"🔴 PayPayで支払う",applepay:"🍎 Apple Payで支払う",googlepay:"🔵 Google Payで支払う"};
-    var payLbl="📩 予約を申し込む（決済はデモ）";
+    var payLbl="📩 予約を申し込む";
     br.appendChild(obtn(payLbl,function(){
       if(!S.bkDate){alert(openSlotsOf(u).length?"空いている枠を選んでください":"空き日程が出ていないため予約できません。メッセージで相談してください");return;}
       if(u.uid&&typeof sb!=="undefined"&&sb&&currentUser){
@@ -3777,10 +3740,11 @@ function loadReservations(){
         else if(meProv&&x.status==="cancelled"){msg=nm+"さんが予約をキャンセルしました";ic="↩️";}
       }
       else if(meProv&&x.status==="pending")msg=nm+"さんから予約の申し込みが届きました（"+String(x.service_date).replace(/-/g,"/")+"）";
-      else if(!meProv&&x.status==="approved"){msg=nm+"さんが予約を承認しました！";ic="✅";}
+      else if(!meProv&&x.status==="approved"&&!isPaidResv(x)){msg=nm+"さんが予約を承認しました！「予約」タブからお支払いすると確定します";ic="💳";}
+      else if(meProv&&x.status==="approved"&&isPaidResv(x)){msg=nm+"さんのお支払いが済み、予約が確定しました（"+String(x.service_date).replace(/-/g,"/")+"）";ic="✅";}
       else if(!meProv&&x.status==="declined"){msg=nm+"さんは今回の予約をお断りしました";ic="🙏";}
       else if(meProv&&x.status==="cancelled"){msg=nm+"さんが予約をキャンセルしました";ic="↩️";}
-      if(msg){var nid="rv_"+x.id+"_"+x.status;S.notifs.unshift({id:nid,uid:meProv?x.customer:x.provider,type:"book",icon:ic,msg:msg,time:"",read:!!readMap[nid]||isNotifRead(nid)});}
+      if(msg){var nid="rv_"+x.id+"_"+x.status+(isPaidResv(x)?"_paid":"");S.notifs.unshift({id:nid,uid:meProv?x.customer:x.provider,type:"book",icon:ic,msg:msg,time:"",read:!!readMap[nid]||isNotifRead(nid)});}
     }
     render();
   });
@@ -3833,12 +3797,12 @@ function renderResvList(){
       var nm=d({style:{fontWeight:"800",fontSize:"16px",color:"#1A1A2E"}});nm.textContent=(o?o.name:"ユーザー")+(mode==="apps"?" さんが応募":(mode==="applied"?" さんの募集":(x.plan==="request"?(meProv?" さんの募集":" さん（あなたの募集）"):(meProv?" さんから":" さんへ"))));
       var dt=d({style:{fontSize:"13px",color:"#4B5563",marginTop:"2px",fontWeight:"700"}});dt.textContent="📅 "+String(x.service_date).replace(/-/g,"/")+" "+(x.start_time||"")+"〜";
       info.appendChild(nm);info.appendChild(dt);tr.appendChild(info);
-      var st=(mode==="apps")?["🙋 応募あり","#FEF3C7","#92400E"]:(mode==="applied"?["⏳ 返事待ち","#FFFBEB","#B45309"]:(RESV_ST[x.status]||RESV_ST.pending));
+      var st=(mode==="apps")?["🙋 応募あり","#FEF3C7","#92400E"]:(mode==="applied"?["⏳ 返事待ち","#FFFBEB","#B45309"]:(x.status==="approved"&&!isPaidResv(x)?["💳 お支払い待ち","#FFF7ED","#C2410C"]:(x.status==="cancelled"&&x.pay_status==="refunded"?["↩️ キャンセル（返金済み）","#F3F4F6","#6B7280"]:(RESV_ST[x.status]||RESV_ST.pending))));
       var badge=d({style:{background:st[1],color:st[2],borderRadius:"10px",padding:"4px 10px",fontSize:"12px",fontWeight:"800",flexShrink:"0"}});badge.textContent=st[0];
       tr.appendChild(badge);card.appendChild(tr);
       var det=d({style:{background:"#F9FAFB",borderRadius:"12px",padding:"10px 14px",fontSize:"13px",color:"#374151",lineHeight:"1.7"}});
       var pl=x.plan==="hour"?("1時間 × "+x.hours+"時間"):(x.plan_label||"");
-      if(x.plan==="request"){var _fp=calcF(Number(x.price_total||0));det.textContent=(x.note?("⛰️ "+x.note+"\n"):"")+"お支払い額：¥"+Number(x.price_total||0).toLocaleString()+(x.status==="approved"&&!meProv?"（支払い済み・デモ）":"")+(meProv?"\n受け取り予定：¥"+_fp.payout.toLocaleString()+"（手数料15%を引いた額）":"");}
+      if(x.plan==="request"){var _fp=calcF(Number(x.price_total||0));det.textContent=(x.note?("⛰️ "+x.note+"\n"):"")+"お支払い額：¥"+Number(x.price_total||0).toLocaleString()+(isPaidResv(x)&&!meProv?"（支払い済み）":"")+(meProv?"\n受け取り予定：¥"+_fp.payout.toLocaleString()+"（手数料15%を引いた額）":"");}
       else if(x.plan==="skill"){var _fs=calcF(Number(x.price_total||0));var _nt=String(x.note||"").replace(/^【オンライン】/,"");det.textContent="オンライン：「"+(x.plan_label||"")+"」\n"+(x.start_time&&String(x.start_time).slice(0,5)!=="00:00"?"話す日時："+String(x.service_date||"").replace(/-/g,"/")+" "+String(x.start_time).slice(0,5)+"\n":"")+"料金：¥"+Number(x.price_total||0).toLocaleString()+(meProv?"（受け取り予定：¥"+_fs.payout.toLocaleString()+"）":"")+(_nt?("\n相談内容："+_nt):"")+(x.status==="approved"?"\n通話のリンクや動画のやり取りはメッセージで行ってください":"");}
        else det.textContent="プラン："+pl+"　合計：¥"+Number(x.price_total||0).toLocaleString()+(x.note?("\n💬 "+x.note):"");
       det.style.whiteSpace="pre-wrap";card.appendChild(det);
@@ -3853,20 +3817,29 @@ function renderResvList(){
       }
       else if(meProv&&x.status==="pending"){
         bt.appendChild(obtn("お断りする",function(){if(confirm("この予約をお断りしますか？"))setResvStatus(x.id,"declined");},"obtn-s"));
-        bt.appendChild(obtn("✅ 承認する",function(){if(confirm("この予約を承認しますか？"))setResvStatus(x.id,"approved",x.plan==="skill"?"確定しました！メッセージで通話のリンク（Zoom・Google Meetなど）や、動画の受け渡し方法を決めましょう":"予約が確定しました！メッセージで集合場所などを決めましょう");},""));
+        bt.appendChild(obtn("✅ 承認する",function(){
+          if(Number(x.price_total||0)>0&&S.stripeSt&&S.stripeSt.has_account===false){alert("お金を受け取るには、先に受け取り口座の登録が必要です。マイページの「同行料金の受け取り」から登録してください。");return;}
+          if(confirm("この予約を承認しますか？\n承認すると、相手がお支払いした時点で確定します。"))setResvStatus(x.id,"approved","承認しました！相手がお支払いすると確定し、通知が届きます。");
+        },""));
       }
       if(x.plan==="skill"){loadSkillReviews(false);var _rv=reviewOf(x.id);
         if(_rv){var rvl=d({style:{marginTop:"8px",background:"#FFFBEB",borderRadius:"10px",padding:"8px 12px",fontSize:"12.5px",color:"#78350F",lineHeight:"1.6",whiteSpace:"pre-wrap"}});rvl.textContent="完了・評価："+starsText(_rv.rating)+(_rv.comment?"\n「"+_rv.comment+"」":"");card.appendChild(rvl);}
-        else if(!meProv&&x.status==="approved"){bt.appendChild(obtn("✅ 完了して評価する",function(){R({reviewFor:{x:x,rating:0,comment:""}});},""));}
+        else if(!meProv&&x.status==="approved"&&isPaidResv(x)){bt.appendChild(obtn("✅ 完了して評価する",function(){R({reviewFor:{x:x,rating:0,comment:""}});},""));}
         else if(meProv&&x.status==="approved"){var wt=d({style:{marginTop:"8px",fontSize:"12px",color:"#6B7280"}});wt.textContent="相談が終わったら、相手が「完了して評価する」を押すと取引が完了します";card.appendChild(wt);}
       }
-      if(!meProv&&(x.status==="pending"||x.status==="approved")&&!(x.plan==="skill"&&reviewOf(x.id))){
+      if(x.status==="approved"&&x.pay_status==="none"&&x.plan!=="request"){
+        if(!meProv){var payB=obtn("💳 ¥"+Number(x.price_total||0).toLocaleString()+" を支払って確定",function(){payResv(x,payB);},"");bt.appendChild(payB);}
+        else{var pw0=d({style:{marginTop:"8px",fontSize:"12px",color:"#C2410C",fontWeight:"700"}});pw0.textContent="相手のお支払い待ちです。お支払いが済むと確定します。";card.appendChild(pw0);}
+      }
+      if(meProv&&x.status==="approved"&&x.pay_status==="paid"&&!(x.plan==="skill"&&reviewOf(x.id))){
+        bt.appendChild(obtn("キャンセル（全額返金）",function(){cancelResv(x,true);},"obtn-s"));
+      }
+      if(!meProv&&x.plan==="skill"&&x.status==="approved"&&x.pay_status==="paid"&&!reviewOf(x.id)){
+        var sk0=d({style:{marginTop:"8px",fontSize:"11.5px",color:"#6B7280",lineHeight:"1.6"}});sk0.textContent="お支払い後のキャンセルは、相手の同意が必要です。メッセージで相談してください（相手がキャンセルすると全額返金されます）。";card.appendChild(sk0);
+      }
+      if(!meProv&&(x.status==="pending"||x.status==="approved")&&!(x.plan==="skill"&&(reviewOf(x.id)||x.pay_status==="paid"))&&x.pay_status!=="transferred"){
         bt.appendChild(obtn("キャンセル",function(){
-          var td=new Date();var ts=td.getFullYear()+"-"+String(td.getMonth()+1).padStart(2,"0")+"-"+String(td.getDate()).padStart(2,"0");
-          var sameDay=String(x.service_date)<=ts;
-          var amt="¥"+Number(x.price_total||0).toLocaleString();
-          var msg=sameDay?("当日のキャンセルのため、キャンセル料として料金の100%（"+amt+"）がかかります。\n※悪天候・リフト運休・スキー場の営業中止の場合は無料です。\n\nキャンセルしますか？"):"前日までのキャンセルのため、キャンセル料はかかりません。\n\nキャンセルしますか？";
-          if(confirm(msg))setResvStatus(x.id,"cancelled");
+          cancelResv(x,false);
         },"obtn-s"));
       }
       if(o&&(x.status==="approved"||x.status==="pending")){
@@ -6528,6 +6501,10 @@ try{(function(){var lu=localStorage.getItem("sm_last_uid");if(!lu)return;var c=J
   for(var k in c){if(c.hasOwnProperty(k))S.chatMsgs[k]=c[k];}
   window._dmRestoredFor=lu;})();}catch(e){}
 if(/[?&]stripe=(return|refresh)/.test(location.search)){S.tab="profile";S.stripeSt=undefined;try{history.replaceState(null,"",location.pathname);}catch(e){}}
+// 同行・スキル販売のお支払い画面から戻ってきたとき
+(function(){var m=location.search.match(/[?&]resv=(paid|cancel)/);if(!m)return;
+  S.tab="bookings";try{history.replaceState(null,"",location.pathname);}catch(e){}
+  resvAfterReturn(m[1]==="paid");})();
 // スノマ＋のお支払い画面・解約画面から戻ってきたとき
 (function(){var m=location.search.match(/[?&]plus=(success|cancel|portal)/);if(!m)return;
   S.tab="profile";S.plusView=true;S.plusCancelView=false;S.plusSub=undefined;if(m[1]==="success")S.plusWaiting=true;
