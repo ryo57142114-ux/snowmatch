@@ -1635,11 +1635,42 @@ function PlusEntryCard(){
   var ar=d({style:{fontSize:"22px",color:on?"#5A4521":"#FBE38E"}});ar.textContent="›";
   c.appendChild(tx);c.appendChild(ar);return c;
 }
+// 解約の前に「なくなるもの」を確認してもらう画面
+function renderPlusCancel(wrap,sub,line,bigBtn){
+  wrap.innerHTML="";
+  var back=document.createElement("button");back.textContent="‹ スノマ＋に戻る";
+  back.style.cssText="color:#FF6B2B;font-weight:800;font-size:13px;padding:0;margin-bottom:12px";
+  back.addEventListener("click",function(){R({plusCancelView:false});});wrap.appendChild(back);
+  line(wrap,"解約すると、次の特典が使えなくなります",{fontWeight:"900",fontSize:"19px",color:"#1A1A2E",lineHeight:"1.5",marginBottom:"14px"});
+  var mine=(typeof skillsOf==="function"&&currentUser)?skillsOf(currentUser.id,false).filter(function(m){return m.status!=="rejected";}).length:0;
+  var pr=S.saPrefs;var rs=(pr&&pr.resorts&&pr.resorts.length)?pr.resorts.join("・"):"";
+  var items=[
+    ["新雪アラートが止まります",rs?("「"+rs+"」の雪の予報やパウダー報告が届かなくなります。"):"雪の予報やパウダー報告のお知らせが届かなくなります。"],
+    ["金色バッジがなくなります","プロフィールやチャットの名前の横の金色バッジが、通常の青いバッジに戻ります。"],
+    ["スキル販売の出品が1つまでになります",(mine>1?("今は"+mine+"つ出品しています。"):"")+"新しく出品できるのは1つまでになり、一覧での上位表示もなくなります。"]
+  ];
+  items.forEach(function(it){
+    var c=d({style:{background:"#fff",border:"1.5px solid #FDE68A",borderRadius:"16px",padding:"14px",marginBottom:"10px"}});
+    line(c,it[0],{fontWeight:"900",fontSize:"14.5px",color:"#92400E",marginBottom:"4px"});
+    line(c,it[1],{fontSize:"12.5px",color:"#4B5563",lineHeight:"1.7"});
+    wrap.appendChild(c);
+  });
+  line(wrap,"解約しても、"+fmtJDate(sub.current_period_end)+"までは今までどおり使えます。そのあと自動更新は止まり、料金はかかりません。",{fontSize:"12.5px",color:"#6B7280",lineHeight:"1.7",margin:"6px 2px 4px"});
+  bigBtn(wrap,"スノマ＋を続ける",true,function(){R({plusCancelView:false});return Promise.resolve();});
+  var go=document.createElement("button");go.textContent="それでも解約する";
+  go.style.cssText="display:block;width:100%;margin-top:10px;padding:12px;border-radius:14px;background:#fff;border:1.5px solid #E5E7EB;color:#6B7280;font-size:13.5px;font-weight:800";
+  go.addEventListener("click",function(){if(go.disabled)return;go.disabled=true;go.textContent="処理中...";
+    plusCall("portal").catch(function(e){go.disabled=false;go.textContent="それでも解約する";alert("うまくいきませんでした: "+(e&&e.message?e.message:e));});});
+  wrap.appendChild(go);
+  line(wrap,"次の画面（Stripe）で「サブスクリプションをキャンセル」を押すと解約が完了します。",{fontSize:"11.5px",color:"#9CA3AF",lineHeight:"1.6",marginTop:"8px",textAlign:"center"});
+  if(currentUser&&S.saPrefs===undefined&&typeof loadSnowAlertPrefs==="function"){S.saPrefs=null;loadSnowAlertPrefs();}
+  return wrap;
+}
 function renderPlusPage(){
   var wrap=d({style:{padding:"16px 16px 100px"}});
   var back=document.createElement("button");back.textContent="‹ マイページに戻る";
   back.style.cssText="background:none;border:none;color:#FF6B2B;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;padding:0;margin-bottom:10px";
-  back.addEventListener("click",function(){R({plusView:false});});wrap.appendChild(back);
+  back.addEventListener("click",function(){R({plusView:false,plusCancelView:false});});wrap.appendChild(back);
   var hero=d({style:{background:"linear-gradient(135deg,#FBE38E,#E6B325)",borderRadius:"20px",padding:"18px 16px",marginBottom:"14px"}});
   var h1=d({style:{fontWeight:"900",fontSize:"22px",color:"#5A4521"}});h1.textContent="スノマ＋";hero.appendChild(h1);
   var h2=d({style:{fontSize:"12.5px",color:"#6B5326",marginTop:"4px",lineHeight:"1.6"}});h2.textContent="スノマをもっと便利に使えるプラス会員です。";hero.appendChild(h2);
@@ -1667,6 +1698,7 @@ function renderPlusPage(){
       c.appendChild(r);
     });
   }
+  if(S.plusCancelView&&on&&sub&&PLUS_ACTIVE.indexOf(sub.status)>=0&&!sub.cancel_at_period_end){return renderPlusCancel(wrap,sub,line,bigBtn);}
   if(S.plusSub==="loading"){var ld=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"13px",padding:"20px"}});ld.textContent="確認中…";wrap.appendChild(ld);return wrap;}
 
   // ---- 加入中 ----
@@ -1679,8 +1711,16 @@ function renderPlusPage(){
       if(sub.status==="trialing")line(sc,"無料期間中です。"+fmtJDate(sub.current_period_end)+"から料金がかかります。"+(sub.cancel_at_period_end?"（解約の手続き済みのため、料金はかかりません）":""));
       else if(sub.cancel_at_period_end)line(sc,"解約の手続き済みです。"+fmtJDate(sub.current_period_end)+"まで使えます。そのあと自動更新はされません。");
       else line(sc,"次の更新日："+fmtJDate(sub.current_period_end)+"（自動で更新されます）");
-      bigBtn(sc,"お支払い方法の変更・解約",false,function(){return plusCall("portal");});
-      line(sc,"解約しても、次の更新日の前日まではそのまま使えます。解約の取り消しも同じ画面からできます。",{fontSize:"11.5px",color:"#6B7280",lineHeight:"1.6",marginTop:"8px"});
+      if(sub.cancel_at_period_end){
+        bigBtn(sc,"解約を取り消して続ける",true,function(){return plusCall("portal");});
+        line(sc,"次の画面で「サブスクリプションを更新」（または「キャンセルを取り消す」）を押すと、解約が取り消されます。",{fontSize:"11.5px",color:"#6B7280",lineHeight:"1.6",marginTop:"8px"});
+      }else{
+        bigBtn(sc,"お支払い方法の変更・領収書",false,function(){return plusCall("portal");});
+        var cx=document.createElement("button");cx.textContent="解約について";
+        cx.style.cssText="display:block;margin:14px auto 0;color:#9CA3AF;font-size:12px;font-weight:700;text-decoration:underline;padding:6px 10px";
+        cx.addEventListener("click",function(){R({plusCancelView:true});var ap=document.getElementById("app");if(ap)ap.scrollTop=0;window.scrollTo(0,0);});
+        sc.appendChild(cx);
+      }
     }else{
       line(sc,"✅ 運営からの特典でスノマ＋をご利用中です",{fontWeight:"900",fontSize:"15px",color:"#166534"});
     }
@@ -1731,7 +1771,7 @@ function renderPlusPage(){
   {
     items.push("料金："+p.price.toLocaleString()+"円（税込）／"+p.per+(trialOk?"。最初の"+PLUS_TRIAL_DAYS+"日間は無料で、その翌日から料金がかかります。":"。"));
     items.push("お申し込み日から1"+(p.id==="monthly"?"か月":"年")+"ごとに自動で更新され、そのたびに登録したカードでお支払いになります。");
-    items.push("解約はこのページの「お支払い方法の変更・解約」からいつでもできます。解約後も次の更新日の前日まで使えます。");
+    items.push("解約はこのページの「解約について」からいつでもできます。解約後も次の更新日の前日まで使えます。");
   }
   items.push("お支払い後のキャンセルや、日割りでの返金はできません。");
   items.push("お支払いはStripe（決済サービス）の画面で行います。SnowMatchはカード番号を保存しません。");
@@ -6476,7 +6516,7 @@ try{(function(){var lu=localStorage.getItem("sm_last_uid");if(!lu)return;var c=J
 if(/[?&]stripe=(return|refresh)/.test(location.search)){S.tab="profile";S.stripeSt=undefined;try{history.replaceState(null,"",location.pathname);}catch(e){}}
 // スノマ＋のお支払い画面・解約画面から戻ってきたとき
 (function(){var m=location.search.match(/[?&]plus=(success|cancel|portal)/);if(!m)return;
-  S.tab="profile";S.plusView=true;S.plusSub=undefined;if(m[1]==="success")S.plusWaiting=true;
+  S.tab="profile";S.plusView=true;S.plusCancelView=false;S.plusSub=undefined;if(m[1]==="success")S.plusWaiting=true;
   try{history.replaceState(null,"",location.pathname);}catch(e){}
   plusAfterReturn();})();
 document.addEventListener("visibilitychange",function(){if(!document.hidden&&S.plusView&&currentUser){window._plusKey=null;loadPlusMembers();loadPlusSub();}});
