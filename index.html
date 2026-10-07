@@ -1734,6 +1734,9 @@ function advSummary(){
 function AdvFilterModal(){
   var f=S.advDraft;
   return Modal(false,function(){R({advOpen:false});},function(box){
+    var stb=d({style:{position:"sticky",top:"-24px",margin:"-24px -24px 10px",padding:"12px 16px",background:"rgba(255,255,255,.97)",zIndex:"5",display:"flex",alignItems:"center",gap:"10px",borderBottom:"1px solid #F0F0F0",borderRadius:"24px 24px 0 0"}});
+    var bk=b2({style:{padding:"10px 20px",minHeight:"44px",background:"#F5F7FA",border:"1.5px solid #E8E8E8",borderRadius:"22px",fontSize:"15px",fontWeight:"800",color:"#4B5563",cursor:"pointer",fontFamily:"inherit"}},"← 戻る");
+    bk.addEventListener("click",function(){R({advOpen:false});});stb.appendChild(bk);box.appendChild(stb);
     var t=d({style:{fontWeight:"900",fontSize:"19px",color:"#1A1A2E",marginBottom:"4px"}});t.textContent="くわしく絞り込む";box.appendChild(t);
     var ex=d({style:{fontSize:"12px",color:"#6B7280",marginBottom:"14px"}});ex.textContent="選んだ条件をすべて満たす人だけを表示します。";box.appendChild(ex);
     function sec(title){var h=d({style:{fontSize:"12.5px",fontWeight:"900",color:"#374151",margin:"14px 0 8px"}});h.textContent=title;box.appendChild(h);}
