@@ -1715,7 +1715,7 @@ function AdvFilterBar(){
   t2.textContent=n?advSummary():"レベル・スキー場・料金・機材・スタイル・年代など";t.appendChild(t2);
   b.appendChild(t);
   b.appendChild(sp({style:{fontSize:"20px",color:"#9CA3AF"}},"›"));
-  b.addEventListener("click",function(){if(!plus){if(confirm("くわしい絞り込みは、スノマ＋会員の機能です。\nプランを見てみますか？"))openPlusPage();return;}R({advOpen:true,advDraft:JSON.parse(JSON.stringify(advF()))});});
+  b.addEventListener("click",function(){if(!plus){if(confirm("くわしい絞り込みは、スノマ＋会員の機能です。\nプランを見てみますか？"))openPlusPage();return;}R({advOpen:true,advArea:null,advDraft:JSON.parse(JSON.stringify(advF()))});});
   return b;
 }
 function advSummary(){
@@ -1759,12 +1759,22 @@ function AdvFilterModal(){
     }
     sec("レベル");chips(LEVELS,"lv");
     sec("活動スキー場");
-    var ar=S.advArea||AREAS[0].area;
-    var at=d({style:{display:"flex",gap:"6px",overflowX:"auto",paddingBottom:"6px",marginBottom:"6px"}});
-    AREAS.forEach(function(A){var on=ar===A.area;var c=document.createElement("button");c.textContent=A.area;c.style.cssText="flex-shrink:0;padding:5px 10px;border-radius:10px;font-size:11.5px;font-weight:800;"+(on?"background:#1A1A2E;color:#fff":"background:#F3F4F6;color:#4B5563");c.addEventListener("click",function(){S.advArea=A.area;render();});at.appendChild(c);});
+    // エリアを押すと、そのエリアのスキー場が開く（もう一度押すと閉じる）
+    var ar=S.advArea||null;
+    var at=d({style:{display:"flex",flexWrap:"wrap",gap:"6px",marginBottom:"6px"}});
+    AREAS.forEach(function(A){
+      var on=ar===A.area;
+      var picked=A.resorts.filter(function(r){return f.resorts.indexOf(r)>=0;}).length;
+      var c=document.createElement("button");c.textContent=A.area+(picked?"（"+picked+"）":"")+(on?" ▲":" ▼");
+      c.style.cssText="padding:7px 12px;border-radius:12px;font-size:12.5px;font-weight:800;"+(on?"background:#1A1A2E;color:#fff;border:1.5px solid #1A1A2E":(picked?"background:#FFF4EC;color:#C2410C;border:1.5px solid #FF6B2B":"background:#F3F4F6;color:#4B5563;border:1.5px solid #F3F4F6"));
+      c.addEventListener("click",function(){S.advArea=on?null:A.area;render();});
+      at.appendChild(c);
+    });
     box.appendChild(at);
-    var areaObj=AREAS.filter(function(A){return A.area===ar;})[0]||AREAS[0];
-    chips(areaObj.resorts,"resorts");
+    if(ar){
+      var areaObj=AREAS.filter(function(A){return A.area===ar;})[0];
+      if(areaObj){var rw=d({style:{background:"#F9FAFB",borderRadius:"12px",padding:"10px",marginTop:"4px"}});var keep=box;box=rw;chips(areaObj.resorts,"resorts");box=keep;box.appendChild(rw);}
+    }
     if(f.resorts.length){var sel=d({style:{fontSize:"11.5px",color:"#C2410C",marginTop:"6px",lineHeight:"1.6"}});sel.textContent="選択中："+f.resorts.join("・");box.appendChild(sel);}
     sec("料金（同行・撮影）");chips(ADV_PRICE,"price",true);
     sec("撮影機材");chips(ADV_GEAR,"gear");
