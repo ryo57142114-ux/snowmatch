@@ -1616,7 +1616,7 @@ function recordView(uid){
   if(!uid||!sb||!currentUser||S.isGuest||uid===currentUser.id)return;
   window._pvSent=window._pvSent||{};var last=window._pvSent[uid]||0;
   if(Date.now()-last<3600000)return;window._pvSent[uid]=Date.now();
-  sb.from("profile_views").upsert({viewer:currentUser.id,viewed:uid,viewed_at:new Date().toISOString()},{onConflict:"viewer,viewed"}).then(function(){},function(){});
+  sb.rpc("record_profile_view",{target:uid}).then(function(r){if(r&&r.error){window._pvSent[uid]=0;console.warn("footprint",r.error.message);}},function(){window._pvSent[uid]=0;});
 }
 function loadFootprints(force){
   if(!sb||!currentUser||S.isGuest)return;
