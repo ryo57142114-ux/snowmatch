@@ -1610,6 +1610,73 @@ function plusMark(uid,sz,extra){if(!isPlus(uid))return null;var b=regBadge(sz||1
 function addPlus(el,uid,sz,extra){var b=plusMark(uid,sz,extra);if(b&&el)el.appendChild(b);return el;}
 function isPlus(uid){return !!(uid&&S.plusIds&&S.plusIds.indexOf(uid)>=0);}
 setTimeout(loadPlusMembers,1500);setInterval(function(){if(!document.hidden)loadPlusMembers();},300000);
+// ===== 足あと（プロフィールを見た人）=====
+// 見た記録は同じ相手につき1時間に1回だけ送る。だれが見たかはスノマ＋会員だけが見られる（DB側で制限）
+function recordView(uid){
+  if(!uid||!sb||!currentUser||S.isGuest||uid===currentUser.id)return;
+  window._pvSent=window._pvSent||{};var last=window._pvSent[uid]||0;
+  if(Date.now()-last<3600000)return;window._pvSent[uid]=Date.now();
+  sb.from("profile_views").upsert({viewer:currentUser.id,viewed:uid,viewed_at:new Date().toISOString()},{onConflict:"viewer,viewed"}).then(function(){},function(){});
+}
+function loadFootprints(force){
+  if(!sb||!currentUser||S.isGuest)return;
+  if(!force&&window._fpAt&&Date.now()-window._fpAt<60000)return;
+  window._fpAt=Date.now();
+  sb.rpc("footprint_count").then(function(r){if(!r.error){S.fpCount=r.data||0;render();}},function(){});
+  if(isPlus(currentUser.id)){
+    sb.from("profile_views").select("*").eq("viewed",currentUser.id).order("viewed_at",{ascending:false}).limit(50).then(function(r){
+      if(r.error)return;S.fpList=r.data||[];render();
+    },function(){});
+  }
+}
+function fpLastSeen(){try{return parseInt(localStorage.getItem("sm_fp_seen_"+currentUser.id)||"0",10)||0;}catch(e){return 0;}}
+function fpMarkSeen(){try{localStorage.setItem("sm_fp_seen_"+currentUser.id,String(Date.now()));}catch(e){}}
+function FootprintCard(){
+  if(!currentUser||S.isGuest)return null;
+  loadFootprints(false);
+  var plus=isPlus(currentUser.id);
+  var c=d({class:"card",style:{padding:"14px 16px",marginBottom:"14px"}});
+  var hd=d({style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"8px"}});
+  hd.appendChild(sp({style:{fontWeight:"900",fontSize:"16px",color:"#1A1A2E"}},"足あと"));
+  var n=S.fpCount||0;
+  hd.appendChild(sp({style:{fontSize:"11.5px",color:"#6B7280"}},"この7日間 "+n+"人"));
+  c.appendChild(hd);
+  var blocked=S.blockedUsers||[];
+  if(plus){
+    var list=(S.fpList||[]).filter(function(v){return blocked.indexOf(v.viewer)<0;});
+    if(!list.length){var em=d({style:{fontSize:"12.5px",color:"#9CA3AF",padding:"6px 0"}});em.textContent=S.fpList?"まだ足あとはありません。プロフィールや投稿を充実させると、見てもらいやすくなります。":"読み込み中…";c.appendChild(em);return c;}
+    var seen=fpLastSeen();var open=!!S.fpOpen;
+    var shown=open?list:list.slice(0,5);
+    shown.forEach(function(v){
+      var u=findRealUser(v.viewer);
+      var r=d({style:{display:"flex",alignItems:"center",gap:"10px",padding:"8px 0",borderTop:"1px solid #F3F4F6",cursor:u?"pointer":"default"}});
+      if(u){r.appendChild(avU(38,18,u));r.addEventListener("click",function(){R({selUser:u});});}
+      else{var ph=d({style:{width:"38px",height:"38px",borderRadius:"12px",background:"#E5E7EB",flexShrink:"0"}});r.appendChild(ph);}
+      var tx=d({style:{flex:"1",minWidth:"0"}});
+      var nm=d({style:{display:"flex",alignItems:"center",gap:"6px",fontWeight:"800",fontSize:"14px",color:"#1A1A2E"}});
+      nm.appendChild(sp(null,u?u.name:"ユーザー"));if(u)addPlus(nm,u.uid,14);
+      if(new Date(v.viewed_at).getTime()>seen)nm.appendChild(sp({style:{fontSize:"10px",fontWeight:"900",color:"#fff",background:"#FF6B2B",borderRadius:"6px",padding:"1px 6px"}},"NEW"));
+      tx.appendChild(nm);
+      var sub=d({style:{fontSize:"11.5px",color:"#9CA3AF",marginTop:"1px"}});sub.textContent=timeAgo(v.viewed_at)+(u&&u.act?"・"+u.act:"")+(u&&u.lv?"・"+u.lv:"");tx.appendChild(sub);
+      r.appendChild(tx);c.appendChild(r);
+    });
+    if(list.length>5){var mb=document.createElement("button");mb.textContent=open?"閉じる":"すべて見る（"+list.length+"人）";mb.style.cssText="display:block;margin:8px auto 0;color:#FF6B2B;font-weight:800;font-size:13px;padding:6px 10px";mb.addEventListener("click",function(){R({fpOpen:!open});});c.appendChild(mb);}
+    if(!window._fpSeenTimer){window._fpSeenTimer=setTimeout(function(){window._fpSeenTimer=null;fpMarkSeen();},4000);}
+    return c;
+  }
+  // 無料会員：人数だけ見せて、だれかはスノマ＋で
+  var ex=d({style:{fontSize:"12.5px",color:"#4B5563",lineHeight:"1.7",marginBottom:"10px"}});
+  ex.textContent=n>0?("この7日間で "+n+"人 があなたのプロフィールを見ました。"):"この7日間にプロフィールを見た人はまだいません。";c.appendChild(ex);
+  if(n>0){
+    var blur=d({style:{display:"flex",gap:"8px",marginBottom:"10px"}});
+    for(var i=0;i<Math.min(n,5);i++){var b=d({style:{width:"38px",height:"38px",borderRadius:"12px",background:"linear-gradient(135deg,#E5E7EB,#D1D5DB)",filter:"blur(1.5px)"}});blur.appendChild(b);}
+    c.appendChild(blur);
+  }
+  var go=document.createElement("button");go.textContent="スノマ＋でだれが見たか確認する";
+  go.style.cssText="width:100%;padding:11px;border-radius:12px;background:linear-gradient(135deg,#FBE38E,#E6B325);color:#5A4521;font-weight:900;font-size:13.5px";
+  go.addEventListener("click",openPlusPage);c.appendChild(go);
+  return c;
+}
 // ===== スノマ＋：プラン選択・お支払い（Stripe）・解約 =====
 // Edge Function：plus-billing（お支払い画面・解約画面を開く）／plus-webhook（支払い結果を plus_members に反映）
 var PLUS_TRIAL_DAYS=0; // plus-billing の TRIAL_DAYS と同じ数にそろえる（12月のキャンペーン開始時に30へ）
@@ -1618,7 +1685,7 @@ var PLUS_PLANS=[
   {id:"yearly",name:"年額プラン",price:3980,per:"年",note:"月あたり約332円・月額より1,780円おトク",best:true},
   {id:"monthly",name:"月額プラン",price:480,per:"月",note:"いつでも解約できます"}
 ];
-var PLUS_PERKS=[["スキル販売を5つまで出品＋上位に表示",""],["新雪アラート（雪の予報・パウダー報告をお知らせ）",""],["金色バッジ",""],["足あと（プロフィールを見た人がわかる）","近日公開"],["くわしい絞り込み検索","近日公開"]];
+var PLUS_PERKS=[["スキル販売を5つまで出品＋上位に表示",""],["新雪アラート（雪の予報・パウダー報告をお知らせ）",""],["金色バッジ",""],["足あと（プロフィールを見た人がわかる）",""],["くわしい絞り込み検索","近日公開"]];
 function plusPlanById(id){for(var i=0;i<PLUS_PLANS.length;i++)if(PLUS_PLANS[i].id===id)return PLUS_PLANS[i];return PLUS_PLANS[0];}
 function fmtJDate(iso){if(!iso)return "";var t=new Date(new Date(iso).getTime()+9*3600000);return t.getUTCFullYear()+"年"+(t.getUTCMonth()+1)+"月"+t.getUTCDate()+"日";}
 function loadPlusSub(){
@@ -5344,6 +5411,7 @@ function renderProfile(){
   hr.appendChild(hi);hero.appendChild(hr);wrap.appendChild(hero);
   var body=d({style:{padding:"16px 16px 0"}});
   var _plusCard=PlusEntryCard();if(_plusCard)body.appendChild(_plusCard);
+  var _fpCard=FootprintCard();if(_fpCard)body.appendChild(_fpCard);
   if(S.sessionChecked&&!currentUser&&!S.isGuest){
     var lgb=d({style:{background:"#FFFBEB",border:"1.5px solid #FCD34D",borderRadius:"16px",padding:"12px 14px",marginBottom:"14px",fontSize:"13px",color:"#92400E",lineHeight:"1.7"}});
     var lgt=d({style:{fontWeight:"900",marginBottom:"4px"}});lgt.textContent="⚠️ ログインしていません";lgb.appendChild(lgt);
@@ -6400,6 +6468,7 @@ function _renderInner(){
     else if(S.selUser.isIns)app.appendChild(InsModal(S.selUser));
     else{
       (function(u){
+        recordView(u.uid);
         app.appendChild(Modal(false,function(){R({selUser:null});},function(box){
           var row=d({style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"14px"}});row.appendChild(avU(84,40,u));
           var cb=b2({style:{padding:"10px 20px",minHeight:"44px",background:"#F5F7FA",border:"1.5px solid #E8E8E8",borderRadius:"22px",fontSize:"15px",fontWeight:"800",color:"#4B5563",cursor:"pointer",fontFamily:"inherit"}},"← 戻る");cb.addEventListener("click",function(){R({selUser:null});});var stb=d({style:{position:"sticky",top:"-24px",margin:"-24px -24px 10px",padding:"12px 16px",background:"rgba(255,255,255,.97)",zIndex:"5",display:"flex",justifyContent:"flex-start",borderBottom:"1px solid #F0F0F0",borderRadius:"24px 24px 0 0"}});stb.appendChild(cb);box.appendChild(stb);box.appendChild(row);
