@@ -1780,7 +1780,7 @@ function AdvFilterModal(){
     var clr=document.createElement("button");clr.textContent="クリア";clr.style.cssText="flex:0 0 96px;padding:13px;border-radius:14px;background:#fff;border:1.5px solid #E5E7EB;color:#6B7280;font-weight:800;font-size:14px";
     clr.addEventListener("click",function(){S.advDraft={lv:[],resorts:[],price:"any",ok:false,gear:[],styles:[],age:[],gender:[],slot:false};render();});
     var ap=document.createElement("button");ap.textContent=cnt+"人を表示する";ap.style.cssText="flex:1;padding:13px;border-radius:14px;background:linear-gradient(135deg,#FF6B2B,#FF8C55);color:#fff;font-weight:900;font-size:14.5px;border:none";
-    ap.addEventListener("click",function(){R({adv:f,advOpen:false});});
+    ap.addEventListener("click",function(){R({adv:f,advOpen:false});setTimeout(function(){var el=document.getElementById("userlist");if(el)el.scrollIntoView({behavior:"smooth",block:"start"});},50);});
     br.appendChild(clr);br.appendChild(ap);box.appendChild(br);
   });
 }
@@ -2946,6 +2946,7 @@ function renderExplore(){
   var fvs=FavStrip();if(fvs)wrap.appendChild(fvs);
   var ht=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"4px"}});ht.textContent="🔍 仲間を探す";wrap.appendChild(ht);
   var sub=d({style:{color:"#6B7280",fontSize:"13px",marginBottom:"12px"}});sub.textContent="エリア・種目で絞り込もう";wrap.appendChild(sub);
+  wrap.appendChild(AdvFilterBar());
   }
 
   // 撮影カメラマンバナー
@@ -3058,7 +3059,6 @@ function renderExplore(){
     (function(area){ar.appendChild(chip2(area.area,S.selArea===area.area,function(){R({selArea:S.selArea===area.area?null:area.area});}));})(AREAS[areai2]);
   }
   wrap.appendChild(ar);
-  wrap.appendChild(AdvFilterBar());
 
   // おすすめ表示
   if(S.myProfile&&S.myProfile.resorts&&S.myProfile.resorts.length>0){
@@ -3096,6 +3096,7 @@ function renderExplore(){
   }
   if(!sortedUsers.length){var usEmpty=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"13px",padding:"24px 0"}});usEmpty.textContent="まだ登録ユーザーがいません。友達を招待してみよう！";wrap.appendChild(usEmpty);}
   var _shown=0;
+  var _ulAnchor=d({id:"userlist",style:{height:"1px",scrollMarginTop:"80px"}});wrap.appendChild(_ulAnchor);
   for(var ui=0;ui<sortedUsers.length;ui++){
     (function(u){
       var pA=!S.selArea;
