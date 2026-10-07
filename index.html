@@ -5437,13 +5437,13 @@ function renderSkillEditor(){
   var ngBox=d({style:{display:"none",background:"#FEF2F2",border:"1.5px solid #FCA5A5",borderRadius:"12px",padding:"10px 12px",fontSize:"12px",color:"#991B1B",lineHeight:"1.7",marginBottom:"12px"}});c.appendChild(ngBox);
   function updNg(){var ng=skillNgCheck((f.title||"")+" "+(f.description||""));if(ng.length){ngBox.style.display="block";ngBox.textContent="⚠️ この内容は出品できない可能性があります\n・"+ng.join("\n・");ngBox.style.whiteSpace="pre-line";}else ngBox.style.display="none";}
   updNg();
-  lbl("料金（500円〜30,000円）");
+  lbl("料金（1,000円〜30,000円）");
   var pr=d({style:{display:"flex",gap:"8px",alignItems:"center",marginBottom:"6px"}});
-  var pi=document.createElement("input");pi.className="inp";pi.id="ai_sk_price";pi.type="number";pi.inputMode="numeric";pi.min="500";pi.max="30000";pi.step="100";pi.value=f.price||"";pi.placeholder="1500";pi.style.cssText="flex:1;font-size:16px";
+  var pi=document.createElement("input");pi.className="inp";pi.id="ai_sk_price";pi.type="number";pi.inputMode="numeric";pi.min="1000";pi.max="30000";pi.step="100";pi.value=f.price||"";pi.placeholder="1500";pi.style.cssText="flex:1;font-size:16px";
   var us=document.createElement("select");us.className="inp";us.style.cssText="width:110px;font-size:16px";SKILL_UNITS.forEach(function(x){var o=document.createElement("option");o.value=x;o.textContent="／"+x;us.appendChild(o);});us.value=f.unit||"1時間";us.addEventListener("change",function(e){f.unit=e.target.value;});
   pr.appendChild(pi);pr.appendChild(us);c.appendChild(pr);
   var rv=d({style:{fontSize:"12px",color:"#6B7280",marginBottom:"14px"}});c.appendChild(rv);
-  function updRv(){var v=parseInt(f.price,10);rv.textContent=v>=500&&v<=30000?("受け取り目安：¥"+Math.floor(v*(1-SKILL_FEE)).toLocaleString()+"（手数料15%を引いた額）"):"500円〜30,000円で入力してください";}
+  function updRv(){var v=parseInt(f.price,10);rv.textContent=v>=1000&&v<=30000?("受け取り目安：¥"+Math.floor(v*(1-SKILL_FEE)).toLocaleString()+"（手数料15%を引いた額）"):"1,000円〜30,000円で入力してください";}
   pi.addEventListener("input",function(e){f.price=e.target.value;updRv();});updRv();
   var nt=d({style:{fontSize:"11.5px",color:"#9CA3AF",lineHeight:"1.6",marginBottom:"12px"}});nt.textContent="出品できるのはオンラインで完結するメニューです。ゲレンデで一緒に滑る・撮影する場合は、プロフィールの「同行・撮影」の料金設定を使ってください。";c.appendChild(nt);
   var sv=document.createElement("button");sv.textContent=isSkillTemplate(f.title)?(f.id?"変更して公開する":"公開する"):(f.id?"変更して審査に出す":"審査に出す");
@@ -5452,7 +5452,7 @@ function renderSkillEditor(){
     var title=(f.title||"").trim(),desc=(f.description||"").trim(),price=parseInt(f.price,10);
     if(title.length<4){alert("タイトルを入力してください");return;}
     if(desc.length<20){alert("説明は20文字以上で、どんなことをするか具体的に書いてください");return;}
-    if(!(price>=500&&price<=30000)){alert("料金は500円〜30,000円で入力してください");return;}
+    if(!(price>=1000&&price<=30000)){alert("料金は1,000円〜30,000円で入力してください");return;}
     var ng=skillNgCheck(title+" "+desc);if(ng.length){alert("この内容は出品できません。\n・"+ng.join("\n・")+"\n\n内容を見直してください。");return;}
     sv.disabled=true;sv.textContent="送信中…";
     var row={category:f.category,title:title,description:desc,price:price,unit:f.unit||"1時間",mode:"online"};
