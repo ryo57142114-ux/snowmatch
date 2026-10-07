@@ -1677,6 +1677,113 @@ function FootprintCard(){
   go.addEventListener("click",openPlusPage);c.appendChild(go);
   return c;
 }
+// ===== くわしい絞り込み（スノマ＋）=====
+var ADV_STYLES=["カービング","グラトリ","パーク","パウダー","フリーラン","オールラウンド"];
+var ADV_GEAR=["GoPro","Insta360","DJI","iPhone","ミラーレス","ビデオカメラ"];
+var ADV_PRICE=[["any","指定なし"],["free","無料のみ"],["3000","〜¥3,000"],["8000","〜¥8,000"],["15000","〜¥15,000"]];
+var ADV_AGE=[["20","20代"],["30","30代"],["40","40代"],["50","50代以上"]];
+var ADV_GENDER=["男性","女性"];
+function advF(){if(!S.adv)S.adv={lv:[],resorts:[],price:"any",ok:false,gear:[],styles:[],age:[],gender:[],slot:false};return S.adv;}
+function advCount(){var f=S.adv;if(!f)return 0;var n=0;["lv","resorts","gear","styles","age","gender"].forEach(function(k){if(f[k]&&f[k].length)n++;});if(f.price&&f.price!=="any")n++;if(f.ok)n++;if(f.slot)n++;return n;}
+function advOn(){return !!(currentUser&&isPlus(currentUser.id)&&S.adv&&advCount());}
+function advMatch(u){
+  var f=S.adv;if(!f)return true;
+  if(f.lv.length&&f.lv.indexOf(u.lv)<0)return false;
+  if(f.resorts.length&&!(u.resorts||[]).some(function(r){return f.resorts.indexOf(r)>=0;}))return false;
+  if(f.price==="free"&&isPaidUser(u))return false;
+  if(f.price!=="any"&&f.price!=="free"){if(!isPaidUser(u))return false;if(minPlanPrice(u)>parseInt(f.price,10))return false;}
+  if(f.ok&&!u.ok)return false;
+  if(f.gear.length){var g=[].concat(u.camGear||[],u.gear||[]).join(" ");if(!f.gear.some(function(x){return g.indexOf(x)>=0;}))return false;}
+  if(f.styles.length&&!(u.styles||[]).some(function(x){return f.styles.some(function(y){return String(x).indexOf(y)>=0;});}))return false;
+  if(f.age.length){var a=parseInt(u.age,10);if(!a)return false;var dec=a>=50?"50":String(Math.floor(a/10)*10);if(f.age.indexOf(dec)<0)return false;}
+  if(f.gender.length&&f.gender.indexOf(u.gender)<0)return false;
+  if(f.slot&&!livePosts().some(function(p){return p.user_id===u.uid&&p.kind==="offer";}))return false;
+  return true;
+}
+function AdvFilterBar(){
+  var plus=!!(currentUser&&isPlus(currentUser.id));
+  var n=plus?advCount():0;
+  var b=document.createElement("button");
+  b.style.cssText="width:100%;display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:14px;margin-bottom:14px;text-align:left;"+(n?"background:#FFF4EC;border:1.5px solid #FF6B2B":"background:#fff;border:1.5px solid #E5E7EB");
+  var t=d({style:{flex:"1",minWidth:"0"}});
+  var t1=d({style:{display:"flex",alignItems:"center",gap:"6px",fontWeight:"900",fontSize:"14px",color:"#1A1A2E"}});
+  t1.appendChild(sp(null,"くわしく絞り込む"));
+  if(!plus)t1.appendChild(sp({style:{fontSize:"10px",fontWeight:"800",background:"linear-gradient(135deg,#FBE38E,#E6B325)",color:"#5A4521",borderRadius:"8px",padding:"2px 7px"}},"スノマ＋"));
+  if(n)t1.appendChild(sp({style:{fontSize:"11px",fontWeight:"900",color:"#fff",background:"#FF6B2B",borderRadius:"10px",padding:"1px 8px"}},n+"件の条件"));
+  t.appendChild(t1);
+  var t2=d({style:{fontSize:"11.5px",color:"#6B7280",marginTop:"2px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}});
+  t2.textContent=n?advSummary():"レベル・スキー場・料金・機材・スタイル・年代など";t.appendChild(t2);
+  b.appendChild(t);
+  b.appendChild(sp({style:{fontSize:"20px",color:"#9CA3AF"}},"›"));
+  b.addEventListener("click",function(){if(!plus){if(confirm("くわしい絞り込みは、スノマ＋会員の機能です。\nプランを見てみますか？"))openPlusPage();return;}R({advOpen:true,advDraft:JSON.parse(JSON.stringify(advF()))});});
+  return b;
+}
+function advSummary(){
+  var f=S.adv,a=[];
+  if(f.lv.length)a.push(f.lv.join("・"));
+  if(f.resorts.length)a.push(f.resorts.length===1?f.resorts[0]:f.resorts[0]+"ほか"+(f.resorts.length-1)+"か所");
+  if(f.price!=="any"){for(var i=0;i<ADV_PRICE.length;i++)if(ADV_PRICE[i][0]===f.price)a.push(ADV_PRICE[i][1]);}
+  if(f.ok)a.push("本人確認済");
+  if(f.gear.length)a.push(f.gear.join("・"));
+  if(f.styles.length)a.push(f.styles.join("・"));
+  if(f.age.length)a.push(f.age.map(function(x){for(var i=0;i<ADV_AGE.length;i++)if(ADV_AGE[i][0]===x)return ADV_AGE[i][1];return x;}).join("・"));
+  if(f.gender.length)a.push(f.gender.join("・"));
+  if(f.slot)a.push("空き日程あり");
+  return a.join("／");
+}
+function AdvFilterModal(){
+  var f=S.advDraft;
+  return Modal(false,function(){R({advOpen:false});},function(box){
+    var t=d({style:{fontWeight:"900",fontSize:"19px",color:"#1A1A2E",marginBottom:"4px"}});t.textContent="くわしく絞り込む";box.appendChild(t);
+    var ex=d({style:{fontSize:"12px",color:"#6B7280",marginBottom:"14px"}});ex.textContent="選んだ条件をすべて満たす人だけを表示します。";box.appendChild(ex);
+    function sec(title){var h=d({style:{fontSize:"12.5px",fontWeight:"900",color:"#374151",margin:"14px 0 8px"}});h.textContent=title;box.appendChild(h);}
+    function chips(list,key,single){
+      var r=d({style:{display:"flex",flexWrap:"wrap",gap:"6px"}});
+      list.forEach(function(it){
+        var val=Array.isArray(it)?it[0]:it,lbl=Array.isArray(it)?it[1]:it;
+        var on=single?f[key]===val:f[key].indexOf(val)>=0;
+        var c=document.createElement("button");c.textContent=lbl;
+        c.style.cssText="padding:7px 12px;border-radius:16px;font-size:12.5px;font-weight:800;"+(on?"background:#FF6B2B;color:#fff;border:1.5px solid #FF6B2B":"background:#fff;color:#4B5563;border:1.5px solid #E5E7EB");
+        c.addEventListener("click",function(){if(single)f[key]=val;else{var k=f[key].indexOf(val);if(k>=0)f[key].splice(k,1);else f[key].push(val);}render();});
+        r.appendChild(c);
+      });
+      box.appendChild(r);
+    }
+    function toggle(key,label){
+      var c=document.createElement("button");var on=!!f[key];
+      c.style.cssText="display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-radius:12px;margin-top:6px;text-align:left;font-size:13.5px;font-weight:800;color:#1A1A2E;"+(on?"background:#FFF4EC;border:1.5px solid #FF6B2B":"background:#fff;border:1.5px solid #E5E7EB");
+      var bx=document.createElement("span");bx.style.cssText="width:22px;height:22px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;box-sizing:border-box;"+(on?"background:#FF6B2B":"border:2px solid #9CA3AF");
+      if(on)bx.innerHTML='<svg width="13" height="13" viewBox="0 0 14 14"><path d="M2.5 7.5l3 3 6-7" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      c.appendChild(bx);c.appendChild(sp(null,label));
+      c.addEventListener("click",function(){f[key]=!f[key];render();});box.appendChild(c);
+    }
+    sec("レベル");chips(LEVELS,"lv");
+    sec("活動スキー場");
+    var ar=S.advArea||AREAS[0].area;
+    var at=d({style:{display:"flex",gap:"6px",overflowX:"auto",paddingBottom:"6px",marginBottom:"6px"}});
+    AREAS.forEach(function(A){var on=ar===A.area;var c=document.createElement("button");c.textContent=A.area;c.style.cssText="flex-shrink:0;padding:5px 10px;border-radius:10px;font-size:11.5px;font-weight:800;"+(on?"background:#1A1A2E;color:#fff":"background:#F3F4F6;color:#4B5563");c.addEventListener("click",function(){S.advArea=A.area;render();});at.appendChild(c);});
+    box.appendChild(at);
+    var areaObj=AREAS.filter(function(A){return A.area===ar;})[0]||AREAS[0];
+    chips(areaObj.resorts,"resorts");
+    if(f.resorts.length){var sel=d({style:{fontSize:"11.5px",color:"#C2410C",marginTop:"6px",lineHeight:"1.6"}});sel.textContent="選択中："+f.resorts.join("・");box.appendChild(sel);}
+    sec("料金（同行・撮影）");chips(ADV_PRICE,"price",true);
+    sec("撮影機材");chips(ADV_GEAR,"gear");
+    sec("滑りのスタイル");chips(ADV_STYLES,"styles");
+    sec("年代");chips(ADV_AGE,"age");
+    sec("性別");chips(ADV_GENDER,"gender");
+    sec("そのほか");
+    toggle("ok","本人確認済みの人だけ");
+    toggle("slot","空き日程を出している人だけ");
+    // 件数のプレビュー
+    var saved=S.adv;S.adv=f;var cnt=USERS.filter(function(u){return !(S.blockedUsers&&S.blockedUsers.indexOf(u.id)>=0)&&advMatch(u);}).length;S.adv=saved;
+    var br=d({style:{display:"flex",gap:"10px",marginTop:"18px",position:"sticky",bottom:"-24px",background:"#fff",padding:"10px 0 4px"}});
+    var clr=document.createElement("button");clr.textContent="クリア";clr.style.cssText="flex:0 0 96px;padding:13px;border-radius:14px;background:#fff;border:1.5px solid #E5E7EB;color:#6B7280;font-weight:800;font-size:14px";
+    clr.addEventListener("click",function(){S.advDraft={lv:[],resorts:[],price:"any",ok:false,gear:[],styles:[],age:[],gender:[],slot:false};render();});
+    var ap=document.createElement("button");ap.textContent=cnt+"人を表示する";ap.style.cssText="flex:1;padding:13px;border-radius:14px;background:linear-gradient(135deg,#FF6B2B,#FF8C55);color:#fff;font-weight:900;font-size:14.5px;border:none";
+    ap.addEventListener("click",function(){R({adv:f,advOpen:false});});
+    br.appendChild(clr);br.appendChild(ap);box.appendChild(br);
+  });
+}
 // ===== スノマ＋：プラン選択・お支払い（Stripe）・解約 =====
 // Edge Function：plus-billing（お支払い画面・解約画面を開く）／plus-webhook（支払い結果を plus_members に反映）
 var PLUS_TRIAL_DAYS=0; // plus-billing の TRIAL_DAYS と同じ数にそろえる（12月のキャンペーン開始時に30へ）
@@ -1685,7 +1792,7 @@ var PLUS_PLANS=[
   {id:"yearly",name:"年額プラン",price:3980,per:"年",note:"月あたり約332円・月額より1,780円おトク",best:true},
   {id:"monthly",name:"月額プラン",price:480,per:"月",note:"いつでも解約できます"}
 ];
-var PLUS_PERKS=[["スキル販売を5つまで出品＋上位に表示",""],["新雪アラート（雪の予報・パウダー報告をお知らせ）",""],["金色バッジ",""],["足あと（プロフィールを見た人がわかる）",""],["くわしい絞り込み検索","近日公開"]];
+var PLUS_PERKS=[["スキル販売を5つまで出品＋上位に表示",""],["新雪アラート（雪の予報・パウダー報告をお知らせ）",""],["金色バッジ",""],["足あと（プロフィールを見た人がわかる）",""],["くわしい絞り込み検索",""]];
 function plusPlanById(id){for(var i=0;i<PLUS_PLANS.length;i++)if(PLUS_PLANS[i].id===id)return PLUS_PLANS[i];return PLUS_PLANS[0];}
 function fmtJDate(iso){if(!iso)return "";var t=new Date(new Date(iso).getTime()+9*3600000);return t.getUTCFullYear()+"年"+(t.getUTCMonth()+1)+"月"+t.getUTCDate()+"日";}
 function loadPlusSub(){
@@ -2951,6 +3058,7 @@ function renderExplore(){
     (function(area){ar.appendChild(chip2(area.area,S.selArea===area.area,function(){R({selArea:S.selArea===area.area?null:area.area});}));})(AREAS[areai2]);
   }
   wrap.appendChild(ar);
+  wrap.appendChild(AdvFilterBar());
 
   // おすすめ表示
   if(S.myProfile&&S.myProfile.resorts&&S.myProfile.resorts.length>0){
@@ -3000,6 +3108,7 @@ function renderExplore(){
       if(S.payMode==="free"&&isPaidUser(u))return;
       if(S.payMode==="paid"&&!isPaidUser(u))return;
       if(!pAc)return;
+      if(advOn()&&!advMatch(u))return;
       _shown++;
       var card=d({class:"card",style:{cursor:"pointer",marginBottom:"12px"},onClick:function(){R({selUser:u});}});
       var row=d({style:{display:"flex",gap:"12px"}});
@@ -6564,6 +6673,7 @@ function _renderInner(){
   if(S.showReport)app.appendChild(ReportModal());
   if(S.showContact)app.appendChild(ContactModal());
   if(S.showFaq)app.appendChild(FaqModal());
+  if(S.advOpen&&S.advDraft)app.appendChild(AdvFilterModal());
   if(S.showDeleteAccount)app.appendChild(DeleteAccountModal());
   if(S.showLoginModal)app.appendChild(LoginModal());
   if(S.showEditProfile)app.appendChild(EditProfileModal());
