@@ -586,7 +586,7 @@ function renderBoard(wrap){
     opts.forEach(function(o){var on=(cur||null)===o[0];var c=document.createElement("button");c.className="chip"+(on?" on":"");c.style.cssText="flex-shrink:0;font-size:12px;padding:7px 12px";c.textContent=o[1];c.addEventListener("click",function(){var u={};u[key]=o[0];R(u);});row.appendChild(c);});
     wrap.appendChild(row);
   }
-  chipRow([[null,"すべて"],["offer","🙋 同行・撮影します"],["request","🔍 同行・撮影お願いします"]],S.bdKind,"bdKind");
+  chipRow([[null,"すべて"],["offer","🙋 空いてます"],["request","🔍 探しています"]],S.bdKind,"bdKind");
   chipRow([[null,"無料・有料"],["free","🤝 無料"],["paid","💴 有料"]],S.bdPay,"bdPay");
   chipRow([[null,"全エリア"]].concat(AREAS.map(function(a){return [a.area,a.area];})),S.bdArea,"bdArea");
   if(S.posts===undefined){S.posts=[];loadPosts();}
@@ -612,7 +612,7 @@ function renderBoard(wrap){
     hr.appendChild(hi);card.appendChild(hr);
     var bg=d({style:{display:"flex",flexWrap:"wrap",gap:"6px",marginBottom:p.note?"8px":"10px"}});
     var isOffer=p.kind==="offer";
-    bg.appendChild(sp({style:{background:isOffer?"#EEF2FF":"#FEF3C7",color:isOffer?"#4338CA":"#92400E",padding:"3px 10px",borderRadius:"20px",fontSize:"11px",fontWeight:"800"}},isOffer?"🙋 同行・撮影します":"🔍 同行・撮影お願いします"));
+    bg.appendChild(sp({style:{background:isOffer?"#EEF2FF":"#FEF3C7",color:isOffer?"#4338CA":"#92400E",padding:"3px 10px",borderRadius:"20px",fontSize:"11px",fontWeight:"800"}},kindLabel(p.kind,p.pay)));
     var paid=p.pay==="paid";var mp=(!mine&&paid&&isOffer&&u.ok)?minPlanPrice(u):0;
     var reqPaid=paid&&!isOffer&&(parseInt(p.price,10)||0)>0;
     bg.appendChild(sp({style:{background:paid?"#FFF0E8":"#F0FDF4",color:paid?"#FF6B2B":"#15803D",padding:"3px 10px",borderRadius:"20px",fontSize:"11px",fontWeight:"800"}},reqPaid?("💴 ¥"+(parseInt(p.price,10)).toLocaleString()+" お支払い"):(paid?("💴 有料"+(mp?" ¥"+mp.toLocaleString()+"〜":"")):"🤝 無料")));
@@ -715,14 +715,20 @@ function confirmApplicant(x,o,cb){
     loadReservations();cb(true);
   });
 }
+// 募集の種類の表示名（無料＝いっしょに滑る／有料＝同行・撮影）
+function kindLabel(kind,pay){
+  if(pay==="paid")return kind==="offer"?"🙋 同行・撮影します":"🔍 同行・撮影お願いします";
+  return kind==="offer"?"🤝 いっしょに滑ります":"🔍 いっしょに滑る人を探しています";
+}
 function PostModal(){
   var f=S.postModal;
   return Modal(false,function(){R({postModal:null});},function(box){
     var t=d({style:{fontWeight:"900",fontSize:"18px",color:"#1A1A2E",marginBottom:"14px"}});t.textContent="📅 募集を投稿する";box.appendChild(t);
     function lbl(x){var l=d({style:{fontSize:"12px",fontWeight:"800",color:"#6B7280",margin:"0 0 6px"}});l.textContent=x;box.appendChild(l);}
     function seg(opts,key){var r=d({style:{display:"flex",gap:"8px",marginBottom:"14px"}});opts.forEach(function(o){var on=f[key]===o[0];var c=document.createElement("button");c.textContent=o[1];c.style.cssText="flex:1;padding:11px 6px;border-radius:14px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;border:2px solid "+(on?"#FF6B2B":"#E5E7EB")+";background:"+(on?"#FFF0E8":"#fff")+";color:"+(on?"#FF6B2B":"#4B5563");c.addEventListener("click",function(){f[key]=o[0];render();});r.appendChild(c);});box.appendChild(r);}
-    lbl("投稿の種類");seg([["offer","🙋 同行・撮影します"],["request","🔍 同行・撮影お願いします"]],"kind");
-    var hint=d({style:{fontSize:"11px",color:"#9CA3AF",margin:"-8px 0 14px",lineHeight:"1.6"}});hint.textContent=f.kind==="offer"?"この日・この時間なら一緒に滑れる／撮影できる、という空き日程の投稿です。有料にすると、この枠から予約を受けられます。":"この日に一緒に滑る人・撮影してくれる人を探す投稿です。";box.appendChild(hint);
+    lbl("料金");seg([["free","🤝 無料（いっしょに滑る）"],["paid","💴 有料（同行・撮影）"]],"pay");
+    lbl("投稿の種類");seg([["offer",kindLabel("offer",f.pay)],["request",kindLabel("request",f.pay)]],"kind");
+    var hint=d({style:{fontSize:"11px",color:"#9CA3AF",margin:"-8px 0 14px",lineHeight:"1.6"}});hint.textContent=f.pay==="paid"?(f.kind==="offer"?"この日・この時間なら同行・撮影できる、という空き日程の投稿です。この枠から予約を受けられます。":"この日に同行・撮影してくれる人を探す投稿です。"):(f.kind==="offer"?"この日・この時間なら一緒に滑れる、という空き日程の投稿です。お金のやり取りはありません。":"この日に一緒に滑る人を探す投稿です。お金のやり取りはありません。");box.appendChild(hint);
     lbl("日付");
     var di=document.createElement("input");di.type="date";di.className="inp";di.style.marginBottom="14px";di.min=todayStr();di.value=f.date||"";di.addEventListener("change",function(e){f.date=e.target.value;});box.appendChild(di);
     lbl("時間");
@@ -735,8 +741,7 @@ function PostModal(){
     var mine=(S.myProfile&&S.myProfile.resorts)||[];
     if(mine.length){var og0=document.createElement("optgroup");og0.label="よく滑るスキー場";mine.forEach(function(r){var o=document.createElement("option");o.value=r;o.textContent=r;og0.appendChild(o);});rs.appendChild(og0);}
     AREAS.forEach(function(a){var og=document.createElement("optgroup");og.label=a.area;a.resorts.forEach(function(r){var o=document.createElement("option");o.value=r;o.textContent=r;og.appendChild(o);});rs.appendChild(og);});
-    rs.value=f.resort||"";rs.addEventListener("change",function(e){f.resort=e.target.value;render();});rs.style.marginBottom="8px";box.appendChild(rs);box.appendChild(resortRuleBox(f.resort));
-    lbl("料金");seg([["free","🤝 無料"],["paid","💴 有料"]],"pay");
+    rs.value=f.resort||"";rs.addEventListener("change",function(e){f.resort=e.target.value;render();});rs.style.marginBottom=f.pay==="paid"?"8px":"14px";box.appendChild(rs);if(f.pay==="paid")box.appendChild(resortRuleBox(f.resort));
     if(f.pay==="paid"&&f.kind==="request"){
       lbl("お支払いする金額（全部込み）");
       var pw=d({style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"6px"}});
@@ -2063,7 +2068,7 @@ var FAQ=[
  ]},
  {sec:"🏂 アプリの使い方",items:[
   ["仲間はどうやって探すの？","「ホーム」→「仲間を探す」で、エリア・種目・レベルなどで絞り込めます。気になる人がいたらプロフィールを見て、フォローやメッセージをしてみましょう。\n撮影してくれる人を探すときは「ホーム」→「撮影カメラマン」から、使っている機材やエリアで絞り込めます。"],
-  ["募集掲示板って何？","日付つきで投稿できる掲示板です。\n・「同行・撮影します」：この日空いているので一緒に滑れる・撮影できます、という投稿\n・「同行・撮影お願いします」：この日一緒に滑る人・撮影してくれる人を探しています、という投稿\nそれぞれ「無料」か「有料」を選べます。"],
+  ["募集掲示板って何？","日付つきで投稿できる掲示板です。\n・「いっしょに滑ります」（無料）／「同行・撮影します」（有料）：この日空いているので一緒に滑れる・撮影できます、という投稿\n・「いっしょに滑る人を探しています」（無料）／「同行・撮影お願いします」（有料）：この日一緒に滑る人・撮影してくれる人を探しています、という投稿\n最初に「無料」か「有料」を選びます。"],
   ["「参加します」を押すとどうなる？","【無料の投稿】相手に「参加したいです！」というメッセージが自動で届き、チャットで日時や集合場所を決めます。\n\n【有料の募集】応募として相手に届きます。募集した人が応募者の中から1人を選ぶと予約が確定します。確定するまでは何人でも応募でき、選ばれなかった人には自動でお知らせが届きます。"],
   ["メッセージは誰にでも送れる？","フォローした相手にメッセージを送れます。プロフィールの「メッセージ」や、募集の「参加します」「質問」から送ると、自動でフォローされます。"],
   ["ラウンジでは何ができる？","・タイムライン：誰でも見られるひとこと投稿（自分の投稿はマイページに日付つきで残り、返信もできます）\n・ゲレンデ速報：今日の雪質・天気・混み具合を写真つきで共有（毎日0時にリセット）\n・会員ページ：本人確認済みの人だけの部屋（雑談部屋・悩み相談・Q&A）。メッセージを長押しすると返信でき、写真や動画も送れます。"]
