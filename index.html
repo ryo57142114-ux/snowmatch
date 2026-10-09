@@ -3356,6 +3356,7 @@ function renderMarket(){
   if(S.logView)return renderLogs(wrap);
   wrap.appendChild(AiHero());
   wrap.appendChild(LogHero());
+  wrap.appendChild(SkillSellCard());
   var tabs=d({style:{display:"flex",gap:"0",marginBottom:"16px",background:"#F5F7FA",borderRadius:"16px",padding:"4px",overflowX:"auto",webkitOverflowScrolling:"touch"}});
   var tabDefs=[["room","雑談部屋"],["nayami","悩み相談"],["qa","Q&A"]];
   if(S.marketTab==="ai")S.marketTab="room";
@@ -3636,6 +3637,39 @@ function logMapMount(wrap){
     }
     setTimeout(function(){if(_lmap){_lmap.invalidateSize();logMapRefresh();}},60);
   });
+}
+function SkillSellCard(){
+  var logged=!!(currentUser&&!S.isGuest);
+  var card=document.createElement("div");
+  card.style.cssText="background:#fff;border:1.5px solid #E8C468;border-radius:20px;padding:14px 16px;margin-bottom:16px;box-shadow:0 2px 10px rgba(184,146,58,.15)";
+  var hd=document.createElement("div");hd.style.cssText="display:flex;align-items:center;gap:8px;margin-bottom:4px";
+  var t=document.createElement("span");t.style.cssText="font-weight:900;font-size:16px;color:#1A1A2E";t.textContent="💡 スキル販売";
+  var bg=document.createElement("span");bg.style.cssText="font-size:10.5px;font-weight:900;color:#E8C468;background:#0F172A;border-radius:999px;padding:2px 9px";bg.textContent="会員の特別枠";
+  hd.appendChild(t);hd.appendChild(bg);card.appendChild(hd);
+  var sub=document.createElement("div");sub.style.cssText="font-size:12.5px;color:#4B5563;line-height:1.7;margin-bottom:10px";
+  sub.textContent="あなたの得意なことを、オンライン相談やレクチャーにして販売できます。";card.appendChild(sub);
+  var lb=document.createElement("div");lb.style.cssText="font-size:11.5px;font-weight:800;color:#6B7280;margin-bottom:6px";lb.textContent="たとえば…";card.appendChild(lb);
+  var row=document.createElement("div");row.style.cssText="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px";
+  ["ギア選び相談","滑り動画の考察","上達プラン作成","ワックスのやり方レクチャー","GoPro・Insta360の設定レクチャー","オフシーズンの練習メニュー"].forEach(function(x){
+    var c=document.createElement("span");c.style.cssText="font-size:11.5px;font-weight:700;color:#0F172A;background:#FDF3D7;border:1px solid #E8C468;border-radius:999px;padding:4px 10px";c.textContent=x;row.appendChild(c);
+  });
+  card.appendChild(row);
+  var fr=document.createElement("div");fr.style.cssText="background:#F8FAFC;border:1px solid #E5E7EB;border-radius:12px;padding:10px 12px;font-size:12.5px;color:#1A1A2E;line-height:1.7;margin-bottom:10px";
+  fr.textContent="✨ 例にないメニューも、自分で考えて自由に作って販売できます（内容の審査があります）。";card.appendChild(fr);
+  var mine=logged?skillsOf(currentUser.id,false):[];var used=mine.filter(function(m){return m.status!=="rejected";}).length;var lim=skillLimit();
+  var full=used>=lim,toPlus=full&&lim===1;
+  var nt=document.createElement("div");nt.style.cssText="font-size:11px;color:#9CA3AF;line-height:1.6;margin-bottom:10px";
+  nt.textContent="出品できる数：無料会員1つ／スノマ＋会員5つ ・ ゲレンデでのレッスンやガイドは出品できません。";card.appendChild(nt);
+  var b=document.createElement("button");
+  b.textContent=!logged?"登録して出品する":toPlus?"スノマ＋で5つまで出品する":full?"出品は5つまでです":"＋ スキルを出品する";
+  b.style.cssText="width:100%;padding:12px;border-radius:12px;border:none;font-weight:900;font-size:14px;cursor:pointer;font-family:inherit;"+(toPlus?"background:linear-gradient(135deg,#FBE38E,#E6B325);color:#5A4521":full?"background:#F3F4F6;color:#9CA3AF":"background:linear-gradient(135deg,#FF6B2B,#FF8C55);color:#fff");
+  b.addEventListener("click",function(){
+    if(!logged){if(S.isGuest)askJoin("無料登録すると、スキルを出品できます。");else{S.showLoginModal=true;render();}return;}
+    if(toPlus){openPlusPage();return;}if(full)return;
+    S.skillEdit={id:null,category:"consult",title:"",description:"",price:"",unit:"1時間"};render();window.scrollTo(0,0);
+  });
+  card.appendChild(b);
+  return card;
 }
 var FREE_LOG_MAX=3;
 function canAddLog(){var plus=!!(currentUser&&isPlus(currentUser.id));return plus||((S.logs||[]).length<FREE_LOG_MAX);}
