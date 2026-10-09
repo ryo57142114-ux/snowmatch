@@ -843,25 +843,45 @@ function MyAvailCard(){
   if(S.isGuest||!currentUser||!S.myProfile)return null;
   var me=S.myProfile;
   var canPaid=!!me.ok&&isPaidUser({price:me.price,priceHour:me.priceHour,priceHalf:me.priceHalf,priceDay:me.priceDay});
-  if(!S.avForm)S.avForm={from:todayStr(),to:"",days:[true,true,true,true,true,true,true],start:"9:00",end:"15:00",resort:(me.resorts&&me.resorts[0])||"",pay:canPaid?"paid":"free",note:""};
+  if(!S.avForm)S.avForm={dates:[],mOff:0,start:"9:00",end:"15:00",resort:(me.resorts&&me.resorts[0])||"",pay:canPaid?"paid":"free",note:""};
   var f=S.avForm;if(!canPaid)f.pay="free";
   var c=document.createElement("div");c.className="card";c.style.marginBottom="12px";
   var t=d({style:{fontWeight:"800",color:"#1A1A2E",fontSize:"14px",marginBottom:"4px"}});t.textContent="📅 空き日程（一緒に滑れる日）";c.appendChild(t);
   var sb0=d({style:{fontSize:"11px",color:"#9CA3AF",marginBottom:"12px",lineHeight:"1.6"}});
-  sb0.textContent="「この期間の、この曜日の、この時間は空いてます」をまとめて登録できます。登録した日は募集掲示板に「🙋 同行・撮影します」として表示され、有料ならその枠から予約を受けられます。";c.appendChild(sb0);
+  sb0.textContent="カレンダーで空いている日をタップして選び、まとめて登録できます。登録した日は募集掲示板に「🙋 同行・撮影します」として表示され、有料ならその枠から予約を受けられます。";c.appendChild(sb0);
   function lbl(x){var l=d({style:{fontSize:"12px",fontWeight:"800",color:"#6B7280",margin:"0 0 6px"}});l.textContent=x;c.appendChild(l);}
-  lbl("期間");
-  var pr=d({style:{display:"flex",alignItems:"center",gap:"6px",marginBottom:"12px"}});
-  function dIn(key,ph){var x=document.createElement("input");x.type="date";x.className="inp";x.style.cssText="flex:1;min-width:0";x.min=todayStr();x.value=f[key]||"";x.placeholder=ph;x.addEventListener("change",function(e){f[key]=e.target.value;});return x;}
-  pr.appendChild(dIn("from"));pr.appendChild(sp({style:{fontWeight:"800",color:"#6B7280"}},"〜"));pr.appendChild(dIn("to"));c.appendChild(pr);
-  var pn=d({style:{fontSize:"11px",color:"#9CA3AF",margin:"-6px 0 12px"}});pn.textContent="1日だけなら、右側は空欄でOKです（最長60日分）";c.appendChild(pn);
-  lbl("曜日");
-  var wr=d({style:{display:"flex",gap:"5px",marginBottom:"12px"}});
-  "日月火水木金土".split("").forEach(function(w,i){var on=f.days[i];var b=document.createElement("button");b.textContent=w;b.style.cssText="flex:1;padding:8px 0;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;border:1.5px solid "+(on?"#FF6B2B":"#E5E7EB")+";background:"+(on?"#FFF0E8":"#fff")+";color:"+(on?"#FF6B2B":(i===0?"#EF4444":i===6?"#3B82F6":"#9CA3AF"));b.addEventListener("click",function(){f.days[i]=!f.days[i];render();});wr.appendChild(b);});
-  c.appendChild(wr);
-  var qr=d({style:{display:"flex",gap:"6px",margin:"-6px 0 12px"}});
-  [["毎日",[1,1,1,1,1,1,1]],["土日のみ",[1,0,0,0,0,0,1]],["平日のみ",[0,1,1,1,1,1,0]]].forEach(function(o){var b=document.createElement("button");b.textContent=o[0];b.style.cssText="padding:4px 10px;border-radius:20px;border:1px solid #E5E7EB;background:#F9FAFB;font-size:11px;font-weight:700;color:#6B7280;cursor:pointer;font-family:inherit";b.addEventListener("click",function(){f.days=o[1].map(Boolean);render();});qr.appendChild(b);});
+  lbl("日にち（タップで選択・もう一度で解除）");
+  if(!f.dates)f.dates=[];
+  var td0=todayStr(),base=new Date();base.setDate(1);base.setMonth(base.getMonth()+(f.mOff||0));
+  var y=base.getFullYear(),m=base.getMonth();
+  var hd=d({style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"6px"}});
+  function nav(t,dlt,dis){var b=document.createElement("button");b.textContent=t;b.disabled=dis;b.style.cssText="padding:6px 12px;border-radius:10px;border:1px solid #E5E7EB;background:#fff;font-weight:800;color:"+(dis?"#D1D5DB":"#4B5563");b.addEventListener("click",function(){f.mOff=(f.mOff||0)+dlt;render();});return b;}
+  hd.appendChild(nav("‹",-1,!(f.mOff>0)));hd.appendChild(sp({style:{fontWeight:"900",fontSize:"15px",color:"#1A1A2E"}},y+"年"+(m+1)+"月"));hd.appendChild(nav("›",1,(f.mOff||0)>=5));
+  c.appendChild(hd);
+  var grid=d({style:{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:"4px",marginBottom:"8px"}});
+  "日月火水木金土".split("").forEach(function(w,i){grid.appendChild(d({style:{textAlign:"center",fontSize:"11px",fontWeight:"800",color:i===0?"#EF4444":i===6?"#3B82F6":"#9CA3AF"}},[document.createTextNode(w)]));});
+  var first=new Date(y,m,1).getDay(),dim=new Date(y,m+1,0).getDate();
+  for(var k=0;k<first;k++)grid.appendChild(document.createElement("div"));
+  var has={};livePosts().forEach(function(x){if(x.user_id===currentUser.id&&x.kind==="offer")has[x.ride_date]=1;});
+  for(var dd=1;dd<=dim;dd++){(function(day){
+    var ds=y+"-"+String(m+1).padStart(2,"0")+"-"+String(day).padStart(2,"0");
+    var past=ds<td0,on=f.dates.indexOf(ds)>=0,wd=new Date(y,m,day).getDay();
+    var b=document.createElement("button");b.textContent=day;b.disabled=past;
+    b.style.cssText="position:relative;aspect-ratio:1;border-radius:10px;font-weight:800;font-size:14px;border:1.5px solid "+(on?"#FF6B2B":"#F0F0F0")+";background:"+(on?"#FF6B2B":"#fff")+";color:"+(past?"#D1D5DB":on?"#fff":wd===0?"#EF4444":wd===6?"#3B82F6":"#1A1A2E");
+    if(has[ds]){var dot=document.createElement("span");dot.style.cssText="position:absolute;bottom:3px;left:50%;margin-left:-3px;width:6px;height:6px;border-radius:3px;background:"+(on?"#fff":"#22C55E");b.appendChild(dot);}
+    b.addEventListener("click",function(){var i=f.dates.indexOf(ds);if(i>=0)f.dates.splice(i,1);else{if(f.dates.length>=60){alert("一度に選べるのは60日までです");return;}f.dates.push(ds);}render();});
+    grid.appendChild(b);
+  })(dd);}
+  c.appendChild(grid);
+  var qr=d({style:{display:"flex",gap:"6px",flexWrap:"wrap",marginBottom:"6px"}});
+  function quick(t,fn){var b=document.createElement("button");b.textContent=t;b.style.cssText="padding:5px 10px;border-radius:20px;border:1px solid #E5E7EB;background:#F9FAFB;font-size:11.5px;font-weight:700;color:#6B7280";b.addEventListener("click",function(){fn();render();});qr.appendChild(b);}
+  function monthDays(pred){var out=[];for(var x=1;x<=dim;x++){var ds=y+"-"+String(m+1).padStart(2,"0")+"-"+String(x).padStart(2,"0");if(ds>=td0&&pred(new Date(y,m,x).getDay()))out.push(ds);}return out;}
+  function addAll(list){list.forEach(function(ds){if(f.dates.indexOf(ds)<0&&f.dates.length<60)f.dates.push(ds);});}
+  quick("この月の土日",function(){addAll(monthDays(function(w){return w===0||w===6;}));});
+  quick("この月の平日",function(){addAll(monthDays(function(w){return w>0&&w<6;}));});
+  quick("選択をクリア",function(){f.dates=[];});
   c.appendChild(qr);
+  var cnt=d({style:{fontSize:"11.5px",color:f.dates.length?"#C2410C":"#9CA3AF",fontWeight:"700",marginBottom:"12px"}});cnt.textContent=f.dates.length?(f.dates.length+"日を選択中"):"日にちを選んでください（緑の点は登録済みの日）";c.appendChild(cnt);
   lbl("時間");
   var tr=d({style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"12px"}});
   function tsel(key){var s2=document.createElement("select");s2.className="inp";s2.style.cssText="flex:1;background:#fff";for(var h=6;h<=22;h++){["00","30"].forEach(function(mm){var v=h+":"+mm;var o=document.createElement("option");o.value=v;o.textContent=v;if(f[key]===v)o.selected=true;s2.appendChild(o);});}s2.addEventListener("change",function(e){f[key]=e.target.value;});return s2;}
@@ -882,23 +902,18 @@ function MyAvailCard(){
   var ta=document.createElement("textarea");ta.className="inp";ta.rows=2;ta.maxLength=200;ta.placeholder="例：ニセコ全山どこでもOK。グラトリ撮影得意です";ta.style.cssText="width:100%;resize:none;margin-bottom:12px";ta.value=f.note||"";ta.addEventListener("input",function(e){f.note=e.target.value;});c.appendChild(ta);
   var go=document.createElement("button");go.className="obtn obtn-full";go.textContent="📅 この内容で空き日程を登録";
   go.addEventListener("click",function(){
-    if(!f.from){alert("開始日を選んでください");return;}
-    var to=f.to||f.from;if(to<f.from){alert("終わりの日は、始まりの日より後にしてください");return;}
+    if(!f.dates.length){alert("日にちを選んでください");return;}
     function mins(x){var a=String(x).split(":");return (+a[0])*60+(+a[1]);}
     if(mins(f.end)<=mins(f.start)){alert("終わりの時間は、始まりより後にしてください");return;}
     if(!f.resort){alert("スキー場を選んでください");return;}
-    var p=f.from.split("-"),dt=new Date(+p[0],+p[1]-1,+p[2]),q=to.split("-"),end=new Date(+q[0],+q[1]-1,+q[2]);
-    if((end-dt)/86400000>60){alert("一度に登録できるのは60日分までです");return;}
     var exist={};livePosts().forEach(function(x){if(x.user_id===currentUser.id&&x.kind==="offer")exist[x.ride_date+"|"+hm5(x.start_time)]=1;});
     var rows=[],skip=0;
-    for(;dt<=end;dt.setDate(dt.getDate()+1)){
-      if(!f.days[dt.getDay()])continue;
-      var ds=dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0");
-      if(ds<todayStr())continue;
-      if(exist[ds+"|"+f.start]){skip++;continue;}
+    f.dates.slice().sort().forEach(function(ds){
+      if(ds<todayStr())return;
+      if(exist[ds+"|"+f.start]){skip++;return;}
       rows.push({user_id:currentUser.id,kind:"offer",ride_date:ds,start_time:f.start,end_time:f.end,resort:f.resort,pay:f.pay,note:(f.note||"").trim()});
-    }
-    if(!rows.length){alert(skip?"選んだ日はすでに登録済みです":"条件に合う日がありません（曜日の選び方を確認してください）");return;}
+    });
+    if(!rows.length){alert(skip?"選んだ日はすでに登録済みです":"登録できる日がありません");return;}
     if(!confirm(rows.length+"日分の空き日程を登録します。よろしいですか？"+(skip?"\n（登録済みの"+skip+"日分はスキップします）":"")))return;
     go.disabled=true;go.textContent="登録中...";
     sb.from("ride_posts").insert(rows).then(function(r){
