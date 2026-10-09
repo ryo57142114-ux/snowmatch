@@ -3645,9 +3645,18 @@ function renderLogs(wrap){
   }
   // スタンプ
   var sh=d({style:{fontWeight:"900",fontSize:"15px",color:"#1A1A2E",margin:"18px 0 8px"}});sh.textContent="🏷 スキー場スタンプ";wrap.appendChild(sh);
+  var lo=S.logOpen||{};
   AREAS.forEach(function(a){
-    var h=d({style:{fontSize:"12px",fontWeight:"800",color:"#6B7280",margin:"8px 2px 6px"}});h.textContent=a.area;wrap.appendChild(h);
-    var row=d({style:{display:"flex",flexWrap:"wrap",gap:"6px"}});
+    var got=0;a.resorts.forEach(function(r){if(st.cnt[r])got++;});
+    var isOpen=!!lo[a.area];
+    var h=d({style:{display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",background:"#fff",border:"1px solid #E5E7EB",borderRadius:"12px",padding:"10px 12px",margin:"6px 0"}});
+    var hl=document.createElement("span");hl.style.cssText="font-size:13px;font-weight:800;color:#1A1A2E";hl.textContent=a.area;
+    var hr=document.createElement("span");hr.style.cssText="font-size:12px;font-weight:800;color:"+(got?"#B8923A":"#9CA3AF");hr.textContent=got+"／"+a.resorts.length+"　"+(isOpen?"▲":"▼");
+    h.appendChild(hl);h.appendChild(hr);
+    h.onclick=function(){var o={};for(var k in lo)o[k]=lo[k];o[a.area]=!isOpen;R({logOpen:o});};
+    wrap.appendChild(h);
+    if(!isOpen)return;
+    var row=d({style:{display:"flex",flexWrap:"wrap",gap:"6px",margin:"0 0 6px"}});
     a.resorts.forEach(function(r){
       var n=st.cnt[r]||0;
       var c=document.createElement("span");
