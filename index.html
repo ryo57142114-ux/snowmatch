@@ -3354,7 +3354,9 @@ function renderMarket(){
   var hs=d({style:{color:"#6B7280",fontSize:"13px"}});hs.textContent="会員限定 · 仲間と語ろう・悩み相談・Q&A";
   hd.appendChild(ht);hd.appendChild(hs);wrap.appendChild(hd);
   if(S.aiView)return renderAiDiag(wrap);
+  if(S.logView)return renderLogs(wrap);
   wrap.appendChild(AiHero());
+  wrap.appendChild(LogHero());
   var tabs=d({style:{display:"flex",gap:"0",marginBottom:"16px",background:"#F5F7FA",borderRadius:"16px",padding:"4px",overflowX:"auto",webkitOverflowScrolling:"touch"}});
   var tabDefs=[["room","雑談部屋"],["nayami","悩み相談"],["qa","Q&A"]];
   if(S.marketTab==="ai")S.marketTab="room";
@@ -3574,6 +3576,151 @@ function runAiDiag(){
     var cv=document.createElement("canvas");try{drawPoseOverlay(cv,o.im,lm);a.overlay=cv.toDataURL("image/jpeg",0.8);}catch(e){a.overlay=null;}
     render();setTimeout(function(){var el=document.getElementById("ai_result");if(el&&el.scrollIntoView)el.scrollIntoView({behavior:"smooth",block:"start"});},50);
   }).catch(function(e){a.busy=false;a.err="AIの準備に失敗しました（通信環境を確認して、もう一度お試しください）"+(e&&e.message?"\n"+e.message:"");render();});
+}
+// ===== シーズン記録・スキー場スタンプ（スノマ＋） =====
+var LOG_WX=[["sun","☀️ 晴れ"],["cloud","☁️ くもり"],["snow","🌨 雪"],["pow","❄️ パウダー"],["wind","💨 風強い"]];
+function logWxLabel(k){for(var i=0;i<LOG_WX.length;i++){if(LOG_WX[i][0]===k)return LOG_WX[i][1];}return "";}
+function seasonStart(){var t=new Date(),y=t.getFullYear();if(t.getMonth()+1<10)y--;return y+"-10-01";}
+function resortTotal(){var n=0;AREAS.forEach(function(a){n+=a.resorts.length;});return n;}
+function loadLogs(){
+  if(typeof sb==="undefined"||!sb||!currentUser){S.logs=[];return;}
+  S.logs=null;
+  sb.from("ride_logs").select("*").eq("user_id",currentUser.id).order("ride_date",{ascending:false}).order("created_at",{ascending:false}).limit(500)
+    .then(function(r){if(r.error){console.error("logs load error",r.error);S.logs=[];S.logErr=true;}else{S.logs=r.data||[];S.logErr=false;}render();},
+          function(){S.logs=[];S.logErr=true;render();});
+}
+function logStats(){
+  var l=S.logs||[],ss=seasonStart(),dSeason={},dAll={},cnt={};
+  l.forEach(function(x){dAll[x.ride_date]=1;cnt[x.resort]=(cnt[x.resort]||0)+1;if(x.ride_date>=ss)dSeason[x.ride_date]=1;});
+  var stamps=0;AREAS.forEach(function(a){a.resorts.forEach(function(r){if(cnt[r])stamps++;});});
+  var top="",tn=0;Object.keys(cnt).forEach(function(k){if(cnt[k]>tn){tn=cnt[k];top=k;}});
+  return {season:Object.keys(dSeason).length,total:Object.keys(dAll).length,stamps:stamps,cnt:cnt,top:top};
+}
+function LogHero(){
+  var plus=!!(currentUser&&isPlus(currentUser.id));
+  if(S.logs===undefined&&currentUser){loadLogs();}
+  var card=document.createElement("div");
+  card.style.cssText="background:linear-gradient(135deg,#0F172A,#1E293B);border:1px solid #B8923A;box-shadow:0 4px 16px rgba(15,23,42,.35);border-radius:20px;padding:14px 16px;margin-bottom:16px;cursor:pointer;display:flex;align-items:center;gap:12px";
+  card.addEventListener("click",function(){S.logView=true;render();var ap=document.getElementById("app");if(ap)ap.scrollTop=0;window.scrollTo(0,0);});
+  var ic=document.createElement("div");ic.style.cssText="width:46px;height:46px;border-radius:14px;background:rgba(232,196,104,.12);border:1px solid rgba(184,146,58,.45);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0";ic.textContent="🏔";
+  var tx=document.createElement("div");tx.style.cssText="flex:1;min-width:0";
+  var t1=document.createElement("div");t1.style.cssText="font-weight:900;font-size:16px;color:#E8C468";t1.textContent="シーズン記録"+(plus?"":"　🔒");
+  var t2=document.createElement("div");t2.style.cssText="font-size:11.5px;color:#CBD5E1;margin-top:2px;line-height:1.5";
+  if(S.logs&&S.logs.length){var st=logStats();t2.textContent="今季 "+st.season+"日 ・ スタンプ "+st.stamps+"／"+resortTotal();}
+  else t2.textContent=plus?"滑った日を記録して、スキー場スタンプを集めよう":"スノマ＋会員限定・滑った日を記録してスタンプを集めよう";
+  tx.appendChild(t1);tx.appendChild(t2);
+  var ar=document.createElement("div");ar.style.cssText="color:#E8C468;font-size:22px";ar.textContent="›";
+  card.appendChild(ic);card.appendChild(tx);card.appendChild(ar);
+  return card;
+}
+function renderLogs(wrap){
+  var plus=!!(currentUser&&isPlus(currentUser.id));
+  if(S.logs===undefined){loadLogs();}
+  var back=document.createElement("button");back.textContent="‹ 会員ページに戻る";
+  back.style.cssText="background:none;border:none;color:#FF6B2B;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;padding:0;margin-bottom:10px";
+  back.addEventListener("click",function(){S.logView=false;render();});wrap.appendChild(back);
+  var ht=d({style:{fontWeight:"900",fontSize:"19px",color:"#1A1A2E",marginBottom:"4px"}});ht.textContent="シーズン記録";wrap.appendChild(ht);
+  var intro=d({style:{color:"#6B7280",fontSize:"12.5px",lineHeight:"1.7",marginBottom:"12px"}});
+  intro.textContent="滑った日を記録して、行ったスキー場のスタンプを集めよう。記録はあなただけに表示されます。";wrap.appendChild(intro);
+  if(S.logs===null||S.logs===undefined){var ld=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"13px",padding:"24px 0"}});ld.textContent="読み込み中...";wrap.appendChild(ld);return wrap;}
+  if(S.logErr){var er=d({style:{background:"#FEF3C7",color:"#92400E",borderRadius:"12px",padding:"10px 12px",fontSize:"12px",lineHeight:"1.7",marginBottom:"12px"}});er.textContent="記録を読み込めませんでした。しばらくしてから、もう一度お試しください。";wrap.appendChild(er);}
+  var st=logStats();
+  // 集計
+  var sg=d({style:{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:"8px",marginBottom:"14px"}});
+  [["今季の日数",st.season+"日"],["通算の日数",st.total+"日"],["スタンプ",st.stamps+"／"+resortTotal()]].forEach(function(o){
+    var b=d({style:{background:"linear-gradient(135deg,#0F172A,#1E293B)",border:"1px solid #B8923A",borderRadius:"14px",padding:"10px 8px",textAlign:"center"}});
+    var n=d({style:{fontWeight:"900",fontSize:"17px",color:"#E8C468"}});n.textContent=o[1];
+    var l=d({style:{fontSize:"10.5px",color:"#CBD5E1",marginTop:"2px"}});l.textContent=o[0];
+    b.appendChild(n);b.appendChild(l);sg.appendChild(b);
+  });
+  wrap.appendChild(sg);
+  if(st.top){var tp=d({style:{fontSize:"12.5px",color:"#4B5563",marginBottom:"12px"}});tp.textContent="いちばん多く行ったスキー場：「"+st.top+"」（"+st.cnt[st.top]+"回）";wrap.appendChild(tp);}
+  // 追加ボタン（スノマ＋のみ）
+  if(plus){
+    wrap.appendChild(obtn("＋ 今日の記録を追加",function(){R({logModal:{date:todayStr(),resort:"",weather:"",note:"",sending:false}});},"obtn-full"));
+  }else{
+    var lk=d({style:{background:"#FFFBEB",border:"1.5px solid #F5D98B",borderRadius:"14px",padding:"12px 14px",marginBottom:"4px"}});
+    var lt=d({style:{fontSize:"12.5px",color:"#78350F",lineHeight:"1.7",marginBottom:"8px"}});lt.textContent="🔒 記録の追加は、スノマ＋会員の特典です。これまでの記録は、そのまま見られます。";lk.appendChild(lt);
+    lk.appendChild(obtn("スノマ＋を見る",function(){openPlusPage();},"obtn-s"));wrap.appendChild(lk);
+  }
+  // スタンプ
+  var sh=d({style:{fontWeight:"900",fontSize:"15px",color:"#1A1A2E",margin:"18px 0 8px"}});sh.textContent="🏷 スキー場スタンプ";wrap.appendChild(sh);
+  AREAS.forEach(function(a){
+    var h=d({style:{fontSize:"12px",fontWeight:"800",color:"#6B7280",margin:"8px 2px 6px"}});h.textContent=a.area;wrap.appendChild(h);
+    var row=d({style:{display:"flex",flexWrap:"wrap",gap:"6px"}});
+    a.resorts.forEach(function(r){
+      var n=st.cnt[r]||0;
+      var c=document.createElement("span");
+      c.style.cssText=n?"font-size:11.5px;font-weight:800;padding:5px 10px;border-radius:999px;background:#0F172A;color:#E8C468;border:1px solid #B8923A":"font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:999px;background:#F3F4F6;color:#9CA3AF;border:1px solid #E5E7EB";
+      c.textContent=(n?"✓ ":"")+r+(n>1?" ×"+n:"");row.appendChild(c);
+    });
+    wrap.appendChild(row);
+  });
+  // 記録の一覧
+  var lh=d({style:{fontWeight:"900",fontSize:"15px",color:"#1A1A2E",margin:"20px 0 8px"}});lh.textContent="📒 記録";wrap.appendChild(lh);
+  var list=S.logs||[];
+  if(!list.length){var em=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"13px",padding:"16px 0"}});em.textContent="まだ記録がありません。";wrap.appendChild(em);}
+  list.slice(0,30).forEach(function(x){
+    var card=d({style:{background:"#fff",borderRadius:"14px",padding:"12px 14px",marginBottom:"8px",boxShadow:"0 1px 6px rgba(0,0,0,.05)"}});
+    var top=d({style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:"8px"}});
+    var dt=d({style:{fontSize:"12px",color:"#6B7280",fontWeight:"700"}});dt.textContent=String(x.ride_date).slice(0,4)+"/"+dateLbl(x.ride_date)+(x.weather?"　"+logWxLabel(x.weather):"");
+    var del=document.createElement("button");del.textContent="削除";del.style.cssText="background:none;border:none;color:#9CA3AF;font-size:12px;cursor:pointer;font-family:inherit";
+    del.addEventListener("click",function(){
+      if(!confirm("この記録を削除しますか？"))return;
+      sb.from("ride_logs").delete().eq("id",x.id).then(function(r){
+        if(r.error){alert("削除できませんでした: "+r.error.message);return;}
+        S.logs=(S.logs||[]).filter(function(y){return y.id!==x.id;});render();
+      });
+    });
+    top.appendChild(dt);top.appendChild(del);card.appendChild(top);
+    var nm=d({style:{fontWeight:"800",fontSize:"14px",color:"#1A1A2E",marginTop:"4px"}});nm.textContent=x.resort;card.appendChild(nm);
+    if(x.note){var nt=d({style:{fontSize:"13px",color:"#4B5563",lineHeight:"1.6",marginTop:"4px",whiteSpace:"pre-wrap"}});nt.textContent=x.note;card.appendChild(nt);}
+    wrap.appendChild(card);
+  });
+  if(list.length>30){var more=d({style:{fontSize:"11px",color:"#9CA3AF",textAlign:"center",marginTop:"4px"}});more.textContent="新しい順に30件まで表示しています。";wrap.appendChild(more);}
+  return wrap;
+}
+function LogModal(){
+  var f=S.logModal;
+  return Modal(false,function(){if(!f.sending)R({logModal:null});},function(box){
+    var t=d({style:{fontWeight:"900",fontSize:"18px",color:"#1A1A2E",marginBottom:"14px"}});t.textContent="🏔 滑った日を記録";box.appendChild(t);
+    function lbl(x){var l=d({style:{fontSize:"12px",fontWeight:"800",color:"#6B7280",margin:"0 0 6px"}});l.textContent=x;box.appendChild(l);}
+    lbl("日付");
+    var di=document.createElement("input");di.type="date";di.className="inp";di.style.marginBottom="14px";di.max=todayStr();di.value=f.date||"";
+    di.addEventListener("change",function(e){f.date=e.target.value;});box.appendChild(di);
+    lbl("スキー場");
+    var rs=document.createElement("select");rs.className="inp";rs.style.cssText="margin-bottom:14px;background:#fff";
+    var o0=document.createElement("option");o0.value="";o0.textContent="選んでください";rs.appendChild(o0);
+    var mine=(S.myProfile&&S.myProfile.resorts)||[];
+    if(mine.length){var og0=document.createElement("optgroup");og0.label="よく滑るスキー場";mine.forEach(function(r){var o=document.createElement("option");o.value=r;o.textContent=r;og0.appendChild(o);});rs.appendChild(og0);}
+    AREAS.forEach(function(a){var og=document.createElement("optgroup");og.label=a.area;a.resorts.forEach(function(r){var o=document.createElement("option");o.value=r;o.textContent=r;og.appendChild(o);});rs.appendChild(og);});
+    rs.value=f.resort||"";rs.addEventListener("change",function(e){f.resort=e.target.value;});box.appendChild(rs);
+    lbl("天気（任意）");
+    var wr=d({style:{display:"flex",flexWrap:"wrap",gap:"6px",marginBottom:"14px"}});
+    LOG_WX.forEach(function(o){var on=f.weather===o[0];var c=document.createElement("button");c.textContent=o[1];
+      c.style.cssText="padding:8px 12px;border-radius:999px;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit;border:2px solid "+(on?"#B8923A":"#E5E7EB")+";background:"+(on?"#0F172A":"#fff")+";color:"+(on?"#E8C468":"#4B5563");
+      c.addEventListener("click",function(){f.weather=on?"":o[0];render();});wr.appendChild(c);});
+    box.appendChild(wr);
+    lbl("ひとこと（任意）");
+    var ta=document.createElement("textarea");ta.className="inp";ta.rows=3;ta.maxLength=200;ta.placeholder="例：新雪ふかふか。午前中のうちに10本滑れた";ta.style.cssText="width:100%;resize:none;margin-bottom:14px";ta.value=f.note||"";
+    ta.addEventListener("input",function(e){f.note=e.target.value;});box.appendChild(ta);
+    var br=d({style:{display:"flex",gap:"10px"}});
+    br.appendChild(obtn("閉じる",function(){if(!f.sending)R({logModal:null});},"obtn-s"));
+    br.appendChild(obtn(f.sending?"保存中…":"記録する",function(){
+      if(f.sending)return;
+      if(!f.date){alert("日付を選んでください");return;}
+      if(f.date>todayStr()){alert("未来の日付は選べません");return;}
+      if(!f.resort){alert("スキー場を選んでください");return;}
+      if(!sb||!currentUser){alert("記録するにはログインが必要です");return;}
+      f.sending=true;render();
+      sb.from("ride_logs").insert({user_id:currentUser.id,ride_date:f.date,resort:f.resort,weather:f.weather||null,note:(f.note||"").trim()||null}).select().single().then(function(r){
+        f.sending=false;
+        if(r.error){render();alert(r.error.code==="42P01"?"記録機能は準備中です。もう少しお待ちください。":"保存できませんでした: "+r.error.message);return;}
+        S.logs=[r.data].concat(S.logs||[]);S.logErr=false;R({logModal:null});
+      },function(e){f.sending=false;render();alert("通信エラー: "+(e&&e.message?e.message:e));});
+    },""));
+    box.appendChild(br);
+  });
 }
 function AiHero(){
   var card=document.createElement("div");
@@ -6639,7 +6786,7 @@ function WelcomeModal(){
 }
 
 
-function viewKey(){return [S.pg,S.tab,S.skillEdit?"se":"",S.skillListView?"sl":"",S.liveCamView?"lc":"",S.weatherView?"wx":"",S.alertView?"al":"",S.aiView?"ai":"",S.openDetail||"",S.openRoom||"",S.selUser?S.selUser.id:"",S.chatUser?S.chatUser.id:"",S.bookUser?1:0,S.showEditProfile?1:0].join("|");}
+function viewKey(){return [S.pg,S.tab,S.skillEdit?"se":"",S.skillListView?"sl":"",S.liveCamView?"lc":"",S.weatherView?"wx":"",S.alertView?"al":"",S.aiView?"ai":"",S.logView?"lg":"",S.openDetail||"",S.openRoom||"",S.selUser?S.selUser.id:"",S.chatUser?S.chatUser.id:"",S.bookUser?1:0,S.showEditProfile?1:0].join("|");}
 function isTypingEl(t){return !!(t&&t.id&&(t.id==="chatinput"||t.id==="roominput"||t.id.indexOf("cmt_")===0||t.id.indexOf("ai_")===0));}
 var _lastViewKey="";
 // 日本語入力（変換中）の最中に画面を描き直すと、文字が勝手に確定したり消えたりするので、変換が終わるまで待つ
@@ -6798,6 +6945,7 @@ function _renderInner(){
   if(S.skillBook)app.appendChild(SkillBookModal());
   if(S.reviewFor)app.appendChild(ReviewModal());
   if(S.postModal)app.appendChild(PostModal());
+  if(S.logModal)app.appendChild(LogModal());
   if(S.reqPay)app.appendChild(ReqPayModal());
   if(S.invite)app.appendChild(RideInviteModal());
   if(S.snowModal)app.appendChild(SnowReportModal());
