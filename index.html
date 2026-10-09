@@ -5657,7 +5657,7 @@ function renderProfile(){
 
   hr.appendChild(hi);hero.appendChild(hr);wrap.appendChild(hero);
   var body=d({style:{padding:"16px 16px 0"}});
-  var _plusCard=PlusEntryCard();if(_plusCard)body.appendChild(_plusCard);
+  var _plusCard=PlusEntryCard();var _plusOn=!!(_plusCard&&isPlus(currentUser.id));if(_plusCard&&!_plusOn)body.appendChild(_plusCard);
   var _fpCard=FootprintCard();if(_fpCard)body.appendChild(_fpCard);
   if(S.sessionChecked&&!currentUser&&!S.isGuest){
     var lgb=d({style:{background:"#FFFBEB",border:"1.5px solid #FCD34D",borderRadius:"16px",padding:"12px 14px",marginBottom:"14px",fontSize:"13px",color:"#92400E",lineHeight:"1.7"}});
@@ -6176,6 +6176,7 @@ function renderProfile(){
   var payoutCard=PayoutCard();if(payoutCard)body.appendChild(payoutCard);
   var _msk=MySkillSection();if(_msk)body.appendChild(_msk);
   var _srv=SkillReviewSection();if(_srv)body.appendChild(_srv);
+  if(_plusOn)body.appendChild(_plusCard); // 加入中の人は、お問い合わせの手前（下のほう）に置く
   // お問い合わせ・退会
   var supportDiv=d({style:{padding:"16px 20px 4px",display:"flex",flexDirection:"column",gap:"8px"}});
   var pushBtn=document.createElement("button");
