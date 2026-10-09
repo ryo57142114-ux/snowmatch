@@ -3641,24 +3641,24 @@ function logMapMount(wrap){
 function SkillSellCard(){
   var logged=!!(currentUser&&!S.isGuest);
   var card=document.createElement("div");
-  card.style.cssText="background:#fff;border:1.5px solid #E8C468;border-radius:20px;padding:14px 16px;margin-bottom:16px;box-shadow:0 2px 10px rgba(184,146,58,.15)";
+  card.style.cssText="background:linear-gradient(135deg,#0F172A,#1E293B);border:1px solid #B8923A;border-radius:20px;padding:14px 16px;margin-bottom:16px;box-shadow:0 4px 16px rgba(15,23,42,.35)";
   var hd=document.createElement("div");hd.style.cssText="display:flex;align-items:center;gap:8px;margin-bottom:4px";
-  var t=document.createElement("span");t.style.cssText="font-weight:900;font-size:16px;color:#1A1A2E";t.textContent="💡 スキル販売";
-  var bg=document.createElement("span");bg.style.cssText="font-size:10.5px;font-weight:900;color:#E8C468;background:#0F172A;border-radius:999px;padding:2px 9px";bg.textContent="会員の特別枠";
+  var t=document.createElement("span");t.style.cssText="font-weight:900;font-size:16px;color:#E8C468";t.textContent="💡 スキル販売";
+  var bg=document.createElement("span");bg.style.cssText="font-size:10.5px;font-weight:900;color:#0F172A;background:#E8C468;border-radius:999px;padding:2px 9px";bg.textContent="会員の特別枠";
   hd.appendChild(t);hd.appendChild(bg);card.appendChild(hd);
-  var sub=document.createElement("div");sub.style.cssText="font-size:12.5px;color:#4B5563;line-height:1.7;margin-bottom:10px";
+  var sub=document.createElement("div");sub.style.cssText="font-size:12.5px;color:#CBD5E1;line-height:1.7;margin-bottom:10px";
   sub.textContent="あなたの得意なことを、オンライン相談やレクチャーにして販売できます。";card.appendChild(sub);
-  var lb=document.createElement("div");lb.style.cssText="font-size:11.5px;font-weight:800;color:#6B7280;margin-bottom:6px";lb.textContent="たとえば…";card.appendChild(lb);
+  var lb=document.createElement("div");lb.style.cssText="font-size:11.5px;font-weight:800;color:#94A3B8;margin-bottom:6px";lb.textContent="たとえば…";card.appendChild(lb);
   var row=document.createElement("div");row.style.cssText="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px";
   ["1時間オンライン相談","ギア選び相談","滑り動画の考察","上達プラン作成","ワックスのやり方レクチャー","GoPro・Insta360の設定レクチャー","オフシーズンの練習メニュー"].forEach(function(x){
-    var c=document.createElement("span");c.style.cssText="font-size:11.5px;font-weight:700;color:#0F172A;background:#FDF3D7;border:1px solid #E8C468;border-radius:999px;padding:4px 10px";c.textContent=x;row.appendChild(c);
+    var c=document.createElement("span");c.style.cssText="font-size:11.5px;font-weight:700;color:#F3E2B3;background:rgba(232,196,104,.10);border:1px solid rgba(184,146,58,.45);border-radius:999px;padding:4px 10px";c.textContent=x;row.appendChild(c);
   });
   card.appendChild(row);
-  var fr=document.createElement("div");fr.style.cssText="background:#F8FAFC;border:1px solid #E5E7EB;border-radius:12px;padding:10px 12px;font-size:12.5px;color:#1A1A2E;line-height:1.7;margin-bottom:10px";
+  var fr=document.createElement("div");fr.style.cssText="background:rgba(255,255,255,.06);border:1px solid rgba(184,146,58,.35);border-radius:12px;padding:10px 12px;font-size:12.5px;color:#F3E2B3;line-height:1.7;margin-bottom:10px";
   fr.textContent="✨ 例にないメニューも、自分で考えて自由に作って販売できます（内容の審査があります）。";card.appendChild(fr);
   var mine=logged?skillsOf(currentUser.id,false):[];var used=mine.filter(function(m){return m.status!=="rejected";}).length;var lim=skillLimit();
   var full=used>=lim,toPlus=full&&lim===1;
-  var nt=document.createElement("div");nt.style.cssText="font-size:11px;color:#9CA3AF;line-height:1.6;margin-bottom:10px";
+  var nt=document.createElement("div");nt.style.cssText="font-size:11px;color:#94A3B8;line-height:1.6;margin-bottom:10px";
   nt.textContent="出品できる数：無料会員1つ／スノマ＋会員5つ ・ ゲレンデでのレッスンやガイドは出品できません。";card.appendChild(nt);
   var b=document.createElement("button");
   b.textContent=!logged?"登録して出品する":toPlus?"スノマ＋で5つまで出品する":full?"出品は5つまでです":"＋ スキルを出品する";
@@ -3677,16 +3677,16 @@ function LogHero(){
   var plus=!!(currentUser&&isPlus(currentUser.id));
   if(S.logs===undefined&&currentUser){loadLogs();}
   var card=document.createElement("div");
-  card.style.cssText="background:linear-gradient(135deg,#0F172A,#1E293B);border:1px solid #B8923A;box-shadow:0 4px 16px rgba(15,23,42,.35);border-radius:20px;padding:14px 16px;margin-bottom:16px;cursor:pointer;display:flex;align-items:center;gap:12px";
+  card.style.cssText="background:#fff;border:1.5px solid #E8C468;box-shadow:0 2px 10px rgba(184,146,58,.15);border-radius:20px;padding:14px 16px;margin-bottom:16px;cursor:pointer;display:flex;align-items:center;gap:12px";
   card.addEventListener("click",function(){S.logView=true;render();var ap=document.getElementById("app");if(ap)ap.scrollTop=0;window.scrollTo(0,0);});
-  var ic=document.createElement("div");ic.style.cssText="width:46px;height:46px;border-radius:14px;background:rgba(232,196,104,.12);border:1px solid rgba(184,146,58,.45);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0";ic.textContent="🏔";
+  var ic=document.createElement("div");ic.style.cssText="width:46px;height:46px;border-radius:14px;background:#FDF3D7;border:1px solid #E8C468;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0";ic.textContent="🏔";
   var tx=document.createElement("div");tx.style.cssText="flex:1;min-width:0";
-  var t1=document.createElement("div");t1.style.cssText="font-weight:900;font-size:16px;color:#E8C468";t1.textContent="シーズン記録"+(plus||canAddLog()?"":"　🔒");
-  var t2=document.createElement("div");t2.style.cssText="font-size:11.5px;color:#CBD5E1;margin-top:2px;line-height:1.5";
+  var t1=document.createElement("div");t1.style.cssText="font-weight:900;font-size:16px;color:#1A1A2E";t1.textContent="シーズン記録"+(plus||canAddLog()?"":"　🔒");
+  var t2=document.createElement("div");t2.style.cssText="font-size:11.5px;color:#6B7280;margin-top:2px;line-height:1.5";
   if(S.logs&&S.logs.length){var st=logStats();t2.textContent="今季 "+st.season+"日 ・ スタンプ "+st.stamps+"／"+resortTotal();}
   else t2.textContent="滑った日を記録して、スキー場スタンプを集めよう"+(plus?"":"（無料は"+FREE_LOG_MAX+"回まで）");
   tx.appendChild(t1);tx.appendChild(t2);
-  var ar=document.createElement("div");ar.style.cssText="color:#E8C468;font-size:22px";ar.textContent="›";
+  var ar=document.createElement("div");ar.style.cssText="color:#B8923A;font-size:22px";ar.textContent="›";
   card.appendChild(ic);card.appendChild(tx);card.appendChild(ar);
   return card;
 }
