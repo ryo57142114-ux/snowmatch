@@ -1386,8 +1386,10 @@ function renderSnowAlert(wrap){
 }
 function renderSnowBoard(wrap){
   if(S.liveCamView)return renderLiveCams(wrap);
+  if(S.weatherView)return renderWeather(wrap);
   if(S.alertView)return renderSnowAlert(wrap);
   wrap.appendChild(LiveCamHero());
+  wrap.appendChild(WeatherHero());
   wrap.appendChild(SnowAlertHero());
   if(S.snowReports===undefined){S.snowReports=null;loadSnowReports();}
   var now=new Date();
@@ -5027,6 +5029,50 @@ function LiveCamHero(){
   card.appendChild(grid);
   return card;
 }
+// ===== スキー場の天気予報（外部サイトへのリンク） =====
+function WeatherHero(){
+  var card=document.createElement("div");
+  card.style.cssText="background:#fff;border:1px solid #E5E7EB;border-radius:20px;padding:14px 16px;margin-bottom:16px;cursor:pointer;display:flex;align-items:center;gap:12px";
+  card.addEventListener("click",function(){S.weatherView=true;render();});
+  var ic=document.createElement("div");ic.style.cssText="width:46px;height:46px;border-radius:14px;background:#FEF3C7;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0";ic.textContent="🌤";
+  var tx=document.createElement("div");tx.style.cssText="flex:1;min-width:0";
+  var t1=document.createElement("div");t1.style.cssText="font-weight:900;font-size:16px;color:#1A1A2E";t1.textContent="スキー場の天気予報";
+  var t2=document.createElement("div");t2.style.cssText="font-size:11.5px;color:#6B7280;margin-top:2px";t2.textContent="行く前に天気・風・気温をチェック";
+  tx.appendChild(t1);tx.appendChild(t2);
+  var ar=document.createElement("div");ar.style.cssText="color:#9CA3AF;font-size:22px";ar.textContent="›";
+  card.appendChild(ic);card.appendChild(tx);card.appendChild(ar);
+  return card;
+}
+function renderWeather(wrap){
+  var back=document.createElement("button");back.textContent="‹ ゲレンデ速報に戻る";
+  back.style.cssText="background:none;border:none;color:#FF6B2B;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;padding:0;margin-bottom:10px";
+  back.addEventListener("click",function(){S.weatherView=false;render();});wrap.appendChild(back);
+  var ht=d({style:{fontWeight:"900",fontSize:"19px",color:"#1A1A2E",marginBottom:"4px"}});ht.textContent="スキー場の天気予報";wrap.appendChild(ht);
+  var intro=d({style:{color:"#6B7280",fontSize:"12.5px",lineHeight:"1.7",marginBottom:"12px"}});
+  intro.textContent="スキー場をタップすると、そのスキー場の天気（外部サイト）が開きます。";wrap.appendChild(intro);
+  function openUrl(u){if(!/^https:\/\//.test(String(u||"")))return;window.open(u,"_blank","noopener");}
+  function linkBtn(label,url,bg,bd,col){
+    var b=document.createElement("button");b.style.cssText="width:100%;text-align:left;padding:12px 14px;border-radius:14px;border:1.5px solid "+bd+";background:"+bg+";color:"+col+";font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;margin-bottom:8px";
+    b.textContent=label+" ›";b.addEventListener("click",function(){openUrl(url);});wrap.appendChild(b);
+  }
+  linkBtn("全国の天気予報（気象庁）","https://www.jma.go.jp/bosai/forecast/","#F0F9FF","#BAE6FD","#0369A1");
+  linkBtn("風・雪雲の地図（Windy）","https://www.windy.com/","#F0F9FF","#BAE6FD","#0369A1");
+  AREAS.forEach(function(a){
+    var h=d({style:{fontSize:"12px",fontWeight:"800",color:"#6B7280",margin:"10px 2px 6px"}});h.textContent=a.area;wrap.appendChild(h);
+    a.resorts.forEach(function(r){
+      var b=document.createElement("button");b.style.cssText="width:100%;display:flex;align-items:center;gap:10px;text-align:left;padding:12px 14px;border-radius:14px;border:1px solid #E5E7EB;background:#fff;cursor:pointer;font-family:inherit;margin-bottom:8px";
+      var ic=document.createElement("span");ic.textContent="🌤";ic.style.fontSize="18px";
+      var nm=document.createElement("span");nm.style.cssText="flex:1;min-width:0;font-weight:800;font-size:14px;color:#1A1A2E";nm.textContent=r;
+      var ar=document.createElement("span");ar.textContent="›";ar.style.cssText="color:#9CA3AF;font-size:18px";
+      b.appendChild(ic);b.appendChild(nm);b.appendChild(ar);
+      b.addEventListener("click",function(){openUrl("https://www.google.com/search?q="+encodeURIComponent(r+" 天気"));});
+      wrap.appendChild(b);
+    });
+  });
+  var ft=d({style:{fontSize:"11px",color:"#9CA3AF",lineHeight:"1.6",marginTop:"8px"}});
+  ft.textContent="※ 外部サイトが開きます。予報は目安です。山頂と麓で天気が大きく違うことがあるので、実際の状況はスキー場の公式情報もご確認ください。";wrap.appendChild(ft);
+  return wrap;
+}
 function renderLiveCams(wrap){
   var back=document.createElement("button");back.textContent="‹ ゲレンデ速報に戻る";
   back.style.cssText="background:none;border:none;color:#FF6B2B;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;padding:0;margin-bottom:10px";
@@ -6593,7 +6639,7 @@ function WelcomeModal(){
 }
 
 
-function viewKey(){return [S.pg,S.tab,S.skillEdit?"se":"",S.skillListView?"sl":"",S.liveCamView?"lc":"",S.alertView?"al":"",S.aiView?"ai":"",S.openDetail||"",S.openRoom||"",S.selUser?S.selUser.id:"",S.chatUser?S.chatUser.id:"",S.bookUser?1:0,S.showEditProfile?1:0].join("|");}
+function viewKey(){return [S.pg,S.tab,S.skillEdit?"se":"",S.skillListView?"sl":"",S.liveCamView?"lc":"",S.weatherView?"wx":"",S.alertView?"al":"",S.aiView?"ai":"",S.openDetail||"",S.openRoom||"",S.selUser?S.selUser.id:"",S.chatUser?S.chatUser.id:"",S.bookUser?1:0,S.showEditProfile?1:0].join("|");}
 function isTypingEl(t){return !!(t&&t.id&&(t.id==="chatinput"||t.id==="roominput"||t.id.indexOf("cmt_")===0||t.id.indexOf("ai_")===0));}
 var _lastViewKey="";
 // 日本語入力（変換中）の最中に画面を描き直すと、文字が勝手に確定したり消えたりするので、変換が終わるまで待つ
