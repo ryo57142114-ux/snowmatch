@@ -3596,6 +3596,8 @@ function logStats(){
   var top="",tn=0;Object.keys(cnt).forEach(function(k){if(cnt[k]>tn){tn=cnt[k];top=k;}});
   return {season:Object.keys(dSeason).length,total:Object.keys(dAll).length,stamps:stamps,cnt:cnt,top:top};
 }
+var FREE_LOG_MAX=3;
+function canAddLog(){var plus=!!(currentUser&&isPlus(currentUser.id));return plus||((S.logs||[]).length<FREE_LOG_MAX);}
 function LogHero(){
   var plus=!!(currentUser&&isPlus(currentUser.id));
   if(S.logs===undefined&&currentUser){loadLogs();}
@@ -3604,10 +3606,10 @@ function LogHero(){
   card.addEventListener("click",function(){S.logView=true;render();var ap=document.getElementById("app");if(ap)ap.scrollTop=0;window.scrollTo(0,0);});
   var ic=document.createElement("div");ic.style.cssText="width:46px;height:46px;border-radius:14px;background:rgba(232,196,104,.12);border:1px solid rgba(184,146,58,.45);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0";ic.textContent="🏔";
   var tx=document.createElement("div");tx.style.cssText="flex:1;min-width:0";
-  var t1=document.createElement("div");t1.style.cssText="font-weight:900;font-size:16px;color:#E8C468";t1.textContent="シーズン記録"+(plus?"":"　🔒");
+  var t1=document.createElement("div");t1.style.cssText="font-weight:900;font-size:16px;color:#E8C468";t1.textContent="シーズン記録"+(plus||canAddLog()?"":"　🔒");
   var t2=document.createElement("div");t2.style.cssText="font-size:11.5px;color:#CBD5E1;margin-top:2px;line-height:1.5";
   if(S.logs&&S.logs.length){var st=logStats();t2.textContent="今季 "+st.season+"日 ・ スタンプ "+st.stamps+"／"+resortTotal();}
-  else t2.textContent=plus?"滑った日を記録して、スキー場スタンプを集めよう":"スノマ＋会員限定・滑った日を記録してスタンプを集めよう";
+  else t2.textContent="滑った日を記録して、スキー場スタンプを集めよう"+(plus?"":"（無料は"+FREE_LOG_MAX+"回まで）");
   tx.appendChild(t1);tx.appendChild(t2);
   var ar=document.createElement("div");ar.style.cssText="color:#E8C468;font-size:22px";ar.textContent="›";
   card.appendChild(ic);card.appendChild(tx);card.appendChild(ar);
@@ -3636,11 +3638,16 @@ function renderLogs(wrap){
   wrap.appendChild(sg);
   if(st.top){var tp=d({style:{fontSize:"12.5px",color:"#4B5563",marginBottom:"12px"}});tp.textContent="いちばん多く行ったスキー場：「"+st.top+"」（"+st.cnt[st.top]+"回）";wrap.appendChild(tp);}
   // 追加ボタン（スノマ＋のみ）
+  var add=function(){R({logModal:{date:todayStr(),resort:"",weather:"",note:"",sending:false}});};
   if(plus){
-    wrap.appendChild(obtn("＋ 今日の記録を追加",function(){R({logModal:{date:todayStr(),resort:"",weather:"",note:"",sending:false}});},"obtn-full"));
+    wrap.appendChild(obtn("＋ 今日の記録を追加",add,"obtn-full"));
+  }else if(canAddLog()){
+    var left=FREE_LOG_MAX-S.logs.length;
+    wrap.appendChild(obtn("＋ 今日の記録を追加",add,"obtn-full"));
+    var fn=d({style:{fontSize:"11.5px",color:"#92400E",textAlign:"center",marginTop:"6px"}});fn.textContent="無料でお試しできるのは、あと"+left+"回です（スノマ＋なら無制限）";wrap.appendChild(fn);
   }else{
     var lk=d({style:{background:"#FFFBEB",border:"1.5px solid #F5D98B",borderRadius:"14px",padding:"12px 14px",marginBottom:"4px"}});
-    var lt=d({style:{fontSize:"12.5px",color:"#78350F",lineHeight:"1.7",marginBottom:"8px"}});lt.textContent="🔒 記録の追加は、スノマ＋会員の特典です。これまでの記録は、そのまま見られます。";lk.appendChild(lt);
+    var lt=d({style:{fontSize:"12.5px",color:"#78350F",lineHeight:"1.7",marginBottom:"8px"}});lt.textContent="🔒 無料でお試しできる"+FREE_LOG_MAX+"回を使いました。続きの記録は、スノマ＋会員の特典です。これまでの記録は、そのまま見られます。";lk.appendChild(lt);
     lk.appendChild(obtn("スノマ＋を見る",function(){openPlusPage();},"obtn-s"));wrap.appendChild(lk);
   }
   // スタンプ
@@ -3721,6 +3728,7 @@ function LogModal(){
       if(f.date>todayStr()){alert("未来の日付は選べません");return;}
       if(!f.resort){alert("スキー場を選んでください");return;}
       if(!sb||!currentUser){alert("記録するにはログインが必要です");return;}
+      if(!canAddLog()){alert("無料でお試しできる"+FREE_LOG_MAX+"回を使いました。続きはスノマ＋で記録できます。");return;}
       f.sending=true;render();
       sb.from("ride_logs").insert({user_id:currentUser.id,ride_date:f.date,resort:f.resort,weather:f.weather||null,note:(f.note||"").trim()||null}).select().single().then(function(r){
         f.sending=false;
