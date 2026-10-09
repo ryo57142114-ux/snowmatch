@@ -5310,6 +5310,7 @@ function ReviewModal(){
 function SkillDetailModal(){
   var st=S.skillDetail,m=st.menu,u=st.user;var mine=!!(currentUser&&u&&u.uid===currentUser.id);
   return Modal(false,function(){R({skillDetail:null});},function(box){
+    var bk=document.createElement("button");bk.textContent="← 戻る";bk.style.cssText="background:none;border:none;padding:4px 0;margin-bottom:6px;font-size:14px;font-weight:800;color:#6B7280;cursor:pointer;font-family:inherit";bk.addEventListener("click",function(){R({skillDetail:null});});box.appendChild(bk);
     var top=d({style:{display:"flex",gap:"6px",marginBottom:"8px"}});
     top.appendChild(sp({style:{fontSize:"11px",fontWeight:"800",background:"#FFF0E8",color:"#C2410C",borderRadius:"8px",padding:"3px 9px"}},skillCatName(m.category)));
     top.appendChild(sp({style:{fontSize:"11px",fontWeight:"800",background:"#E0F2FE",color:"#075985",borderRadius:"8px",padding:"3px 9px"}},"オンライン"));
