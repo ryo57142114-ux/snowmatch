@@ -802,7 +802,7 @@ function loadUserOpenPosts(uid){
 }
 function UserOpenHistory(u){
   var c=d({class:"card",style:{marginBottom:"14px"}});
-  var t=d({style:{fontWeight:"800",color:"#1A1A2E",marginBottom:"8px",fontSize:"14px"}});t.textContent="タイムライン";c.appendChild(t);
+  var t=d({style:{fontWeight:"800",color:"#1A1A2E",marginBottom:"8px",fontSize:"14px"}});t.textContent="リフトトーク";c.appendChild(t);
   var uid=u&&u.uid;
   if(!uid){var n0=d({style:{fontSize:"12px",color:"#9CA3AF"}});n0.textContent="まだ投稿はありません";c.appendChild(n0);return c;}
   var list=S.userOpen&&S.userOpen[uid];
@@ -828,7 +828,7 @@ function MyOpenHistory(){
   var list=S.myOpenPosts;
   if(list===undefined){loadMyOpenPosts();var ld=d({style:{fontSize:"12px",color:"#9CA3AF",padding:"8px 0"}});ld.textContent="読み込み中…";c.appendChild(ld);return c;}
   if(S.myOpenErr&&!list.length){var er=d({style:{fontSize:"12px",color:"#EF4444"}});er.textContent="読み込めませんでした: "+S.myOpenErr;c.appendChild(er);return c;}
-  if(!list.length){var em=d({style:{fontSize:"12px",color:"#9CA3AF",padding:"6px 0",lineHeight:"1.7"}});em.textContent="まだ投稿がありません。\nラウンジの「タイムライン」で書き込むと、ここに日付つきで残ります。";em.style.whiteSpace="pre-line";c.appendChild(em);return c;}
+  if(!list.length){var em=d({style:{fontSize:"12px",color:"#9CA3AF",padding:"6px 0",lineHeight:"1.7"}});em.textContent="まだ投稿がありません。\nラウンジの「リフトトーク」で書き込むと、ここに日付つきで残ります。";em.style.whiteSpace="pre-line";c.appendChild(em);return c;}
   var lim=S.myOpenMore?list.length:5;
   list.slice(0,lim).forEach(function(p,i){
     var row=d({style:{padding:"10px 0",borderTop:i?"1px solid #F3F4F6":"none"}});
@@ -1076,7 +1076,7 @@ function OpenPreviewCard(){
   c.addEventListener("click",function(){loadOpenPosts();R({tab:"market",marketTab:"open"});});
   var hr=d({style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"8px"}});
   var tt=d({style:{fontWeight:"900",fontSize:"15px",color:"#1A1A2E",display:"flex",alignItems:"center",gap:"6px"}});
-  tt.appendChild(sp({},"タイムライン"));
+  tt.appendChild(sp({},"リフトトーク"));
   if(newCnt>0)tt.appendChild(sp({style:{background:"#EF4444",color:"#fff",fontSize:"10px",fontWeight:"900",padding:"2px 7px",borderRadius:"10px"}},"NEW "+newCnt));
   hr.appendChild(tt);
   hr.appendChild(sp({style:{fontSize:"12px",fontWeight:"800",color:"#FF6B2B"}},"書き込む・もっと見る ›"));
@@ -1171,7 +1171,7 @@ function CommentBox(p,logged){
 function openPostDetail(id){S.openDetail=id;var app=document.getElementById("app");render();if(app)app.scrollTop=0;window.scrollTo(0,0);}
 function renderPostDetail(wrap,logged){
   var p=null;(S.openPosts||[]).forEach(function(x){if(x.id===S.openDetail)p=x;});
-  var back=document.createElement("button");back.textContent="‹ タイムラインに戻る";
+  var back=document.createElement("button");back.textContent="‹ リフトトークに戻る";
   back.style.cssText="background:none;border:none;color:#FF6B2B;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;padding:0;margin-bottom:10px";
   back.addEventListener("click",function(){S.openDetail=null;render();});wrap.appendChild(back);
   if(!p){var nf=d({style:{textAlign:"center",color:"#9CA3AF",fontSize:"13px",padding:"30px 0"}});nf.textContent="この投稿は見つかりませんでした（削除された可能性があります）";wrap.appendChild(nf);return wrap;}
@@ -1208,7 +1208,7 @@ function renderOpenBoard(wrap){
     var jt=d({style:{fontWeight:"900",fontSize:"14px",color:"#1A1A2E",marginBottom:"4px"}});jt.textContent="✍️ 書き込みは会員だけ";jc.appendChild(jt);
     var js=d({style:{fontSize:"12px",color:"#6B7280",marginBottom:"10px",lineHeight:"1.6"}});js.textContent="無料登録（メールアドレスだけ）で書き込めます。読むのとリアクションはそのままどうぞ！";jc.appendChild(js);
     var jb=document.createElement("button");jb.textContent="無料で登録する";jb.style.cssText="padding:10px 22px;border-radius:14px;border:none;background:linear-gradient(135deg,#FF6B2B,#FF8C55);color:#fff;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit";
-    jb.addEventListener("click",function(){if(S.isGuest)askJoin("無料登録すると、タイムラインに書き込めます。");else{S.showLoginModal=true;render();}});jc.appendChild(jb);
+    jb.addEventListener("click",function(){if(S.isGuest)askJoin("無料登録すると、リフトトークに書き込めます。");else{S.showLoginModal=true;render();}});jc.appendChild(jb);
     wrap.appendChild(jc);
   }else{
   var cb=d({class:"card",style:{marginBottom:"14px",padding:"14px"}});
@@ -2059,7 +2059,7 @@ var FAQ=[
   ["アプリストアからダウンロードするの？","いいえ。SnowMatchはWebアプリなので、ダウンロードは不要です。SafariやChromeで開いて「ホーム画面に追加」すると、普通のアプリと同じようにアイコンから開けます（次の質問を見てください）。"],
   ["ホーム画面に追加する方法（iPhone）","① Safariで SnowMatch を開く（Chromeなど他のアプリからではなく、Safariで開いてください）\n② 画面下の共有ボタン（□に↑のマーク）をタップ\n③ メニューを下にスクロールして「ホーム画面に追加」をタップ\n④ 右上の「追加」をタップ\n\nホーム画面に「スノマ」のアイコンができます。次からはそのアイコンから開くと、上下のバーがない全画面で、アプリと同じように使えます。"],
   ["ホーム画面に追加する方法（Android）","① Chromeで SnowMatch を開く\n② 右上の「︙」をタップ\n③「ホーム画面に追加」または「アプリをインストール」をタップ\n④「追加」または「インストール」をタップ\n\nホーム画面にアイコンができます。"],
-  ["ゲストでも使える？","「ゲストとして見る」から、登録なしで仲間探しや募集掲示板、タイムラインなどを見られます。メッセージ・予約・参加・書き込みなどをするには無料登録が必要です。"]
+  ["ゲストでも使える？","「ゲストとして見る」から、登録なしで仲間探しや募集掲示板、リフトトークなどを見られます。メッセージ・予約・参加・書き込みなどをするには無料登録が必要です。"]
  ]},
  {sec:"📝 登録の流れ",items:[
   ["登録はどうやるの？","① 最初の画面で「はじめる（無料登録）」をタップ\n② メールアドレスを入力して登録\n③ ニックネーム・アイコン・種目（スキー／スノーボード）・レベルなどのプロフィールを入力\n④ マイページで「活動エリア・スキー場」を選ぶ\n\nこれで仲間探し・メッセージ・無料の募集への参加ができます。登録は無料です。"],
@@ -2072,7 +2072,7 @@ var FAQ=[
   ["募集掲示板って何？","日付つきで投稿できる掲示板です。\n・「いっしょに滑ります」（無料）／「同行・撮影します」（有料）：この日空いているので一緒に滑れる・撮影できます、という投稿\n・「いっしょに滑る人を探しています」（無料）／「同行・撮影お願いします」（有料）：この日一緒に滑る人・撮影してくれる人を探しています、という投稿\n最初に「無料」か「有料」を選びます。"],
   ["「参加します」を押すとどうなる？","【無料の投稿】相手に「参加したいです！」というメッセージが自動で届き、チャットで日時や集合場所を決めます。\n\n【有料の募集】応募として相手に届きます。募集した人が応募者の中から1人を選ぶと予約が確定します。確定するまでは何人でも応募でき、選ばれなかった人には自動でお知らせが届きます。"],
   ["メッセージは誰にでも送れる？","フォローした相手にメッセージを送れます。プロフィールの「メッセージ」や、募集の「参加します」「質問」から送ると、自動でフォローされます。"],
-  ["ラウンジでは何ができる？","・タイムライン：誰でも見られるひとこと投稿（自分の投稿はマイページに日付つきで残り、返信もできます）\n・ゲレンデ速報：今日の雪質・天気・混み具合を写真つきで共有（毎日0時にリセット）\n・会員ページ：本人確認済みの人だけの部屋（雑談部屋・悩み相談・Q&A）。メッセージを長押しすると返信でき、写真や動画も送れます。"]
+  ["ラウンジでは何ができる？","・リフトトーク：誰でも見られるひとこと投稿（自分の投稿はマイページに日付つきで残り、返信もできます）\n・ゲレンデ速報：今日の雪質・天気・混み具合を写真つきで共有（毎日0時にリセット）\n・会員ページ：本人確認済みの人だけの部屋（雑談部屋・悩み相談・Q&A）。メッセージを長押しすると返信でき、写真や動画も送れます。"]
  ]},
  {sec:"💴 料金とお支払いの流れ",items:[
   ["アプリの利用料は？","登録・仲間探し・メッセージ・無料の募集などは、すべて無料です。お金がかかるのは、有料の同行・撮影をお願いするときだけです。"],
@@ -2087,8 +2087,8 @@ var FAQ=[
  {sec:"🛡 安全に使うために",items:[
   ["個人情報や支払いは安全？","【お支払い】\n世界中で使われている決済サービス「Stripe」が管理します。カード番号や銀行口座などの情報はStripeが扱い、SnowMatchでは保存しません。お金もSnowMatchが預かるのではなく、Stripeが安全に預かります。\n\n【本人確認の身分証】\n審査のためだけに使い、審査が終わって30日後に自動で削除します。\n\n【退会したとき】\n不正利用やトラブルを防ぐため、退会後も1年間、本人確認の記録（氏名・生年月日など）と通報の履歴を保管し、その後削除します（トラブルが解決していないときは、解決するまで保管します）。取引の記録は、法令に従い必要な期間保管します。身分証の写真は、審査完了から30日以内、または退会の手続きと同時に削除します。\n\nそのほか、個人情報の扱いはプライバシーポリシーに従って管理しています。"],
   ["スキー場で撮影してもいいの？","スキー場ごとに撮影や営利活動のルールがあります。必ず各スキー場のルールをご確認のうえご利用ください。\n\n【許可のない有償の撮影・営利活動を公式に禁止しているスキー場】\nサッポロテイネ、ルスツリゾート、サホロリゾート、たんばらスキーパーク、ハンターマウンテン塩原、タングラムスキーサーカス、スキージャム勝山、グランデコスノーリゾート、ホワイトワールド尾瀬岩鞍\n→ これらのスキー場では、お金を受け取る撮影の依頼・引き受けはしないでください。\n\n【撮影に事前の登録・申請が必要なスキー場】\nニセコ（グラン・ヒラフ、アンヌプリ、ビレッジ、HANAZONO）、戸隠スキー場\n→ 撮影する前に、公式サイトで手続きを確認してください。\n\nここに載っていないスキー場も、ルールが変わることがあります。撮影する前に公式サイトで確認しましょう。"],
-  ["初めて会う人と滑るときの注意は？","・集合場所はゲレンデのセンターハウスなど、人の多い場所にしましょう\n・本人確認済みの「確認済」マークやプロフィール、タイムラインの投稿も参考にしましょう\n・アプリの外での直接のお金のやり取りはしないでください（トラブルのとき運営が対応できません）"],
-  ["嫌な思いをしたときは？","タイムラインの「通報」や、マイページの「お問い合わせ」から運営に知らせてください。悪質な場合は、運営が投稿の非表示や利用停止などの対応をします。"]
+  ["初めて会う人と滑るときの注意は？","・集合場所はゲレンデのセンターハウスなど、人の多い場所にしましょう\n・本人確認済みの「確認済」マークやプロフィール、リフトトークの投稿も参考にしましょう\n・アプリの外での直接のお金のやり取りはしないでください（トラブルのとき運営が対応できません）"],
+  ["嫌な思いをしたときは？","リフトトークの「通報」や、マイページの「お問い合わせ」から運営に知らせてください。悪質な場合は、運営が投稿の非表示や利用停止などの対応をします。"]
  ]},
  {sec:"❓ 困ったとき",items:[
   ["画面が古いまま・うまく動かない","ホーム画面のアプリを一度完全に閉じて（下から上にスワイプして終了）、もう一度開いてください。それでも直らないときは、Safariで直接開き直してみてください。"],
@@ -3338,7 +3338,7 @@ function renderMarket(){
   if(!S.marketTab||S.marketTab==="room"&&!S._mtInit){S._mtInit=true;S.marketTab="open";}
   // 上のタブ：つぶやきは誰でも、ほかは本人確認済みの会員だけ
   var mt=d({style:{display:"flex",background:"#EEF0F3",borderRadius:"14px",padding:"4px",marginBottom:"14px"}});
-  [["open","タイムライン"],["snow","ゲレンデ速報"],["member","会員ページ"]].forEach(function(o){var on=o[0]==="member"?(S.marketTab!=="open"&&S.marketTab!=="snow"):S.marketTab===o[0];var x=document.createElement("button");x.textContent=o[1];x.style.cssText="flex:1;padding:10px 6px;border-radius:11px;border:none;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;background:"+(on?"#fff":"transparent")+";color:"+(on?"#FF6B2B":"#6B7280")+";box-shadow:"+(on?"0 1px 4px rgba(0,0,0,.08)":"none");x.addEventListener("click",function(){if(o[0]==="open"){loadOpenPosts();R({marketTab:"open",openDetail:null});}else if(o[0]==="snow"){loadSnowReports();R({marketTab:"snow",liveCamView:false,alertView:false});}else R({marketTab:"room",openRoom:null,aiView:false});});mt.appendChild(x);});
+  [["open","リフトトーク"],["snow","ゲレンデ速報"],["member","会員ページ"]].forEach(function(o){var on=o[0]==="member"?(S.marketTab!=="open"&&S.marketTab!=="snow"):S.marketTab===o[0];var x=document.createElement("button");x.textContent=o[1];x.style.cssText="flex:1;padding:10px 6px;border-radius:11px;border:none;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;background:"+(on?"#fff":"transparent")+";color:"+(on?"#FF6B2B":"#6B7280")+";box-shadow:"+(on?"0 1px 4px rgba(0,0,0,.08)":"none");x.addEventListener("click",function(){if(o[0]==="open"){loadOpenPosts();R({marketTab:"open",openDetail:null});}else if(o[0]==="snow"){loadSnowReports();R({marketTab:"snow",liveCamView:false,alertView:false});}else R({marketTab:"room",openRoom:null,aiView:false});});mt.appendChild(x);});
   wrap.appendChild(mt);
   if(S.marketTab==="open")return renderOpenBoard(wrap);
   if(S.marketTab==="snow")return renderSnowBoard(wrap);
