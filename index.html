@@ -1860,13 +1860,13 @@ function openPlusPage(){R({plusView:true,tab:"profile",alertView:false,skillEdit
 function PlusEntryCard(){
   if(!currentUser||S.isGuest)return null;
   var on=isPlus(currentUser.id);
-  var c=d({style:{borderRadius:"18px",padding:"14px 16px",marginBottom:"14px",cursor:"pointer",display:"flex",alignItems:"center",gap:"12px",background:on?"linear-gradient(135deg,#FBE38E,#E6B325)":"linear-gradient(135deg,#1A1A2E,#3B3B5C)",boxShadow:"0 4px 14px rgba(0,0,0,.12)"}});
+  var c=d({style:{borderRadius:"18px",padding:"14px 16px",marginBottom:"14px",cursor:"pointer",display:"flex",alignItems:"center",gap:"12px",background:on?"linear-gradient(135deg,#0F172A,#1E293B)":"linear-gradient(135deg,#1A1A2E,#3B3B5C)",border:on?"1px solid #B8923A":"none",boxShadow:on?"0 4px 16px rgba(15,23,42,.35)":"0 4px 14px rgba(0,0,0,.12)"}});
   c.addEventListener("click",openPlusPage);
   var tx=d({style:{flex:"1",minWidth:"0"}});
-  var t1=d({style:{fontWeight:"900",fontSize:"16px",color:on?"#5A4521":"#FBE38E"}});t1.textContent=on?"スノマ＋ 加入中":"スノマ＋";tx.appendChild(t1);
-  var t2=d({style:{fontSize:"12px",marginTop:"3px",lineHeight:"1.5",color:on?"#6B5326":"#E5E7EB"}});
+  var t1=d({style:{fontWeight:"900",fontSize:"16px",color:on?"#E8C468":"#FBE38E"}});t1.textContent=on?"スノマ＋ 加入中":"スノマ＋";tx.appendChild(t1);
+  var t2=d({style:{fontSize:"12px",marginTop:"3px",lineHeight:"1.5",color:on?"#CBD5E1":"#E5E7EB"}});
   t2.textContent=on?"プランの確認・お支払い方法の変更・解約":"新雪アラート・スキル5つまで出品・金色バッジ　月あたり約332円から";tx.appendChild(t2);
-  var ar=d({style:{fontSize:"22px",color:on?"#5A4521":"#FBE38E"}});ar.textContent="›";
+  var ar=d({style:{fontSize:"22px",color:on?"#E8C468":"#FBE38E"}});ar.textContent="›";
   c.appendChild(tx);c.appendChild(ar);return c;
 }
 // 解約の前に「なくなるもの」を確認してもらう画面
