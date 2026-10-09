@@ -144,7 +144,6 @@ var USERS=[
 var ROOMS_SAMPLE=[
   {id:"r1",icon:"🏂",title:"グラトリ上達したい人集まれ！",cat:"スノーボード",members:0,msgs:[],last:""},
   {id:"r2",icon:"⛷️",title:"カービングターンを極めたい",cat:"スキー",members:0,msgs:[],last:""},
-  {id:"r3",icon:"🌨️",title:"パウダー情報・今シーズンの積雪",cat:"情報共有",members:0,msgs:[],last:""},
   {id:"r4",icon:"🎥",title:"滑り動画を見せ合おう・フォーム分析",cat:"動画",members:0,msgs:[],last:""},
   {id:"r5",icon:"🏔️",title:"初心者・今シーズン始めた人の部屋",cat:"初心者",members:0,msgs:[],last:""},
   {id:"n1",icon:"💭",title:"悩み相談部屋",cat:"悩み相談",members:0,msgs:[],last:"",desc:"上達・道具・人間関係など、なんでも気軽に相談しよう"}
@@ -3379,7 +3378,7 @@ function renderMarket(){
     sortRoomsByActivity(ROOMS_SAMPLE.filter(function(r){return r.cat==="悩み相談";})).forEach(function(room){wrap.appendChild(roomCard(room));});
   }
   if(S.marketTab==="room"){
-    var cats2=["すべて","スノーボード","スキー","初心者","情報共有","動画"];
+    var cats2=["すべて","スノーボード","スキー","初心者","動画"];
     var catRow=d({style:{display:"flex",gap:"8px",overflowX:"auto",paddingBottom:"4px",marginBottom:"14px"}});
     if(!S.marketCat)S.marketCat="すべて";
     cats2.forEach(function(c){
