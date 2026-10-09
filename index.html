@@ -2814,7 +2814,7 @@ function renderOnboard(){
 
   if(S.onStep===0){
     var t0=d({style:{fontWeight:"900",fontSize:"22px",color:"#1A1A2E",marginBottom:"6px"}});t0.textContent="SnowMatch会員として登録しよう";wrap.appendChild(t0);
-    var s0=d({style:{color:"#6B7280",fontSize:"13px",marginBottom:"20px"}});s0.textContent="3項目だけで今すぐ始められます！";wrap.appendChild(s0);
+    var s0=d({style:{color:"#6B7280",fontSize:"13px",marginBottom:"20px"}});s0.textContent="4項目だけで今すぐ始められます！";wrap.appendChild(s0);
     var quickFields=[["ニックネーム（表示名）","nick","text","例：ゆきな"],["メールアドレス","email","email","example@email.com"],["パスワード（8文字以上）","pw","password",""]];
     for(var qfi=0;qfi<quickFields.length;qfi++){
       (function(f){
@@ -2825,6 +2825,11 @@ function renderOnboard(){
         fw.appendChild(fl);fw.appendChild(f[2]==="password"?pwToggleWrap(fi):fi);wrap.appendChild(fw);
       })(quickFields[qfi]);
     }
+    var bw=d({style:{marginBottom:"14px"}});
+    var bl=d({style:{fontSize:"12px",fontWeight:"700",color:"#6B7280",marginBottom:"4px"}});bl.textContent="生年月日（18歳以上の方のみ登録できます）";
+    var bi2=i2({type:"date",class:"inp"});bi2.max=new Date().toISOString().slice(0,10);bi2.value=S.reg.birth||"";
+    bi2.addEventListener("input",function(e){S.reg.birth=e.target.value;});
+    bw.appendChild(bl);bw.appendChild(bi2);wrap.appendChild(bw);
     var tokCard=d({style:{background:"linear-gradient(135deg,#FFF0E8,#FFE4D6)",borderRadius:"16px",padding:"14px",marginBottom:"20px"}});
     var tokT=d({style:{fontWeight:"800",fontSize:"13px",color:"#FF6B2B",marginBottom:"10px"}});tokT.textContent="🎁 会員登録特典";tokCard.appendChild(tokT);
     var benefits=[["🛖","スノマラウンジ入室"],["💰","サービスの販売・価格設定"],["👥","フォロー・予約"],["📸","投稿・実績のアップロード"],["🪪","本人確認済みバッジ"]];
@@ -2839,6 +2844,7 @@ function renderOnboard(){
       if(!S.reg.nick||!S.reg.nick.trim()){alert("ニックネームを入力してください");return;}
       if(!S.reg.email||!S.reg.email.trim()){alert("メールアドレスを入力してください");return;}
       if(!S.reg.pw||S.reg.pw.length<8){alert("パスワードは8文字以上で入力してください");return;}
+      if(!regBirthCheck())return;
       R({onStep:1});
     },"obtn-full"));
     var skip=d({style:{textAlign:"center",marginTop:"12px"}});
@@ -2848,6 +2854,7 @@ function renderOnboard(){
       if(!S.reg.nick||!S.reg.nick.trim()){alert("ニックネームを入力してください");return;}
       if(!S.reg.email||!S.reg.email.trim()){alert("メールアドレスを入力してください");return;}
       if(!S.reg.pw||S.reg.pw.length<8){alert("パスワードは8文字以上で入力してください");return;}
+      if(!regBirthCheck())return;
       R({onStep:2});
     });
     skip.appendChild(skipBtn);wrap.appendChild(skip);
@@ -4475,10 +4482,46 @@ function canMessage(u){
   if(S.followers&&S.followers.indexOf(u.id)>=0)return true;    // 相手が自分をフォロー（返信できるように）
   return false;
 }
+// ===== 連絡先交換・外部誘導のブロック =====
+var CB_OK_HOSTS=["zoom.us","meet.google.com","teams.microsoft.com","meet.jit.si"];
+var CB_KW_UP=/(^|[^A-Za-z])(LINE|DM|ID)([^A-Za-z]|$)/;
+var CB_KW=/ライン(交換|ID|教|追加|やって|しませ|繋|つな)|らいん|インスタ|instagram|telegram|テレグラム|カカオ|kakao|wechat|ウィーチャット|スナチャ|snapchat|tiktok|ティックトック|ツイッター|twitter|電話番号|携帯番号|番号(教|交換)|連絡先|メアド|メルアド|メールアドレス|アドレス(教|交換)|アットマーク|ディーエム/i;
+function regBirthCheck(){
+  var b=S.reg.birth||"";
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(b)){alert("生年月日を入力してください");return false;}
+  var p=b.split("-"),now=new Date(),age=now.getFullYear()-parseInt(p[0],10);
+  var m=now.getMonth()+1-parseInt(p[1],10);
+  if(m<0||(m===0&&now.getDate()<parseInt(p[2],10)))age--;
+  if(age<18){alert("SnowMatchは18歳以上の方のみご利用いただけます。");return false;}
+  if(age>110){alert("生年月日をご確認ください");return false;}
+  return true;
+}
+function contactBlockReason(raw){
+  var MSG="連絡先の交換や、外部サービスへの誘導にあたる内容は送れません。やり取りはアプリ内でお願いします。\n（通話のURLは Zoom・Google Meet・Teams・Jitsi Meet のものだけ送れます）";
+  var t=String(raw||"").replace(/[！-～]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0xFEE0);}).replace(/　/g," ");
+  // 電話番号（全角・スペース・ハイフン区切り・漢数字・ゼロ表記も検出）
+  var km={"一":"1","二":"2","三":"3","四":"4","五":"5","六":"6","七":"7","八":"8","九":"9"};
+  var tk=t.replace(/[〇零]|ゼロ|ぜろ/g,"0").replace(/[一二三四五六七八九]/g,function(c){return km[c];}).replace(/[ー−―‐–—]/g,"-");
+  var col=tk.replace(/(\d)[\s\-.・,，、_()（）]+(?=\d)/g,"$1");
+  if(/(^|\D)0\d{9,10}(\D|$)/.test(col)||/(^|\D)81[5789]0\d{8}(\D|$)/.test(col))return MSG;
+  // メールアドレス・@ID
+  if(t.indexOf("@")>=0)return MSG;
+  // 誘導ワード
+  if(CB_KW_UP.test(t)||CB_KW.test(t))return MSG;
+  // URL（許可した通話サービス以外はブロック）
+  var um=t.match(/(https?:\/\/[^\s]+|www\.[^\s]+|[A-Za-z0-9][A-Za-z0-9\-]*\.(?:[A-Za-z0-9\-]+\.)*(?:com|net|jp|me|app|io|ly|gl|to|cc|info|org|co|us|si|be|tv|xyz|link|page)(?:\/[^\s]*)?)/gi);
+  if(um){for(var i=0;i<um.length;i++){
+    var host=um[i].replace(/^https?:\/\//i,"").split(/[\/?#:]/)[0].toLowerCase();var ok=false;
+    for(var j=0;j<CB_OK_HOSTS.length;j++){var dm=CB_OK_HOSTS[j];if(host===dm||host.slice(-(dm.length+1))==="."+dm){ok=true;break;}}
+    if(!ok)return MSG;
+  }}
+  return null;
+}
 function sendMsg(text){if(S.isGuest){guestPrompt();return;}
   var u=S.chatUser;if(!u)return;
   var body=(text!==undefined?text:(S.chatIn||"")).trim();
   if(!body)return;
+  var cbr=contactBlockReason(body);if(cbr){alert(cbr);return;}
   var cid=String(u.id);if(!S.chatMsgs[cid])S.chatMsgs[cid]=[];
   if(u.isReal){
     if(!sb||!currentUser){alert("メッセージを送るにはログインが必要です");return;}
@@ -4722,6 +4765,7 @@ function saveProfileToSupabase(){
     nick: S.reg.nick||"",
     real_name: S.reg.real||"",
     age: S.reg.age?parseInt(S.reg.age):null,
+    birth_date: S.reg.birth||null,
     email: S.reg.email||"",
     act: S.reg.act||"",
     acts: S.reg.acts||[],
