@@ -3342,11 +3342,32 @@ function renderMarket(){
   if(S.marketTab==="open")return renderOpenBoard(wrap);
   if(S.marketTab==="snow")return renderSnowBoard(wrap);
   if(!S.myProfile||!S.myProfile.ok){
-    var locked=d({style:{textAlign:"center",padding:"40px 20px"}});
-    var lico=d({style:{fontSize:"56px",marginBottom:"12px"}});lico.textContent="🔒";
-    var lt=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"8px"}});lt.textContent="会員限定コンテンツ";
-    var ls=d({style:{color:"#6B7280",fontSize:"13px",lineHeight:"1.7",marginBottom:"20px"}});ls.textContent="スノマラウンジはSnowMatch会員のみ参加できます。本人確認を完了してご参加ください。";
-    locked.appendChild(lico);locked.appendChild(lt);locked.appendChild(ls);wrap.appendChild(locked);return wrap;
+    // ゲスト・本人確認前でも、中身は見られる（使うには登録／本人確認）
+    var guest=!!(S.isGuest||!currentUser);
+    var h0=d({style:{marginBottom:"14px"}});
+    var h1=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"4px"}});h1.textContent="スノマラウンジ";
+    var h2=d({style:{color:"#6B7280",fontSize:"13px"}});h2.textContent="会員限定 · 仲間と語ろう・悩み相談・Q&A";
+    h0.appendChild(h1);h0.appendChild(h2);wrap.appendChild(h0);
+    var cta=d({style:{background:"linear-gradient(135deg,#FF6B2B,#FF8C55)",borderRadius:"20px",padding:"16px",marginBottom:"16px",color:"#fff",boxShadow:"0 6px 18px rgba(255,107,43,.28)"}});
+    var c1=d({style:{fontWeight:"900",fontSize:"17px",marginBottom:"4px"}});c1.textContent=guest?"🏔 登録すると、ここが全部使えます":"🏔 本人確認で、ここが全部使えます";
+    var c2=d({style:{fontSize:"12.5px",lineHeight:"1.7",opacity:".95",marginBottom:"12px"}});
+    c2.textContent=guest?"AI診断・シーズン記録・スキル販売・ラウンジの仲間との会話。まずは無料登録（メールアドレスだけ）から。":"スノマラウンジはSnowMatch会員のみ参加できます。本人確認を完了してご参加ください。";
+    cta.appendChild(c1);cta.appendChild(c2);
+    if(guest){var cb0=document.createElement("button");cb0.textContent="無料で登録する";cb0.style.cssText="width:100%;padding:12px;border-radius:14px;border:none;background:#fff;color:#FF6B2B;font-weight:900;font-size:14px;cursor:pointer;font-family:inherit";
+      cb0.addEventListener("click",function(){if(S.isGuest)askJoin("無料登録すると、ラウンジの機能を使えます。");else{S.showLoginModal=true;render();}});cta.appendChild(cb0);}
+    wrap.appendChild(cta);
+    var pv=d({style:{position:"relative"}});
+    pv.appendChild(AiHero());pv.appendChild(LogHero());pv.appendChild(SkillSellCard());
+    pv.addEventListener("click",function(e){e.stopPropagation();e.preventDefault();if(guest)askJoin("無料登録すると、使えるようになります。");else alert("本人確認を完了すると、使えるようになります。");},true);
+    wrap.appendChild(pv);
+    var tz=d({class:"card",style:{padding:"14px",marginBottom:"16px"}});
+    var tzt=d({style:{fontWeight:"900",fontSize:"15px",color:"#1A1A2E",marginBottom:"8px"}});tzt.textContent="ラウンジでできること";tz.appendChild(tzt);
+    [["💬","雑談部屋・悩み相談・Q&A で、仲間と話せる"],["🤖","写真や体格から、AIがフォームとギアをアドバイス"],["🗺","滑った日を記録して、スキー場スタンプと地図を集める"],["💡","自分のスキルを、オンライン相談として販売できる"]].forEach(function(o){
+      var r=d({style:{display:"flex",gap:"10px",alignItems:"flex-start",fontSize:"13px",color:"#374151",lineHeight:"1.6",padding:"5px 0"}});
+      r.appendChild(sp({style:{fontSize:"18px"}},o[0]));r.appendChild(sp({},o[1]));tz.appendChild(r);
+    });
+    wrap.appendChild(tz);
+    return wrap;
   }
   var hd=d({style:{marginBottom:"14px"}});
   var ht=d({style:{fontWeight:"900",fontSize:"20px",color:"#1A1A2E",marginBottom:"4px"}});ht.textContent="スノマラウンジ";
