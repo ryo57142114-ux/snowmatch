@@ -3596,6 +3596,48 @@ function logStats(){
   var top="",tn=0;Object.keys(cnt).forEach(function(k){if(cnt[k]>tn){tn=cnt[k];top=k;}});
   return {season:Object.keys(dSeason).length,total:Object.keys(dAll).length,stamps:stamps,cnt:cnt,top:top};
 }
+var RESORT_GEO={"ニセコ東急 グラン・ヒラフ":[42.862,140.699],"ニセコアンヌプリ国際スキー場":[42.850,140.635],"ニセコビレッジスキーリゾート":[42.855,140.680],"ニセコHANAZONOリゾート":[42.876,140.717],"ルスツリゾート":[42.745,140.905],"キロロスノーワールド":[43.079,140.976],"サッポロテイネ":[43.080,141.205],"札幌国際スキー場":[42.970,141.170],"さっぽろばんけいスキー場":[43.026,141.276],"滝野スノーワールド":[42.960,141.350],"小樽天狗山スキー場":[43.157,140.985],"星野リゾート トマム スキー場":[43.000,142.630],"富良野スキー場":[43.330,142.390],"旭岳ロープウェイスキー場":[43.663,142.799],"大雪山黒岳スキー場":[43.710,142.940],"安比高原スキー場":[39.990,141.000],"雫石スキー場":[39.745,140.960],"蔵王温泉スキー場":[38.145,140.440],"星野リゾート ネコマ マウンテン":[37.620,139.980],"グランデコスノーリゾート":[37.663,140.069],"苗場スキー場":[36.835,138.790],"かぐらスキー場":[36.835,138.760],"ガーラ湯沢スキー場":[36.900,138.820],"白馬八方尾根スキー場":[36.700,137.820],"白馬岩岳スノーフィールド":[36.715,137.850],"エイブル白馬五竜スキー場":[36.690,137.800],"Hakuba47":[36.675,137.810],"栂池高原スキー場":[36.770,137.850],"野沢温泉スキー場":[36.925,138.450],"志賀高原スキー場":[36.700,138.500],"菅平高原スノーリゾート":[36.520,138.330],"車山高原SKYPARKスキー場":[36.100,138.190],"草津温泉スキー場":[36.620,138.530],"万座温泉スキー場":[36.640,138.510],"谷川岳天神平スキー場":[36.830,138.950],"六甲山スノーパーク":[34.770,135.250],"びわ湖バレイ":[35.250,135.920]};
+var _lmap=null,_lel=null,_llayer=null,_lfit=false,_lqueue=null;
+function loadLeaflet(cb){
+  if(window.L){cb();return;}
+  if(_lqueue){_lqueue.push(cb);return;}
+  _lqueue=[cb];
+  var css=document.createElement("link");css.rel="stylesheet";css.href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css";document.head.appendChild(css);
+  var sc=document.createElement("script");sc.src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js";
+  sc.onload=function(){var q=_lqueue;_lqueue=null;q.forEach(function(f){f();});};
+  sc.onerror=function(){_lqueue=null;if(_lel)_lel.textContent="地図を読み込めませんでした。通信状態をご確認ください。";};
+  document.head.appendChild(sc);
+}
+function logMapRefresh(){
+  if(!window.L||!_lmap||!_llayer)return;
+  var cnt=(S.logs?logStats().cnt:{}),vis=[];
+  _llayer.clearLayers();
+  Object.keys(RESORT_GEO).forEach(function(nm){
+    var g=RESORT_GEO[nm],n=cnt[nm]||0;
+    if(n){
+      var ic=L.divIcon({className:"",html:'<div style="font-size:22px;line-height:22px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))">📍</div>',iconSize:[22,22],iconAnchor:[11,22]});
+      L.marker(g,{icon:ic}).bindPopup("<b>"+nm+"</b><br>"+n+"回").addTo(_llayer);vis.push(g);
+    }else{
+      L.circleMarker(g,{radius:4,color:"#9CA3AF",weight:1,fillColor:"#D1D5DB",fillOpacity:.9}).bindPopup(nm).addTo(_llayer);
+    }
+  });
+  if(!_lfit){_lfit=true;if(vis.length)_lmap.fitBounds(vis,{padding:[40,40],maxZoom:8});}
+}
+function logMapMount(wrap){
+  var hd=d({style:{fontWeight:"900",fontSize:"15px",color:"#1A1A2E",margin:"18px 0 8px"}});hd.textContent="🗺 スキー場マップ";wrap.appendChild(hd);
+  if(!_lel){_lel=document.createElement("div");_lel.style.cssText="height:300px;border-radius:14px;overflow:hidden;border:1px solid #E5E7EB;background:#E5E7EB;color:#6B7280;font-size:12px;text-align:center;line-height:300px";_lel.textContent="地図を読み込み中...";}
+  wrap.appendChild(_lel);
+  var nt=d({style:{fontSize:"10.5px",color:"#9CA3AF",marginTop:"4px",lineHeight:"1.6"}});nt.textContent="📍行った場所／●まだの場所。地図に出るのは位置データのある"+Object.keys(RESORT_GEO).length+"か所です（順次追加中・位置は目安です）。";wrap.appendChild(nt);
+  loadLeaflet(function(){
+    if(!_lmap){
+      _lel.textContent="";_lel.style.lineHeight="normal";
+      _lmap=L.map(_lel,{zoomControl:true}).setView([38.5,138.5],5);
+      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:"© OpenStreetMap"}).addTo(_lmap);
+      _llayer=L.layerGroup().addTo(_lmap);
+    }
+    setTimeout(function(){if(_lmap){_lmap.invalidateSize();logMapRefresh();}},60);
+  });
+}
 var FREE_LOG_MAX=3;
 function canAddLog(){var plus=!!(currentUser&&isPlus(currentUser.id));return plus||((S.logs||[]).length<FREE_LOG_MAX);}
 function LogHero(){
@@ -3650,6 +3692,7 @@ function renderLogs(wrap){
     var lt=d({style:{fontSize:"12.5px",color:"#78350F",lineHeight:"1.7",marginBottom:"8px"}});lt.textContent="🔒 無料でお試しできる"+FREE_LOG_MAX+"回を使いました。続きの記録は、スノマ＋会員の特典です。これまでの記録は、そのまま見られます。";lk.appendChild(lt);
     lk.appendChild(obtn("スノマ＋を見る",function(){openPlusPage();},"obtn-s"));wrap.appendChild(lk);
   }
+  logMapMount(wrap);
   // スタンプ
   var sh=d({style:{fontWeight:"900",fontSize:"15px",color:"#1A1A2E",margin:"18px 0 8px"}});sh.textContent="🏷 スキー場スタンプ";wrap.appendChild(sh);
   var lo=S.logOpen||{};
