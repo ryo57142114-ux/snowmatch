@@ -3197,12 +3197,25 @@ function renderExplore(){
 function fitChatInput(el){if(!el)return;el.style.height="auto";var h=Math.min(el.scrollHeight,124);el.style.height=h+"px";el.style.overflowY=el.scrollHeight>124?"auto":"hidden";}
 function dmKey(m){if(!m._k){window._dmK=(window._dmK||0)+1;m._k="k"+window._dmK;}return m._k;}
 // チャットの吹き出し1つ分を作る（画面全体を描き直さずに、追加・差し替えできるようにする）
+// メッセージ本文を入れる（許可した通話サービスのURLだけタップで開ける）
+function dmFill(el,txt){
+  var s=String(txt||""),re=/https?:\/\/[^\s]+/g,last=0,mm;
+  while((mm=re.exec(s))){
+    var url=mm[0],host=url.replace(/^https?:\/\//i,"").split(/[\/?#:]/)[0].toLowerCase(),ok=false;
+    for(var j=0;j<CB_OK_HOSTS.length;j++){var dm=CB_OK_HOSTS[j];if(host===dm||host.slice(-(dm.length+1))==="."+dm){ok=true;break;}}
+    el.appendChild(document.createTextNode(s.slice(last,mm.index)));
+    if(ok){var a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener noreferrer";a.textContent=url;a.style.cssText="color:inherit;text-decoration:underline";el.appendChild(a);}
+    else el.appendChild(document.createTextNode(url));
+    last=mm.index+url.length;
+  }
+  el.appendChild(document.createTextNode(s.slice(last)));
+}
 function dmRow(m,cu){
   var isMe=m.f==="m";
     var mRow=d({style:{display:"flex",justifyContent:isMe?"flex-end":"flex-start",marginBottom:"10px",gap:"8px",alignItems:"flex-end"}});
     var mBox=d({style:{maxWidth:"72%"}});
     if(!isMe){var mName=d({style:{fontSize:"11px",color:"#9CA3AF",marginBottom:"2px",fontWeight:"700"}});mName.textContent=cu.name;mBox.appendChild(mName);}
-    var mBub=d({style:{background:isMe?"linear-gradient(135deg,#FF6B2B,#FF8C55)":"#fff",color:isMe?"#fff":"#1A1A2E",padding:"10px 16px",borderRadius:isMe?"18px 18px 4px 18px":"18px 18px 18px 4px",fontSize:"14px",lineHeight:"1.6",boxShadow:"0 2px 8px rgba(0,0,0,.08)"}});
+    var mBub=d({style:{background:isMe?"linear-gradient(135deg,#FF6B2B,#FF8C55)":"#fff",color:isMe?"#fff":"#1A1A2E",padding:"10px 16px",borderRadius:isMe?"18px 18px 4px 18px":"18px 18px 18px 4px",fontSize:"14px",lineHeight:"1.6",boxShadow:"0 2px 8px rgba(0,0,0,.08)",overflowWrap:"anywhere",wordBreak:"break-word"}});
     if(m.img){
       mBub.style.padding="6px";
       var src=m.preview||(sb?chatImgUrl(m.img):null);
@@ -3213,7 +3226,7 @@ function dmRow(m,cu){
         mBub.appendChild(im);
       }else{var _ce=window._chatImgUrl&&window._chatImgUrl[m.img];var _err=!m.failed&&_ce&&_ce.err;var ld=d({style:{width:"220px",maxWidth:"100%",height:"260px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontSize:"12px",opacity:".75",textAlign:"center",lineHeight:"1.6",cursor:_err?"pointer":"default"}});ld.textContent=m.failed?"送信できませんでした":(_err?"写真を表示できませんでした\nタップで再読み込み":"📷 読み込み中…");ld.style.whiteSpace="pre-line";if(!m.failed)ld.setAttribute("data-imgph",m.img);if(_err){(function(pth){ld.addEventListener("click",function(){delete window._chatImgUrl[pth];ld.textContent="📷 読み込み中…";chatImgUrl(pth);});})(m.img);}mBub.appendChild(ld);}
       if(m.pending){var pd=d({style:{fontSize:"10px",opacity:".8",padding:"2px 6px 0"}});pd.textContent="送信中…";mBub.appendChild(pd);}
-    }else mBub.textContent=m.t;
+    }else dmFill(mBub,m.t);
     var mTime=d({style:{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:"4px",marginTop:"3px"}});
     var mt=d({style:{fontSize:"10px",opacity:".6"}});mt.textContent=m.time;
     if(isMe&&(cu.isReal?!!m.readAt:true)){var rd=d({style:{fontSize:"10px",color:"rgba(255,255,255,0.7)"}});rd.textContent="既読";mTime.appendChild(rd);}
