@@ -401,7 +401,7 @@ function PayoutCard(){
     msg.textContent="同行の予約で受け取る料金は、Stripe（世界中で使われている決済サービス）を通じてあなたの銀行口座に振り込まれます。まずは受け取り口座を登録しましょう。";
     btn("受け取り口座を登録する",true,go("onboard"));
   }else if(st.payouts_enabled){
-    msg.textContent="✅ 受け取りの準備ができています。売上や入金予定はStripeの画面で確認できます。";
+    msg.textContent="✅ 受け取りの準備ができています。売上は毎月1日と15日に、まとめて銀行口座へ入金されます（3,000円未満は次回に繰り越し）。売上や入金予定はStripeの画面で確認できます。";
     btn("売上・入金を確認する",false,go("dashboard"));
   }else{
     msg.textContent=st.details_submitted?"登録内容をStripeが確認中です。追加の情報を求められている場合は、登録を続けてください。":"登録が途中です。続きから入力してください。";
@@ -740,7 +740,7 @@ function PostModal(){
     if(f.pay==="paid"&&f.kind==="request"){
       lbl("お支払いする金額（全部込み）");
       var pw=d({style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"6px"}});
-      var pi=document.createElement("input");pi.type="number";pi.inputMode="numeric";pi.min="500";pi.step="100";pi.className="inp";pi.style.cssText="flex:1";pi.placeholder="例：3000";pi.value=f.price||"";
+      var pi=document.createElement("input");pi.type="number";pi.inputMode="numeric";pi.min="1000";pi.step="100";pi.className="inp";pi.style.cssText="flex:1";pi.placeholder="例：3000";pi.value=f.price||"";
       pi.addEventListener("input",function(e){f.price=e.target.value;});
       pw.appendChild(pi);pw.appendChild(sp({style:{fontWeight:"800",color:"#4B5563"}},"円"));box.appendChild(pw);
       var ph=d({style:{fontSize:"11px",lineHeight:"1.6",margin:"0 0 14px",color:"#9CA3AF"}});ph.textContent="「参加します」と応募してくれた人の中から1人を選んで、この金額をお支払いします（謝礼・交通費などすべて込みの金額）。応募できるのは本人確認済みの人だけです。";box.appendChild(ph);
@@ -762,7 +762,7 @@ function PostModal(){
       if(!f.resort){alert("スキー場を選んでください");return;}
       if(f.pay==="paid"&&f.kind==="offer"){var me=S.myProfile||{};if(!me.ok){alert("有料で受けるには、本人確認の承認が必要です。無料で投稿するか、先に本人確認を申請してください。");return;}}
       var reqPrice=0;
-      if(f.pay==="paid"&&f.kind==="request"){reqPrice=parseInt(f.price,10)||0;if(reqPrice<500){alert("お支払いする金額を500円以上で入力してください");return;}if(reqPrice>200000){alert("金額が大きすぎます");return;}}
+      if(f.pay==="paid"&&f.kind==="request"){reqPrice=parseInt(f.price,10)||0;if(reqPrice<1000){alert("お支払いする金額を1,000円以上で入力してください");return;}if(reqPrice>200000){alert("金額が大きすぎます");return;}}
       if(S.postSending)return;S.postSending=true;
       var prow={user_id:currentUser.id,kind:f.kind,ride_date:f.date,start_time:f.start,end_time:f.end,resort:f.resort,pay:f.pay,note:(f.note||"").trim()};
       if(reqPrice)prow.price=reqPrice;
